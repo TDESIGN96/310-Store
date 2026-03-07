@@ -1,0 +1,260 @@
+<script setup lang="ts">
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import {
+  Bell,
+  Package,
+  CheckSquare,
+  AlertTriangle,
+  Truck,
+  X,
+  Info,
+} from 'lucide-vue-next'
+
+// ── Types ──
+interface Notification {
+  id: string
+  type: 'low_stock' | 'approval' | 'shipment' | 'warning' | 'info'
+  title: string
+  message: string
+  time: string
+  read: boolean
+  link?: string
+}
+
+// ── Dummy Data (replace with store later) ──
+const notifications = ref<Notification[]>([
+  {
+    id: '1',
+    type: 'low_stock',
+    title: 'مخزون منخفض',
+    message: 'منتج "كرتون تغليف A4" وصل لحد الطلب',
+    time: 'منذ ٥ دقائق',
+    read: false,
+    link: '/products',
+  },
+  {
+    id: '2',
+    type: 'approval',
+    title: 'طلب موافقة جديد',
+    message: 'أحمد محمد يطلب تعديل الفاتورة #١٢٣٤',
+    time: 'منذ ١٥ دقيقة',
+    read: false,
+    link: '/approvals',
+  },
+  {
+    id: '3',
+    type: 'shipment',
+    title: 'شحنة متأخرة',
+    message: 'الشحنة #٥٦٧٨ متأخرة أكثر من ٣ أيام',
+    time: 'منذ ١ ساعة',
+    read: false,
+    link: '/shipping/delayed',
+  },
+  {
+    id: '4',
+    type: 'warning',
+    title: 'تم رفض الطلب',
+    message: 'تم رفض طلب تعديل الفاتورة #٩٩٩',
+    time: 'منذ ٢ ساعة',
+    read: true,
+    link: '/approvals',
+  },
+  {
+    id: '5',
+    type: 'info',
+    title: 'تمت الموافقة',
+    message: 'تمت الموافقة على طلب تعديل الفاتورة #٨٨٨',
+    time: 'منذ ٣ ساعات',
+    read: true,
+    link: '/sales/invoices',
+  },
+])
+
+// ── Computed ──
+const unreadCount = computed(() =>
+  notifications.value.filter(n => !n.read).length
+)
+
+// ── Icon + Color per type ──
+const typeConfig = {
+  low_stock: {
+    icon: Package,
+    color: 'text-red-500',
+    bg: 'bg-red-500/10',
+  },
+  approval: {
+    icon: CheckSquare,
+    color: 'text-amber-500',
+    bg: 'bg-amber-500/10',
+  },
+  shipment: {
+    icon: Truck,
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
+  },
+  warning: {
+    icon: AlertTriangle,
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10',
+  },
+  info: {
+    icon: Info,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+  },
+}
+
+// ── Actions ──
+const markRead = (id: string) => {
+  const n = notifications.value.find(n => n.id === id)
+  if (n) n.read = true
+}
+
+const markAllRead = () => {
+  notifications.value.forEach(n => n.read = true)
+}
+
+const remove = (id: string) => {
+  notifications.value = notifications.value.filter(n => n.id !== id)
+}
+</script>
+
+<template>
+  <Popover>
+
+    <!-- ── Bell Trigger ── -->
+    <PopoverTrigger as-child>
+      <Button variant="ghost" size="icon" class="relative">
+        <Bell class="size-4" />
+        <span
+          v-if="unreadCount > 0"
+          class="absolute -top-1 -left-1 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white"
+        >
+          {{ unreadCount > 9 ? '9+' : unreadCount }}
+        </span>
+      </Button>
+    </PopoverTrigger>
+
+    <!-- ── Popover Panel ── -->
+    <PopoverContent class="w-80 p-0" align="end" :side-offset="8">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-sm">الإشعارات</span>
+          <Badge
+            v-if="unreadCount > 0"
+            variant="secondary"
+            class="text-xs px-1.5 py-0"
+          >
+            {{ unreadCount }} جديد
+          </Badge>
+        </div>
+        <Button
+          v-if="unreadCount > 0"
+          variant="ghost"
+          size="sm"
+          class="text-xs text-muted-foreground h-7"
+          @click="markAllRead"
+        >
+          تحديد الكل كمقروء
+        </Button>
+      </div>
+
+      <Separator />
+
+      <!-- Notifications List -->
+      <ScrollArea class="h-[320px]">
+
+        <!-- Empty State -->
+        <div
+          v-if="notifications.length === 0"
+          class="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground"
+        >
+          <Bell class="size-8 opacity-20" />
+          <span class="text-sm">لا توجد إشعارات</span>
+        </div>
+
+        <!-- List -->
+        <div v-else>
+          <div
+            v-for="notification in notifications"
+            :key="notification.id"
+            class="flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer relative group border-b border-border/50 last:border-0"
+            :class="!notification.read ? 'bg-muted/40' : 'hover:bg-muted/30'"
+            @click="markRead(notification.id)"
+          >
+            <!-- Type Icon -->
+            <div
+              :class="[
+                'flex size-8 shrink-0 items-center justify-center rounded-full mt-0.5',
+                typeConfig[notification.type].bg
+              ]"
+            >
+              <component
+                :is="typeConfig[notification.type].icon"
+                :class="['size-4', typeConfig[notification.type].color]"
+              />
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm font-medium leading-tight">
+                  {{ notification.title }}
+                </span>
+                <!-- Unread dot -->
+                <span
+                  v-if="!notification.read"
+                  class="size-1.5 rounded-full bg-blue-500 shrink-0"
+                />
+              </div>
+              <p class="text-xs text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
+                {{ notification.message }}
+              </p>
+              <span class="text-[11px] text-muted-foreground/50 mt-1 block">
+                {{ notification.time }}
+              </span>
+            </div>
+
+            <!-- Remove Button -->
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
+              @click.stop="remove(notification.id)"
+            >
+              <X class="size-3" />
+            </Button>
+
+          </div>
+        </div>
+      </ScrollArea>
+
+      <Separator />
+
+      <!-- Footer -->
+      <div class="p-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="w-full text-xs text-muted-foreground"
+          as-child
+        >
+          <NuxtLink to="/notifications">
+            عرض جميع الإشعارات
+          </NuxtLink>
+        </Button>
+      </div>
+
+    </PopoverContent>
+  </Popover>
+</template>

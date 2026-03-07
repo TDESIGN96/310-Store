@@ -1,7 +1,18 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineNuxtConfig({future: {
+export default defineNuxtConfig({
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'ar',
+        dir: 'rtl',
+      }
+    }
+  },
+  
+  
+  future: {
   compatibilityVersion: 4  // ← enables Nuxt 4 app/ structure
 },
   modules: ['shadcn-nuxt'],

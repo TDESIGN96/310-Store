@@ -1,4 +1,7 @@
 <script setup>
+definePageMeta({
+  layout: 'auth'
+})
 const loading = ref(false)
 import { ref } from 'vue'
 
@@ -22,8 +25,8 @@ const handleLogin = async () => {
   error.value = ''
   isLoading.value = true
   await new Promise(r => setTimeout(r, 1800))
-  isLoading.value = false
-  // await navigateTo('/dashboard')
+  isLoading.value = true
+   await navigateTo('/dashboard')
 }
 </script>
 
@@ -162,7 +165,7 @@ const handleLogin = async () => {
                 </label>
               </div>
   
-              <button class="login-btn anim-fade-up" style="--delay: 0.8s" :class="{ loading: isLoading }" @click="handleLogin" :disabled="isLoading">
+              <button class="login-btn anim-fade-up" style="--delay: 0.8s" :class="{ loading: isLoading }" @click="handleLogin" :disabled="isLoading" linkto="/dashboard">
                 <span v-if="!isLoading" class="inline-flex items-center gap-2">
                   تسجيل الدخول
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
@@ -190,8 +193,10 @@ const handleLogin = async () => {
           </div>
   
           <p class="login-note anim-fade-up" style="--delay: 1s">
-            هل تحتاج مساعدة؟
-            <a href="#" class="login-note-link">تواصل مع الدعم الفني</a>
+هل تحتاج الى التسجيل في النظام؟            <a href="#" class="login-note-link">تواصل مع شركة كامو
+
+
+</a>
           </p>
         </div>
   
