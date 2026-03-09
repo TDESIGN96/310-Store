@@ -24,7 +24,7 @@ export interface NavGroup {
 export const navItems: NavGroup[] = [
   {
     group: 'الرئيسية',
-    items: [{ label: 'لوحة التحكم', icon: LayoutDashboard, path: '/dashboard' }],
+    items: [{ label: 'لوحة التحكم', icon: LayoutDashboard, path: '/mainCards' }],
   },
   {
     group: 'المبيعات',

@@ -2,6 +2,12 @@
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
+ 
+  runtimeConfig: {
+    public: {
+      apiBase: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud/api'
+    }
+  },
   app: {
     head: {
       htmlAttrs: {
@@ -13,9 +19,9 @@ export default defineNuxtConfig({
   
   
   future: {
-  compatibilityVersion: 4  // ← enables Nuxt 4 app/ structure
-},
-  modules: ['shadcn-nuxt'],
+    compatibilityVersion: 4, // ← enables Nuxt 4 app/ structure
+  },
+  modules: ['@pinia/nuxt', 'shadcn-nuxt'],
   
   shadcn: {
     /**

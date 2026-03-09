@@ -24,7 +24,7 @@ const route = useRoute()
       >
       <SidebarMenuButton
           as-child
-          :is-active="route.path.startsWith(item.path)"
+          :is-active="route.path.startsWith(item.path) || (item.path === '/mainCards' && (route.path === '/dashboard' || route.path === '/'))"
           :tooltip="item.label"
         >
         <NuxtLink :to="item.path">

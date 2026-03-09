@@ -8,7 +8,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
     <AppSidebar variant="inset" />
     <SidebarInset>
       <AppHeader />
-      <AppLayoutContent />
+      
       <main class="p-4">
         <slot />
       </main>
