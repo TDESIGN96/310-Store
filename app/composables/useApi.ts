@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth'
+import { toast } from 'vue-sonner'
 
 export const useApi = () => {
   const config = useRuntimeConfig()
@@ -22,13 +23,16 @@ export const useApi = () => {
       // 401 → token expired → logout
       if (response.status === 401) {
         authStore.logout()
+       toast.error('بيانات غير صحيحة')
         navigateTo('/')
       }
 
       // 422 → validation error → handled per form
       // 500 → server error → log to console for now
       if (response.status === 500) {
-        // You can replace this with a proper toast/notification later
+        toast.error('خطأ في الخادم', {
+          description: 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً'
+        })
         console.error('Server error', response._data ?? response.statusText)
       }
     },

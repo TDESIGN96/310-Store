@@ -23,11 +23,11 @@ import {
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar'
 import { Badge } from '@/components/ui/badge'
 import { User, Settings, LogOut } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 const route = useRoute()
+const authStore = useAuthStore()
 
-
-// ── Role label (replace with useAuthStore() later) ──
 const roleLabel: Record<string, string> = {
   admin: 'مدير النظام',
   manager: 'المدير',
@@ -38,8 +38,22 @@ const roleLabel: Record<string, string> = {
   driver: 'السائق',
 }
 
-// Simulated — replace with useAuthStore() later
-const currentUser = ref({ name: 'أحمد محمد', role: 'admin' })
+const currentUser = computed(() => authStore.user)
+
+const handleLogout = async () => {
+  const name = authStore.user?.name ?? ''
+  toast.promise(authStore.logout(), {
+    loading: 'جارٍ تسجيل الخروج...',
+    success: () => {
+      navigateTo('/')
+      return name ? `إلى اللقاء، ${name}` : 'تم تسجيل الخروج بنجاح'
+    },
+    error: () => {
+      navigateTo('/')
+      return 'تم تسجيل الخروج'
+    },
+  })
+}
 
 const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
 </script>
@@ -105,14 +119,14 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
                   <div
                     class="flex size-7 items-center justify-center rounded-full bg-[#215260] text-[#CFE030] text-xs font-bold shrink-0"
                   >
-                    {{ currentUser.name.charAt(0) }}
+                    {{ currentUser?.name?.charAt(0) ?? '؟' }}
                   </div>
                   <div class="flex flex-col leading-tight">
                     <span class="text-sm font-medium leading-tight">
-                      {{ currentUser.name }}
+                      {{ currentUser?.name ?? '—' }}
                     </span>
                     <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 w-fit">
-                      {{ roleLabel[currentUser.role] }}
+                      {{ roleLabel[currentUser?.role ?? ''] ?? currentUser?.role }}
                     </Badge>
                   </div>
                 </SidebarMenuButton>
@@ -134,7 +148,10 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem class="text-red-500 focus:text-red-500">
+                <DropdownMenuItem
+                  class="text-red-500 focus:text-red-500 cursor-pointer"
+                  @click="handleLogout"
+                >
                   <LogOut class="ms-2 size-4" />
                   <span>تسجيل الخروج</span>
                 </DropdownMenuItem>

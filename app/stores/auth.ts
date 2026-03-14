@@ -8,6 +8,7 @@ interface User {
 }
 
 const COOKIE_NAME = 'auth_token'
+const COOKIE_USER = 'auth_user'
 const COOKIE_OPTS = {
   maxAge: 60 * 60 * 24 * 7, // 7 days
   sameSite: 'lax' as const,
@@ -39,8 +40,8 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = response.data.token
     user.value = response.data.user
 
-    // Write to cookie after setting in-memory token
     useCookie(COOKIE_NAME, COOKIE_OPTS).value = response.data.token
+    useCookie<User | null>(COOKIE_USER, COOKIE_OPTS).value = response.data.user
   }
 
   const logout = async () => {
@@ -58,12 +59,16 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     user.value = null
     useCookie(COOKIE_NAME).value = null
+    useCookie(COOKIE_USER).value = null
   }
 
-  // Called from plugin on every page load — reads cookie into in-memory ref
+  // Called from plugin on every page load — restores token + user from cookies
   const init = () => {
-    const stored = useCookie(COOKIE_NAME).value
-    if (stored) token.value = stored
+    const storedToken = useCookie(COOKIE_NAME).value
+    if (storedToken) token.value = storedToken
+
+    const storedUser = useCookie<User | null>(COOKIE_USER).value
+    if (storedUser) user.value = storedUser
   }
 
   return { token, user, isLoggedIn, login, logout, init }
