@@ -10,10 +10,8 @@ export default defineNuxtRouteMiddleware((to) => {
     const match = raw.split(';').map(c => c.trim()).find(c => c.startsWith('auth_token='))
     token = match ? match.split('=').slice(1).join('=') : null
   } else {
-    // On the client, rely on store first (immediate after login),
-    // then fallback to cookie for page reload persistence.
-    const authStore = useAuthStore()
-    token = authStore.token || useCookie('auth_token').value
+    // On the client, useCookie reads document.cookie
+    token = useCookie('auth_token').value
   }
 
   if (!token) {

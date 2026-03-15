@@ -1,7 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
 
-const env = (globalThis as any).process?.env ?? {}
+const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+  .process?.env ?? {}
 
 export default defineNuxtConfig({
   runtimeConfig: {
