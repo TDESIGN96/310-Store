@@ -1,9 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
 
-const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-  .process?.env ?? {}
-
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
@@ -31,21 +28,21 @@ export default defineNuxtConfig({
   },
   modules: ['@pinia/nuxt', 'shadcn-nuxt', 'nuxt-laravel-echo'],
   echo: {
-    key: env.NUXT_PUBLIC_ECHO_KEY || '',
-    broadcaster: (env.NUXT_PUBLIC_ECHO_BROADCASTER as 'reverb' | 'pusher') || 'reverb',
-    host: env.NUXT_PUBLIC_ECHO_HOST || 'localhost',
-    port: Number(env.NUXT_PUBLIC_ECHO_PORT || 8080),
-    scheme: (env.NUXT_PUBLIC_ECHO_SCHEME as 'http' | 'https') || 'https',
+    key: 'dA6V4f6Gn3QYA7NDgd6t',
+    broadcaster: 'reverb',
+    host: 'ws-a14d3d63-48f2-43f1-a933-d3e4cfde010c-reverb.laravel.cloud',
+    port: 443,
+    scheme: 'https',
     transports: ['ws', 'wss'],
     authentication: {
       mode: 'token',
-      baseUrl: env.NUXT_PUBLIC_ECHO_AUTH_BASE_URL || 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
-      authEndpoint: env.NUXT_PUBLIC_ECHO_AUTH_ENDPOINT || '/api/broadcasting/auth',
-      csrfEndpoint: env.NUXT_PUBLIC_ECHO_CSRF_ENDPOINT || '/sanctum/csrf-cookie',
-      csrfCookie: env.NUXT_PUBLIC_ECHO_CSRF_COOKIE || 'XSRF-TOKEN',
-      csrfHeader: env.NUXT_PUBLIC_ECHO_CSRF_HEADER || 'X-XSRF-TOKEN',
+      baseUrl: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
+      authEndpoint: '/api/broadcasting/auth',
+      csrfEndpoint: '/sanctum/csrf-cookie',
+      csrfCookie: 'XSRF-TOKEN',
+      csrfHeader: 'X-XSRF-TOKEN',
     },
-    logLevel: Number(env.NUXT_PUBLIC_ECHO_LOG_LEVEL || 3),
+    logLevel: 3,
   },
   shadcn: {
     /**
