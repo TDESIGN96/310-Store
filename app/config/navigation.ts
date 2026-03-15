@@ -5,6 +5,7 @@ import {
   FileText,
   UserCircle,
   Package,
+  ShieldCheck,
   Warehouse,
   ArrowLeftRight,
   AlertTriangle,
@@ -14,6 +15,7 @@ export interface NavItem {
   label: string
   icon: Component
   path: string
+  requiredPermission?: string
 }
 
 export interface NavGroup {
@@ -37,7 +39,8 @@ export const navItems: NavGroup[] = [
    {
     group: 'المخزون',
     items: [
-      { label: 'المنتجات', icon: Package, path: '/products' },
+      { label: 'المنتجات', icon: Package, path: '/products', requiredPermission: 'view_products' },
+      { label: 'الصلاحيات', icon: ShieldCheck, path: '/roles' },
       // { label: 'المستودعات', icon: Warehouse, path: '/inventory/warehouses' },
       // { label: 'التحويلات', icon: ArrowLeftRight, path: '/inventory/transfers' },
       // { label: 'التالف', icon: AlertTriangle, path: '/inventory/damaged' },

@@ -9,11 +9,24 @@ import {
 import { navItems } from '@/config/navigation'
 
 const route = useRoute()
+const authStore = useAuthStore()
+
+const visibleSections = computed(() => {
+  return navItems
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (!item.requiredPermission) return true
+        return authStore.hasPermission(item.requiredPermission)
+      }),
+    }))
+    .filter((section) => section.items.length > 0)
+})
 </script>
 
 <template>
  <SidebarGroup
-    v-for="section in navItems"
+    v-for="section in visibleSections"
     :key="section.group"
   >
   <SidebarGroupLabel>{{ section.group }}</SidebarGroupLabel>
