@@ -1,6 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
 
+const env = (globalThis as any).process?.env ?? {}
+
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
@@ -28,21 +30,21 @@ export default defineNuxtConfig({
   },
   modules: ['@pinia/nuxt', 'shadcn-nuxt', 'nuxt-laravel-echo'],
   echo: {
-    key: import.meta.env.NUXT_PUBLIC_ECHO_KEY || '',
-    broadcaster: (import.meta.env.NUXT_PUBLIC_ECHO_BROADCASTER as 'reverb' | 'pusher') || 'reverb',
-    host: import.meta.env.NUXT_PUBLIC_ECHO_HOST || 'localhost',
-    port: Number(import.meta.env.NUXT_PUBLIC_ECHO_PORT || 8080),
-    scheme: (import.meta.env.NUXT_PUBLIC_ECHO_SCHEME as 'http' | 'https') || 'https',
+    key: env.NUXT_PUBLIC_ECHO_KEY || '',
+    broadcaster: (env.NUXT_PUBLIC_ECHO_BROADCASTER as 'reverb' | 'pusher') || 'reverb',
+    host: env.NUXT_PUBLIC_ECHO_HOST || 'localhost',
+    port: Number(env.NUXT_PUBLIC_ECHO_PORT || 8080),
+    scheme: (env.NUXT_PUBLIC_ECHO_SCHEME as 'http' | 'https') || 'https',
     transports: ['ws', 'wss'],
     authentication: {
       mode: 'token',
-      baseUrl: import.meta.env.NUXT_PUBLIC_ECHO_AUTH_BASE_URL || 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
-      authEndpoint: import.meta.env.NUXT_PUBLIC_ECHO_AUTH_ENDPOINT || '/api/broadcasting/auth',
-      csrfEndpoint: import.meta.env.NUXT_PUBLIC_ECHO_CSRF_ENDPOINT || '/sanctum/csrf-cookie',
-      csrfCookie: import.meta.env.NUXT_PUBLIC_ECHO_CSRF_COOKIE || 'XSRF-TOKEN',
-      csrfHeader: import.meta.env.NUXT_PUBLIC_ECHO_CSRF_HEADER || 'X-XSRF-TOKEN',
+      baseUrl: env.NUXT_PUBLIC_ECHO_AUTH_BASE_URL || 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
+      authEndpoint: env.NUXT_PUBLIC_ECHO_AUTH_ENDPOINT || '/api/broadcasting/auth',
+      csrfEndpoint: env.NUXT_PUBLIC_ECHO_CSRF_ENDPOINT || '/sanctum/csrf-cookie',
+      csrfCookie: env.NUXT_PUBLIC_ECHO_CSRF_COOKIE || 'XSRF-TOKEN',
+      csrfHeader: env.NUXT_PUBLIC_ECHO_CSRF_HEADER || 'X-XSRF-TOKEN',
     },
-    logLevel: Number(import.meta.env.NUXT_PUBLIC_ECHO_LOG_LEVEL || 3),
+    logLevel: Number(env.NUXT_PUBLIC_ECHO_LOG_LEVEL || 3),
   },
   shadcn: {
     /**
