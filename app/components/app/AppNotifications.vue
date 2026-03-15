@@ -17,6 +17,10 @@ import {
   X,
   Info,
 } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
+
+const authStore = useAuthStore()
+const nuxtApp = useNuxtApp()
 
 // ── Types ──
 interface Notification {
@@ -29,59 +33,214 @@ interface Notification {
   link?: string
 }
 
-// ── Dummy Data (replace with store later) ──
-const notifications = ref<Notification[]>([
-  {
-    id: '1',
-    type: 'low_stock',
-    title: 'مخزون منخفض',
-    message: 'منتج "كرتون تغليف A4" وصل لحد الطلب',
-    time: 'منذ ٥ دقائق',
-    read: false,
-    link: '/products',
-  },
-  {
-    id: '2',
-    type: 'approval',
-    title: 'طلب موافقة جديد',
-    message: 'أحمد محمد يطلب تعديل الفاتورة #١٢٣٤',
-    time: 'منذ ١٥ دقيقة',
-    read: false,
-    link: '/approvals',
-  },
-  {
-    id: '3',
-    type: 'shipment',
-    title: 'شحنة متأخرة',
-    message: 'الشحنة #٥٦٧٨ متأخرة أكثر من ٣ أيام',
-    time: 'منذ ١ ساعة',
-    read: false,
-    link: '/shipping/delayed',
-  },
-  {
-    id: '4',
-    type: 'warning',
-    title: 'تم رفض الطلب',
-    message: 'تم رفض طلب تعديل الفاتورة #٩٩٩',
-    time: 'منذ ٢ ساعة',
-    read: true,
-    link: '/approvals',
-  },
-  {
-    id: '5',
-    type: 'info',
-    title: 'تمت الموافقة',
-    message: 'تمت الموافقة على طلب تعديل الفاتورة #٨٨٨',
-    time: 'منذ ٣ ساعات',
-    read: true,
-    link: '/sales/invoices',
-  },
-])
+interface EchoNotificationPayload {
+  id?: string | number
+  type?: string
+  read_at?: string | null
+  created_at?: string
+  title?: string
+  message?: string
+  data?: {
+    title?: string
+    message?: string
+    type?: string
+    link?: string
+  }
+}
+
+interface DemoPost {
+  id: number
+  title: string
+  body: string
+}
+
+const notifications = ref<Notification[]>([])
+const activeChannelName = ref<string | null>(null)
+const isLoadingDemo = ref(false)
+const demoLoadError = ref<string | null>(null)
+
+const toRelativeArabicTime = (value?: string) => {
+  if (!value) return 'الآن'
+
+  const timestamp = new Date(value).getTime()
+  if (Number.isNaN(timestamp)) return 'الآن'
+
+  const minutes = Math.floor((Date.now() - timestamp) / (1000 * 60))
+  if (minutes < 1) return 'الآن'
+  if (minutes < 60) return `منذ ${minutes} دقيقة`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `منذ ${hours} ساعة`
+
+  const days = Math.floor(hours / 24)
+  return `منذ ${days} يوم`
+}
+
+const resolveNotificationType = (payload: EchoNotificationPayload): Notification['type'] => {
+  const raw = (payload.data?.type || payload.type || '').toLowerCase()
+  if (raw.includes('stock')) return 'low_stock'
+  if (raw.includes('approve')) return 'approval'
+  if (raw.includes('ship')) return 'shipment'
+  if (raw.includes('warn') || raw.includes('reject')) return 'warning'
+  return 'info'
+}
+
+const normalizeNotification = (payload: EchoNotificationPayload): Notification => {
+  const data = payload.data || {}
+  const resolvedType = resolveNotificationType(payload)
+
+  return {
+    id: String(payload.id ?? crypto.randomUUID()),
+    type: resolvedType,
+    title: data.title || payload.title || 'إشعار جديد',
+    message: data.message || payload.message || 'تم استلام إشعار جديد',
+    time: toRelativeArabicTime(payload.created_at),
+    read: Boolean(payload.read_at),
+    link: data.link,
+  }
+}
+
+const showToastForNotification = (notification: Notification) => {
+  if (!import.meta.client) return
+
+  toast(notification.title, {
+    description: notification.message,
+    action: notification.link
+      ? {
+          label: 'عرض',
+          onClick: () => navigateTo(notification.link as string),
+        }
+      : undefined,
+  })
+}
+
+const addNotification = (
+  payload: EchoNotificationPayload,
+  options: { showToast?: boolean } = {},
+) => {
+  const normalized = normalizeNotification(payload)
+  const existingIndex = notifications.value.findIndex(n => n.id === normalized.id)
+
+  if (existingIndex !== -1) {
+    notifications.value[existingIndex] = normalized
+    return
+  }
+
+  notifications.value.unshift(normalized)
+
+  if (options.showToast && !normalized.read) {
+    showToastForNotification(normalized)
+  }
+}
+
+const demoTypes: Notification['type'][] = ['info', 'approval', 'shipment', 'warning', 'low_stock']
+
+const loadOnlineDemoNotifications = async () => {
+  if (isLoadingDemo.value) return
+
+  isLoadingDemo.value = true
+  demoLoadError.value = null
+
+  try {
+    const posts = await $fetch<DemoPost[]>('https://jsonplaceholder.typicode.com/posts', {
+      query: { _limit: 5 },
+    })
+
+    notifications.value = posts.map((post, index) => ({
+      id: `demo-${post.id}`,
+      type: demoTypes[index % demoTypes.length] || 'info',
+      title: post.title.slice(0, 42) || 'Demo notification',
+      message: post.body.slice(0, 90) || 'Demo message',
+      time: `منذ ${index + 1} دقيقة`,
+      read: false,
+      link: '/notifications',
+    }))
+  } catch {
+    demoLoadError.value = 'تعذر تحميل البيانات التجريبية حالياً'
+  } finally {
+    isLoadingDemo.value = false
+  }
+}
+
+const triggerDemoLiveNotification = () => {
+  addNotification(
+    {
+      id: `live-demo-${Date.now()}`,
+      type: 'info',
+      created_at: new Date().toISOString(),
+      data: {
+        title: 'اختبار إشعار مباشر',
+        message: 'هذا إشعار تجريبي لاختبار الـ toaster والتحديث الفوري',
+        type: 'info',
+        link: '/notifications',
+      },
+    },
+    { showToast: true },
+  )
+}
+
+const unsubscribeFromUserChannel = () => {
+  if (!activeChannelName.value) return
+
+  const echo = nuxtApp.$echo as any
+  if (!echo) {
+    activeChannelName.value = null
+    return
+  }
+
+  try {
+    echo.leave(activeChannelName.value)
+  } catch {}
+
+  activeChannelName.value = null
+}
+
+const subscribeToUserChannel = (userId: number) => {
+  const echo = nuxtApp.$echo as any
+  if (!echo) return
+
+  const channelName = `App.Models.User.${userId}`
+  if (activeChannelName.value === channelName) return
+
+  unsubscribeFromUserChannel()
+
+  const channel = echo.private(channelName) as any
+  if (typeof channel.notification === 'function') {
+    channel.notification((payload: EchoNotificationPayload) => addNotification(payload, { showToast: true }))
+  } else {
+    channel.listen(
+      '.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated',
+      (payload: EchoNotificationPayload) => addNotification(payload, { showToast: true }),
+    )
+  }
+
+  activeChannelName.value = channelName
+}
 
 // ── Computed ──
 const unreadCount = computed(() =>
   notifications.value.filter(n => !n.read).length
 )
+
+watch(
+  () => authStore.user?.id,
+  (userId) => {
+    if (!import.meta.client) return
+
+    if (!userId) {
+      unsubscribeFromUserChannel()
+      notifications.value = []
+      return
+    }
+
+    subscribeToUserChannel(userId)
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  unsubscribeFromUserChannel()
+})
 
 // ── Icon + Color per type ──
 const typeConfig = {
@@ -167,6 +326,27 @@ const remove = (id: string) => {
         >
           تحديد الكل كمقروء
         </Button>
+        <Button
+          v-else
+          variant="ghost"
+          size="sm"
+          class="text-xs text-muted-foreground h-7"
+          :disabled="isLoadingDemo"
+          @click="loadOnlineDemoNotifications"
+        >
+          {{ isLoadingDemo ? 'جارٍ التحميل...' : 'تحميل بيانات تجريبية' }}
+        </Button>
+      </div>
+
+      <div class="px-4 pb-2">
+        <Button
+          variant="outline"
+          size="sm"
+          class="w-full text-xs"
+          @click="triggerDemoLiveNotification"
+        >
+          اختبار إشعار مباشر + Toast
+        </Button>
       </div>
 
       <Separator />
@@ -181,6 +361,18 @@ const remove = (id: string) => {
         >
           <Bell class="size-8 opacity-20" />
           <span class="text-sm">لا توجد إشعارات</span>
+          <Button
+            variant="outline"
+            size="sm"
+            class="mt-2"
+            :disabled="isLoadingDemo"
+            @click="loadOnlineDemoNotifications"
+          >
+            {{ isLoadingDemo ? 'جارٍ التحميل...' : 'تحميل بيانات تجريبية أونلاين' }}
+          </Button>
+          <span v-if="demoLoadError" class="text-xs text-red-500">
+            {{ demoLoadError }}
+          </span>
         </div>
 
         <!-- List -->

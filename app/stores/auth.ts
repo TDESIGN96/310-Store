@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 interface User {
   id: number
   name: string
-  email: string
+  phone: string
   role: string
 }
 
@@ -21,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!token.value)
 
-  const login = async (credentials: { email: string; password: string }) => {
+  const login = async (credentials: { phone: string; password: string }) => {
     const config = useRuntimeConfig()
 
     const response = await $fetch<{

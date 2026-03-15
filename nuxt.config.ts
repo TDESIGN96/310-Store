@@ -2,7 +2,6 @@
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
- 
   runtimeConfig: {
     public: {
       apiBase: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud/api'
@@ -10,6 +9,12 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
+      link: [
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap',
+        },
+      ],
       htmlAttrs: {
         lang: 'ar',
         dir: 'rtl',
@@ -21,8 +26,24 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4, // ← enables Nuxt 4 app/ structure
   },
-  modules: ['@pinia/nuxt', 'shadcn-nuxt'],
-  
+  modules: ['@pinia/nuxt', 'shadcn-nuxt', 'nuxt-laravel-echo'],
+  echo: {
+    key: import.meta.env.NUXT_PUBLIC_ECHO_KEY || '',
+    broadcaster: (import.meta.env.NUXT_PUBLIC_ECHO_BROADCASTER as 'reverb' | 'pusher') || 'reverb',
+    host: import.meta.env.NUXT_PUBLIC_ECHO_HOST || 'localhost',
+    port: Number(import.meta.env.NUXT_PUBLIC_ECHO_PORT || 8080),
+    scheme: (import.meta.env.NUXT_PUBLIC_ECHO_SCHEME as 'http' | 'https') || 'https',
+    transports: ['ws', 'wss'],
+    authentication: {
+      mode: 'token',
+      baseUrl: import.meta.env.NUXT_PUBLIC_ECHO_AUTH_BASE_URL || 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
+      authEndpoint: import.meta.env.NUXT_PUBLIC_ECHO_AUTH_ENDPOINT || '/api/broadcasting/auth',
+      csrfEndpoint: import.meta.env.NUXT_PUBLIC_ECHO_CSRF_ENDPOINT || '/sanctum/csrf-cookie',
+      csrfCookie: import.meta.env.NUXT_PUBLIC_ECHO_CSRF_COOKIE || 'XSRF-TOKEN',
+      csrfHeader: import.meta.env.NUXT_PUBLIC_ECHO_CSRF_HEADER || 'X-XSRF-TOKEN',
+    },
+    logLevel: Number(import.meta.env.NUXT_PUBLIC_ECHO_LOG_LEVEL || 3),
+  },
   shadcn: {
     /**
      * Prefix for all the imported component.
@@ -40,6 +61,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/tailwind.css'],
   vite: {
     plugins: [tailwindcss() as any],
+    optimizeDeps: {
+      include: ['nuxt-laravel-echo > pusher-js'],
+    },
   },
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },

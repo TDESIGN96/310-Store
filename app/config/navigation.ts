@@ -26,21 +26,21 @@ export const navItems: NavGroup[] = [
     group: 'الرئيسية',
     items: [{ label: 'لوحة التحكم', icon: LayoutDashboard, path: '/mainCards' }],
   },
-  {
-    group: 'المبيعات',
-    items: [
-      { label: 'الفواتير', icon: ReceiptText, path: '/sales/invoices' },
-      { label: 'عروض الأسعار', icon: FileText, path: '/sales/quotes' },
-      { label: 'العملاء', icon: UserCircle, path: '/sales/customers' },
-    ],
-  },
-  {
+  // {
+  //   group: 'المبيعات',
+  //   items: [
+  //     { label: 'الفواتير', icon: ReceiptText, path: '/sales/invoices' },
+  //     { label: 'عروض الأسعار', icon: FileText, path: '/sales/quotes' },
+  //     { label: 'العملاء', icon: UserCircle, path: '/sales/customers' },
+  //   ],
+  // },
+   {
     group: 'المخزون',
     items: [
       { label: 'المنتجات', icon: Package, path: '/products' },
-      { label: 'المستودعات', icon: Warehouse, path: '/inventory/warehouses' },
-      { label: 'التحويلات', icon: ArrowLeftRight, path: '/inventory/transfers' },
-      { label: 'التالف', icon: AlertTriangle, path: '/inventory/damaged' },
+      // { label: 'المستودعات', icon: Warehouse, path: '/inventory/warehouses' },
+      // { label: 'التحويلات', icon: ArrowLeftRight, path: '/inventory/transfers' },
+      // { label: 'التالف', icon: AlertTriangle, path: '/inventory/damaged' },
     ],
   },
 ]

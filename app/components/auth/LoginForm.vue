@@ -6,24 +6,64 @@ import { Button } from '@/components/ui/button'
 
 const authStore = useAuthStore()
 
-const email = ref('')
+const phone = ref('')
 const password = ref('')
 const remember = ref(false)
 const showPass = ref(false)
 const isLoading = ref(false)
 const error = ref('')
 
+interface LoginErrorPayload {
+  message?: string
+  errors?: {
+    phone?: string[]
+    password?: string[]
+  }
+}
+
+const extractLoginError = (e: unknown) => {
+  const payload = ((e as { data?: LoginErrorPayload })?.data || {}) as LoginErrorPayload
+
+  const phoneError = payload.errors?.phone?.[0]
+  if (phoneError) return phoneError
+
+  const passwordError = payload.errors?.password?.[0]
+  if (passwordError) return passwordError
+
+  if (payload.message) return payload.message
+
+  return 'بيانات الدخول غير صحيحة'
+}
+
 const handleLogin = async () => {
   isLoading.value = true
   error.value = ''
+
+  const phoneValue = phone.value
+
   try {
-    await authStore.login({
-      email: email.value,
-      password: password.value,
-    })
-    await navigateTo('/mainCards')
-  } catch (e: any) {
-    error.value = e?.data?.message ?? 'بيانات الدخول غير صحيحة'
+    await toast.promise(
+      authStore.login({
+        phone: phoneValue,
+        password: password.value,
+      }),
+      {
+        loading: 'جارٍ تسجيل الدخول...',
+        success: () => {
+          const name = authStore.user?.name ?? ''
+          navigateTo('/mainCards')
+          return name ? `مرحباً بعودتك، ${name}` : 'مرحباً بعودتك'
+        },
+        error: (e: unknown) => {
+          const message = extractLoginError(e)
+          error.value = message
+          return message
+        },
+      },
+    )
+
+  } catch {
+    // Error toast + inline message are already handled above.
   } finally {
     isLoading.value = false
   }
@@ -46,14 +86,13 @@ const handleLogin = async () => {
       <div class="login-form">
 
         <div class="form-group anim-fade-up" style="--delay: 0.5s">
-          <label class="form-label">البريد الإلكتروني</label>
+          <label class="form-label">رقم الهاتف</label>
           <div class="input-wrap">
             <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="2">
-              <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
-              <polyline points="22,6 12,13 2,6" />
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.8 12.8 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.8 12.8 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             </svg>
-            <input v-model="email" type="email" class="form-input" placeholder="أدخل البريد الإلكتروني"
+            <input v-model="phone" type="tel" inputmode="tel" class="form-input" placeholder="أدخل رقم الهاتف"
               @keyup.enter="handleLogin" />
           </div>
         </div>
@@ -161,8 +200,6 @@ const handleLogin = async () => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap');
-
 /* ── Login Panel ── */
 .login-panel {
   display: flex;
