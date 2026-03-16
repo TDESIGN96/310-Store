@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Search, Plus, Pencil, Copy, Trash2, Loader2, ShieldAlert } from 'lucide-vue-next'
+import { onMounted, ref, watch } from 'vue'
+import { Search, Plus, Pencil, Copy, Trash2, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -11,6 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
@@ -44,25 +53,22 @@ const search = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const pagination = ref<RolesPagination | null>(null)
+const currentPage = ref(1)
 
-const filteredRoles = computed(() => {
-  const query = search.value.trim().toLowerCase()
-  if (!query) return roles.value
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
-  return roles.value.filter(role =>
-    role.name_en.toLowerCase().includes(query) ||
-    role.name_ar.toLowerCase().includes(query),
-  )
-})
-
-const loadRoles = async () => {
+const loadRoles = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
   errorMessage.value = ''
 
   try {
-    const data = await $api<RolesResponse>('/roles')
+    const params: Record<string, string | number> = { page }
+    if (query) params.search = query
+
+    const data = await $api<RolesResponse>('/roles', { params })
     roles.value = data.data.roles ?? []
     pagination.value = data.data.pagination ?? null
+    currentPage.value = data.data.pagination?.current_page ?? page
   } catch (error: any) {
     errorMessage.value = error?.data?.message ?? 'تعذر تحميل قائمة الصلاحيات حالياً'
   } finally {
@@ -70,20 +76,84 @@ const loadRoles = async () => {
   }
 }
 
+const goToPage = (page: number) => {
+  if (page < 1 || (pagination.value && page > pagination.value.last_page)) return
+  loadRoles(page)
+}
+
+watch(search, (value) => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadRoles(1, value.trim())
+  }, 1000)
+})
+
 const goToCreateRole = async () => {
   await navigateTo('/roles/create')
 }
 
 const handleEdit = (role: RoleItem) => {
-  toast(`تعديل: ${role.name_ar}`)
+  navigateTo(`/roles/edit/${role.id}`)
 }
 
-const handleClone = (role: RoleItem) => {
-  toast(`نسخ: ${role.name_ar}`)
+const cloningId = ref<string | null>(null)
+
+const handleClone = async (role: RoleItem) => {
+  cloningId.value = String(role.id)
+
+  try {
+    const res = await $api<Record<string, any>>(`/roles/${role.id}/clone`, { method: 'POST' })
+
+    // Extract the new role ID from whatever response shape the backend returns
+    const newId =
+      res?.data?.role?.id ??
+      res?.data?.id ??
+      res?.role?.id ??
+      res?.id ??
+      null
+
+    toast.success(`تم نسخ "${role.name_ar}" بنجاح`)
+
+    if (newId) {
+      await navigateTo(`/roles/edit/${newId}`)
+    } else {
+      await loadRoles(currentPage.value)
+    }
+  } catch (error: any) {
+    const msg =
+      error?.data?.message?.ar ||
+      error?.data?.message ||
+      'تعذر نسخ الصلاحية حالياً'
+    toast.error(msg)
+  } finally {
+    cloningId.value = null
+  }
 }
 
-const handleDelete = (role: RoleItem) => {
-  toast.error(`حذف: ${role.name_ar}`)
+const deletingId = ref<string | null>(null)
+const roleToDelete = ref<RoleItem | null>(null)
+
+const confirmDelete = async () => {
+  if (!roleToDelete.value) return
+
+  const role = roleToDelete.value
+  deletingId.value = String(role.id)
+  roleToDelete.value = null
+
+  try {
+    await $api(`/roles/${role.id}`, { method: 'DELETE' })
+    toast.success(`تم حذف "${role.name_ar}" بنجاح`)
+    await loadRoles(currentPage.value)
+  } catch (error: any) {
+    const msg =
+      error?.data?.message?.ar ||
+      error?.data?.message ||
+      'تعذر حذف الصلاحية حالياً'
+    toast.error(msg)
+  } finally {
+    deletingId.value = null
+  }
 }
 
 onMounted(loadRoles)
@@ -109,6 +179,10 @@ onMounted(loadRoles)
           v-model="search"
           placeholder="ابحث باسم الصلاحية بالعربي أو الإنجليزي..."
           class="pr-9 w-80 h-9"
+        />
+        <Loader2
+          v-if="loading && search"
+          class="absolute top-1/2 -translate-y-1/2 left-3 size-3.5 animate-spin text-muted-foreground"
         />
       </div>
      
@@ -151,14 +225,14 @@ onMounted(loadRoles)
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="filteredRoles.length === 0">
+          <TableRow v-else-if="roles.length === 0">
             <TableCell :colspan="3" class="py-14 text-center text-sm text-muted-foreground">
-              لا توجد صلاحيات مطابقة للبحث
+              {{ search ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد صلاحيات' }}
             </TableCell>
           </TableRow>
 
           <TableRow
-            v-for="role in filteredRoles"
+            v-for="role in roles"
             v-else
             :key="role.id"
             class="hover:bg-muted/30 transition-colors"
@@ -171,12 +245,22 @@ onMounted(loadRoles)
                   <Pencil class="size-3.5" />
                   تعديل
                 </button>
-                <button class="inline-flex items-center gap-1 text-muted-foreground hover:underline" @click="handleClone(role)">
-                  <Copy class="size-3.5" />
+                <button
+                  class="inline-flex items-center gap-1 text-muted-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+                  :disabled="cloningId === String(role.id)"
+                  @click="handleClone(role)"
+                >
+                  <LoaderCircle v-if="cloningId === String(role.id)" class="size-3.5 animate-spin" />
+                  <Copy v-else class="size-3.5" />
                   نسخ
                 </button>
-                <button class="inline-flex items-center gap-1 text-red-500 hover:underline" @click="handleDelete(role)">
-                  <Trash2 class="size-3.5" />
+                <button
+                  class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+                  :disabled="deletingId === String(role.id)"
+                  @click="roleToDelete = role"
+                >
+                  <LoaderCircle v-if="deletingId === String(role.id)" class="size-3.5 animate-spin" />
+                  <Trash2 v-else class="size-3.5" />
                   حذف
                 </button>
               </div>
@@ -184,10 +268,83 @@ onMounted(loadRoles)
           </TableRow>
         </TableBody>
       </Table>
-      
+
+      <div v-if="pagination && pagination.last_page > 1" class="flex items-center justify-between gap-3 border-t px-4 py-3">
+        <p class="text-xs text-muted-foreground">
+          عرض {{ (currentPage - 1) * pagination.per_page + 1 }}–{{ Math.min(currentPage * pagination.per_page, pagination.total) }} من إجمالي {{ pagination.total }} صلاحية
+        </p>
+
+        <div class="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            class="size-8"
+            :disabled="currentPage <= 1 || loading"
+            @click="goToPage(currentPage - 1)"
+          >
+            <ChevronRight class="size-4" />
+          </Button>
+
+          <template v-for="page in pagination.last_page" :key="page">
+            <Button
+              v-if="page === 1 || page === pagination.last_page || Math.abs(page - currentPage) <= 1"
+              :variant="page === currentPage ? 'default' : 'outline'"
+              size="icon"
+              class="size-8 text-xs"
+              :disabled="loading"
+              @click="goToPage(page)"
+            >
+              {{ page }}
+            </Button>
+            <span
+              v-else-if="page === 2 && currentPage > 3"
+              class="px-1 text-muted-foreground text-sm"
+            >...</span>
+            <span
+              v-else-if="page === pagination.last_page - 1 && currentPage < pagination.last_page - 2"
+              class="px-1 text-muted-foreground text-sm"
+            >...</span>
+          </template>
+
+          <Button
+            variant="outline"
+            size="icon"
+            class="size-8"
+            :disabled="currentPage >= pagination.last_page || loading"
+            @click="goToPage(currentPage + 1)"
+          >
+            <ChevronLeft class="size-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div v-else-if="pagination" class="border-t px-4 py-3">
+        <p class="text-xs text-muted-foreground">إجمالي {{ pagination.total }} صلاحية</p>
+      </div>
     </div>
-    <p v-if="pagination" class="text-xs text-muted-foreground">
-        إجمالي {{ pagination.total }} صلاحية
-      </p>
   </div>
+
+  <AlertDialog :open="!!roleToDelete" @update:open="val => { if (!val) roleToDelete = null }">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+        <AlertDialogDescription>
+          هل أنت متأكد من حذف دور
+          <span class="font-semibold text-foreground">{{ roleToDelete?.name_ar }}</span>؟
+          لا يمكن التراجع عن هذا الإجراء.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <Button
+          class="bg-red-600 hover:bg-red-700 text-white"
+          :disabled="!!deletingId"
+          @click="confirmDelete"
+        >
+          <LoaderCircle v-if="deletingId" class="size-4 animate-spin" />
+          نعم، احذف
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>

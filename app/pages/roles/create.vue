@@ -22,7 +22,7 @@ interface ApiErrorPayload {
 }
 
 interface PermissionItem {
-  key: string
+  id: string
   label: string
 }
 
@@ -34,41 +34,41 @@ interface PermissionGroup {
 
 const permissionGroups: PermissionGroup[] = [
   {
-    id: 'dashboard',
-    label: 'لوحة التحكم',
-    permissions: [
-      { id: 1, label: 'عرض لوحة التحكم' },
-      { id: 2, label: 'تصدير التقارير' },
-    ],
-  },
-  {
     id: 'users',
     label: 'إدارة المستخدمين',
     permissions: [
-      { id: 3, label: 'عرض المستخدمين' },
-      { id: 4, label: 'إنشاء مستخدمين' },
-      { id: 5, label: 'تعديل المستخدمين' },
-      { id: 6, label: 'حذف المستخدمين' },
+      { id: 'users.view', label: 'عرض المستخدمين' },
+      { id: 'users.create', label: 'إنشاء مستخدمين' },
+      { id: 'users.edit', label: 'تعديل المستخدمين' },
+      { id: 'users.delete', label: 'حذف المستخدمين' },
     ],
   },
   {
-    id: 'roles_permissions',
-    label: 'الصلاحيات والأدوار',
+    id: 'roles',
+    label: 'الأدوار والصلاحيات',
     permissions: [
-      { id: 7, label: 'عرض الصلاحيات' },
-      { id: 8, label: 'إنشاء صلاحيات' },
-      { id: 9, label: 'تعديل الصلاحيات' },
-      { id: 10, label: 'حذف الصلاحيات' },
+      { id: 'roles.view', label: 'عرض الأدوار' },
+      { id: 'roles.create', label: 'إنشاء الأدوار' },
+      { id: 'roles.edit', label: 'تعديل الأدوار' },
+      { id: 'roles.delete', label: 'حذف الأدوار' },
+    ],
+  },
+  {
+    id: 'reports',
+    label: 'التقارير',
+    permissions: [
+      { id: 'reports.view', label: 'عرض التقارير' },
+      { id: 'reports.export', label: 'تصدير التقارير' },
     ],
   },
   {
     id: 'products',
     label: 'إدارة المنتجات',
     permissions: [
-      { id: 11, label: 'عرض المنتجات' },
-      { id: 12, label: 'إنشاء منتجات' },
-      { id: 13, label: 'تعديل المنتجات' },
-      { id: 14, label: 'حذف المنتجات' },
+      { id: 'products.view', label: 'عرض المنتجات' },
+      { id: 'products.create', label: 'إنشاء منتجات' },
+      { id: 'products.edit', label: 'تعديل المنتجات' },
+      { id: 'products.delete', label: 'حذف المنتجات' },
     ],
   },
 ]
@@ -77,23 +77,24 @@ const { $api } = useApi()
 
 const nameEn = ref('')
 const nameAr = ref('')
-const selectedPermissions = ref<number[]>([])
+const selectedPermissions = ref<string[]>([])
 const submitting = ref(false)
 const errorMessage = ref('')
+const fieldErrors = ref({ name_en: '', name_ar: '' })
 
-const setPermission = (permissionId: number, checked: boolean) => {
+const setPermission = (permissionKey: string, checked: boolean) => {
   if (checked) {
-    if (!selectedPermissions.value.includes(permissionId)) {
-      selectedPermissions.value = [...selectedPermissions.value, permissionId]
+    if (!selectedPermissions.value.includes(permissionKey)) {
+      selectedPermissions.value = [...selectedPermissions.value, permissionKey]
     }
     return
   }
 
-  selectedPermissions.value = selectedPermissions.value.filter(item => item !== permissionId)
+  selectedPermissions.value = selectedPermissions.value.filter(item => item !== permissionKey)
 }
 
-const isPermissionSelected = (permissionId: number) => {
-  return selectedPermissions.value.includes(permissionId)
+const isPermissionSelected = (permissionKey: string) => {
+  return selectedPermissions.value.includes(permissionKey)
 }
 
 const isGroupSelected = (group: PermissionGroup) => {
@@ -116,9 +117,9 @@ const onGroupChange = (group: PermissionGroup, event: Event) => {
   setGroup(group, checked)
 }
 
-const onPermissionChange = (permissionId: number, event: Event) => {
+const onPermissionChange = (permissionKey: string, event: Event) => {
   const checked = (event.target as HTMLInputElement | null)?.checked ?? false
-  setPermission(permissionId, checked)
+  setPermission(permissionKey, checked)
 }
 
 const permissionsError = computed(() => {
@@ -133,13 +134,14 @@ const extractErrorMessage = (error: unknown) => {
       ? payload.message
       : payload.message?.ar || payload.message?.en || ''
 
+  fieldErrors.value.name_en = payload.errors?.name_en?.[0] ?? ''
+  fieldErrors.value.name_ar = payload.errors?.name_ar?.[0] ?? ''
+
   const firstPermissionError = Object.entries(payload.errors || {}).find(([key]) =>
     key.startsWith('permissions'),
   )?.[1]?.[0]
 
   return (
-    payload.errors?.name_en?.[0] ||
-    payload.errors?.name_ar?.[0] ||
     firstPermissionError ||
     message ||
     'تعذر حفظ الصلاحية حالياً'
@@ -148,11 +150,21 @@ const extractErrorMessage = (error: unknown) => {
 
 const saveRole = async () => {
   errorMessage.value = ''
+  fieldErrors.value = { name_en: '', name_ar: '' }
 
-  if (!nameEn.value.trim() || !nameAr.value.trim()) {
-    errorMessage.value = 'يرجى إدخال اسم الصلاحية باللغتين'
-    return
+  if (!nameEn.value.trim()) {
+    fieldErrors.value.name_en = 'يرجى إدخال اسم الصلاحية بالإنجليزية'
+  } else if (nameEn.value.trim().length < 3) {
+    fieldErrors.value.name_en = 'يجب أن يكون الاسم 3 أحرف على الأقل'
   }
+
+  if (!nameAr.value.trim()) {
+    fieldErrors.value.name_ar = 'يرجى إدخال اسم الصلاحية بالعربية'
+  } else if (nameAr.value.trim().length < 3) {
+    fieldErrors.value.name_ar = 'يجب أن يكون الاسم 3 أحرف على الأقل'
+  }
+
+  if (fieldErrors.value.name_en || fieldErrors.value.name_ar) return
 
   if (!selectedPermissions.value.length) {
     errorMessage.value = permissionsError.value
@@ -162,29 +174,19 @@ const saveRole = async () => {
   submitting.value = true
 
   try {
-    await toast.promise(
-      $api<CreateRoleResponse>('/roles', {
-        method: 'POST',
-        body: {
-          name_en: nameEn.value.trim(),
-          name_ar: nameAr.value.trim(),
-          permissions: selectedPermissions.value,
-        },
-      }),
-      {
-        loading: 'جارٍ حفظ الصلاحية...',
-        success: 'تم إنشاء الصلاحية بنجاح',
-        error: (error: unknown) => {
-          const message = extractErrorMessage(error)
-          errorMessage.value = message
-          return message
-        },
+    await $api<CreateRoleResponse>('/roles', {
+      method: 'POST',
+      body: {
+        name_en: nameEn.value.trim(),
+        name_ar: nameAr.value.trim(),
+        permissions: selectedPermissions.value,
       },
-    )
+    })
 
+    toast.success('تم إنشاء الصلاحية بنجاح')
     await navigateTo('/roles')
-  } catch {
-    // Error toast + message handled above.
+  } catch (error: unknown) {
+    errorMessage.value = extractErrorMessage(error)
   } finally {
     submitting.value = false
   }
@@ -211,12 +213,24 @@ const saveRole = async () => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
           <label class="text-sm font-medium">اسم الصلاحية (EN) <span class="text-red-500">*</span></label>
-          <Input v-model="nameEn" placeholder="مثال: Editor" />
+          <Input
+            v-model="nameEn"
+            placeholder="مثال: Editor"
+            :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            @input="fieldErrors.name_en = ''"
+          />
+          <p v-if="fieldErrors.name_en" class="text-xs text-red-500">{{ fieldErrors.name_en }}</p>
         </div>
 
         <div class="space-y-2">
           <label class="text-sm font-medium">اسم الصلاحية (AR) <span class="text-red-500">*</span></label>
-          <Input v-model="nameAr" placeholder="مثال: محرر" />
+          <Input
+            v-model="nameAr"
+            placeholder="مثال: محرر"
+            :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            @input="fieldErrors.name_ar = ''"
+          />
+          <p v-if="fieldErrors.name_ar" class="text-xs text-red-500">{{ fieldErrors.name_ar }}</p>
         </div>
       </div>
       <p class="text-xs text-muted-foreground">
@@ -267,7 +281,13 @@ const saveRole = async () => {
       </div>
     </div>
 
-    <p v-if="errorMessage" class="text-sm text-red-500">{{ errorMessage }}</p>
+    <div
+      v-if="errorMessage"
+      class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+    >
+      <span class="mt-0.5 shrink-0">⚠</span>
+      <span>{{ errorMessage }}</span>
+    </div>
 
     <Separator />
 
