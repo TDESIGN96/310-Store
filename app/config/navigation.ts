@@ -6,6 +6,7 @@ import {
   UserCircle,
   Package,
   ShieldCheck,
+  Users,
   Warehouse,
   ArrowLeftRight,
   AlertTriangle,
@@ -41,6 +42,7 @@ export const navItems: NavGroup[] = [
     items: [
       { label: 'المنتجات', icon: Package, path: '/products', requiredPermission: 'view_products' },
       { label: 'الصلاحيات', icon: ShieldCheck, path: '/roles' },
+      { label: 'المستخدمون', icon: Users, path: '/users' },
       // { label: 'المستودعات', icon: Warehouse, path: '/inventory/warehouses' },
       // { label: 'التحويلات', icon: ArrowLeftRight, path: '/inventory/transfers' },
       // { label: 'التالف', icon: AlertTriangle, path: '/inventory/damaged' },
