@@ -21,6 +21,8 @@ import { toast } from 'vue-sonner'
 
 const authStore = useAuthStore()
 const nuxtApp = useNuxtApp()
+const STORAGE_PREFIX = 'app_notifications'
+const MAX_NOTIFICATIONS = 50
 
 // ── Types ──
 interface Notification {
@@ -28,7 +30,7 @@ interface Notification {
   type: 'low_stock' | 'approval' | 'shipment' | 'warning' | 'info'
   title: string
   message: string
-  time: string
+  createdAt?: string
   read: boolean
   link?: string
 }
@@ -40,6 +42,7 @@ interface EchoNotificationPayload {
   created_at?: string
   title?: string
   message?: string
+  link?: string
   data?: {
     title?: string
     message?: string
@@ -48,16 +51,8 @@ interface EchoNotificationPayload {
   }
 }
 
-interface DemoPost {
-  id: number
-  title: string
-  body: string
-}
-
 const notifications = ref<Notification[]>([])
 const activeChannelName = ref<string | null>(null)
-const isLoadingDemo = ref(false)
-const demoLoadError = ref<string | null>(null)
 
 const toRelativeArabicTime = (value?: string) => {
   if (!value) return 'الآن'
@@ -94,9 +89,9 @@ const normalizeNotification = (payload: EchoNotificationPayload): Notification =
     type: resolvedType,
     title: data.title || payload.title || 'إشعار جديد',
     message: data.message || payload.message || 'تم استلام إشعار جديد',
-    time: toRelativeArabicTime(payload.created_at),
+    createdAt: payload.created_at,
     read: Boolean(payload.read_at),
-    link: data.link,
+    link: data.link || payload.link,
   }
 }
 
@@ -133,49 +128,60 @@ const addNotification = (
   }
 }
 
-const demoTypes: Notification['type'][] = ['info', 'approval', 'shipment', 'warning', 'low_stock']
+const setEchoAuthorizationHeader = () => {
+  const echo = nuxtApp.$echo as any
+  if (!echo?.connector?.options) return
 
-const loadOnlineDemoNotifications = async () => {
-  if (isLoadingDemo.value) return
-
-  isLoadingDemo.value = true
-  demoLoadError.value = null
-
-  try {
-    const posts = await $fetch<DemoPost[]>('https://jsonplaceholder.typicode.com/posts', {
-      query: { _limit: 5 },
-    })
-
-    notifications.value = posts.map((post, index) => ({
-      id: `demo-${post.id}`,
-      type: demoTypes[index % demoTypes.length] || 'info',
-      title: post.title.slice(0, 42) || 'Demo notification',
-      message: post.body.slice(0, 90) || 'Demo message',
-      time: `منذ ${index + 1} دقيقة`,
-      read: false,
-      link: '/notifications',
-    }))
-  } catch {
-    demoLoadError.value = 'تعذر تحميل البيانات التجريبية حالياً'
-  } finally {
-    isLoadingDemo.value = false
+  const token = authStore.token
+  echo.connector.options.auth = {
+    ...(echo.connector.options.auth || {}),
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   }
 }
 
-const triggerDemoLiveNotification = () => {
-  addNotification(
-    {
-      id: `live-demo-${Date.now()}`,
-      type: 'info',
-      created_at: new Date().toISOString(),
-      data: {
-        title: 'اختبار إشعار مباشر',
-        message: 'هذا إشعار تجريبي لاختبار الـ toaster والتحديث الفوري',
-        type: 'info',
-        link: '/notifications',
-      },
-    },
-    { showToast: true },
+const sanitizePersistedNotification = (value: unknown): Notification | null => {
+  if (!value || typeof value !== 'object') return null
+
+  const candidate = value as Partial<Notification>
+  if (!candidate.id || !candidate.title || !candidate.message || !candidate.type) return null
+
+  return {
+    id: String(candidate.id),
+    type: candidate.type,
+    title: String(candidate.title),
+    message: String(candidate.message),
+    createdAt: candidate.createdAt,
+    read: Boolean(candidate.read),
+    link: candidate.link,
+  }
+}
+
+const getStorageKey = (userId: number) => `${STORAGE_PREFIX}:${userId}`
+
+const hydrateNotifications = (userId: number) => {
+  if (!import.meta.client) return
+
+  const raw = localStorage.getItem(getStorageKey(userId))
+  if (!raw) return
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return
+
+    notifications.value = parsed
+      .map(sanitizePersistedNotification)
+      .filter((item): item is Notification => item !== null)
+      .slice(0, MAX_NOTIFICATIONS)
+  } catch {
+    notifications.value = []
+  }
+}
+
+const persistNotifications = (userId: number) => {
+  if (!import.meta.client) return
+  localStorage.setItem(
+    getStorageKey(userId),
+    JSON.stringify(notifications.value.slice(0, MAX_NOTIFICATIONS)),
   )
 }
 
@@ -198,6 +204,8 @@ const unsubscribeFromUserChannel = () => {
 const subscribeToUserChannel = (userId: number) => {
   const echo = nuxtApp.$echo as any
   if (!echo) return
+
+  setEchoAuthorizationHeader()
 
   const channelName = `App.Models.User.${userId}`
   if (activeChannelName.value === channelName) return
@@ -227,15 +235,28 @@ watch(
   (userId) => {
     if (!import.meta.client) return
 
+    notifications.value = []
+
     if (!userId) {
       unsubscribeFromUserChannel()
-      notifications.value = []
       return
     }
 
+    hydrateNotifications(userId)
     subscribeToUserChannel(userId)
   },
   { immediate: true },
+)
+
+watch(
+  notifications,
+  () => {
+    if (!import.meta.client) return
+    const userId = authStore.user?.id
+    if (!userId) return
+    persistNotifications(userId)
+  },
+  { deep: true },
 )
 
 onBeforeUnmount(() => {
@@ -326,27 +347,6 @@ const remove = (id: string) => {
         >
           تحديد الكل كمقروء
         </Button>
-        <Button
-          v-else
-          variant="ghost"
-          size="sm"
-          class="text-xs text-muted-foreground h-7"
-          :disabled="isLoadingDemo"
-          @click="loadOnlineDemoNotifications"
-        >
-          {{ isLoadingDemo ? 'جارٍ التحميل...' : 'تحميل بيانات تجريبية' }}
-        </Button>
-      </div>
-
-      <div class="px-4 pb-2">
-        <Button
-          variant="outline"
-          size="sm"
-          class="w-full text-xs"
-          @click="triggerDemoLiveNotification"
-        >
-          اختبار إشعار مباشر + Toast
-        </Button>
       </div>
 
       <Separator />
@@ -361,18 +361,6 @@ const remove = (id: string) => {
         >
           <Bell class="size-8 opacity-20" />
           <span class="text-sm">لا توجد إشعارات</span>
-          <Button
-            variant="outline"
-            size="sm"
-            class="mt-2"
-            :disabled="isLoadingDemo"
-            @click="loadOnlineDemoNotifications"
-          >
-            {{ isLoadingDemo ? 'جارٍ التحميل...' : 'تحميل بيانات تجريبية أونلاين' }}
-          </Button>
-          <span v-if="demoLoadError" class="text-xs text-red-500">
-            {{ demoLoadError }}
-          </span>
         </div>
 
         <!-- List -->
@@ -413,7 +401,7 @@ const remove = (id: string) => {
                 {{ notification.message }}
               </p>
               <span class="text-[11px] text-muted-foreground/50 mt-1 block">
-                {{ notification.time }}
+                {{ toRelativeArabicTime(notification.createdAt) }}
               </span>
             </div>
 
@@ -430,22 +418,6 @@ const remove = (id: string) => {
           </div>
         </div>
       </ScrollArea>
-
-      <Separator />
-
-      <!-- Footer -->
-      <div class="p-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          class="w-full text-xs text-muted-foreground"
-          as-child
-        >
-          <NuxtLink to="/notifications">
-            عرض جميع الإشعارات
-          </NuxtLink>
-        </Button>
-      </div>
 
     </PopoverContent>
   </Popover>
