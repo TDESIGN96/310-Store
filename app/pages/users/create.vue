@@ -186,9 +186,7 @@ const createUser = async () => {
   } else if (!nameValid.value) {
     fieldErrors.value.name = getNameError()
   }
-  if (!email.value.trim()) {
-    fieldErrors.value.email = 'يرجى إدخال البريد الإلكتروني'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+  if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
     fieldErrors.value.email = 'البريد الإلكتروني غير صالح'
   }
   if (!password.value) {
@@ -213,7 +211,7 @@ const createUser = async () => {
       body: {
         name: name.value.trim(),
         phone: phone.value.trim() || undefined,
-        email: email.value.trim(),
+        email: email.value.trim() || undefined,
         is_active: isActive.value,
         password: password.value,
         password_confirmation: passwordConfirmation.value,
@@ -275,7 +273,7 @@ onMounted(loadRoles)
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium">البريد الإلكتروني <span class="text-red-500">*</span></label>
+          <label class="text-sm font-medium">البريد الإلكتروني</label>
           <Input
             v-model="email"
             type="email"
@@ -323,7 +321,7 @@ onMounted(loadRoles)
           </label>
         </div>
 
-        <div class="space-y-2 md:col-span-2">
+        <div class="space-y-2 md:col-span-1">
           <label class="text-sm font-medium">كلمة المرور <span class="text-red-500">*</span></label>
           <Input
             v-model="password"
@@ -347,7 +345,7 @@ onMounted(loadRoles)
           </ul>
         </div>
 
-        <div class="space-y-2 md:col-span-2">
+        <div class="space-y-2 md:col-span-1">
           <label class="text-sm font-medium">تأكيد كلمة المرور <span class="text-red-500">*</span></label>
           <Input
             v-model="passwordConfirmation"

@@ -39,38 +39,12 @@ const permissionGroups: PermissionGroup[] = [
     permissions: [
       { id: 'users.view', label: 'عرض المستخدمين' },
       { id: 'users.create', label: 'إنشاء مستخدمين' },
-      { id: 'users.edit', label: 'تعديل المستخدمين' },
-      { id: 'users.delete', label: 'حذف المستخدمين' },
+     
     ],
   },
-  {
-    id: 'roles',
-    label: 'الأدوار والصلاحيات',
-    permissions: [
-      { id: 'roles.view', label: 'عرض الأدوار' },
-      { id: 'roles.create', label: 'إنشاء الأدوار' },
-      { id: 'roles.edit', label: 'تعديل الأدوار' },
-      { id: 'roles.delete', label: 'حذف الأدوار' },
-    ],
-  },
-  {
-    id: 'reports',
-    label: 'التقارير',
-    permissions: [
-      { id: 'reports.view', label: 'عرض التقارير' },
-      { id: 'reports.export', label: 'تصدير التقارير' },
-    ],
-  },
-  {
-    id: 'products',
-    label: 'إدارة المنتجات',
-    permissions: [
-      { id: 'products.view', label: 'عرض المنتجات' },
-      { id: 'products.create', label: 'إنشاء منتجات' },
-      { id: 'products.edit', label: 'تعديل المنتجات' },
-      { id: 'products.delete', label: 'حذف المنتجات' },
-    ],
-  },
+ 
+  
+ 
 ]
 
 const { $api } = useApi()

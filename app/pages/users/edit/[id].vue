@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, ChevronDown, KeyRound, ShieldCheck } from 'lucide-vue-next'
+import { ArrowRight, Check, ChevronDown, KeyRound, Loader2, ShieldAlert, ShieldCheck } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -17,6 +17,37 @@ interface RoleItem {
 interface RolesResponse {
   data?: { roles?: RoleItem[] }
   roles?: RoleItem[]
+}
+
+interface UserRole {
+  id: number
+  name: string
+  name_en: string
+  name_ar: string
+}
+
+interface UserData {
+  id: number
+  name: string
+  email: string
+  email_verified_at: string | null
+  created_at: string
+  updated_at: string
+  roles: UserRole[]
+  is_active: boolean
+  is_admin: boolean
+  phone: string
+  permissions: string[]
+}
+
+interface UserResponse {
+  user?: UserData
+  data?: UserData | { user?: UserData }
+}
+
+interface ApiErrorPayload {
+  message?: string | { en?: string; ar?: string }
+  errors?: Record<string, string[] | undefined>
 }
 
 const route = useRoute()
@@ -37,8 +68,10 @@ const isSuperAdmin = computed(() => {
 const username = ref('')
 const phone = ref('')
 const email = ref('')
+const isActive = ref(true)
 const selectedRoleIds = ref<number[]>([])
 const showResetPassword = ref(false)
+const loadingUser = ref(false)
 const newPassword = ref('')
 const newPasswordConfirmation = ref('')
 
@@ -68,12 +101,28 @@ const loadRoles = async () => {
   }
 }
 
-// Mock load user data (no endpoint - use placeholder)
-const loadUser = () => {
-  username.value = 'مستخدم تجريبي'
-  phone.value = '07501234567'
-  email.value = 'user@example.com'
-  selectedRoleIds.value = []
+const loadUser = async () => {
+  loadingUser.value = true
+  errorMessage.value = ''
+  try {
+    const data = await $api<UserResponse>(`/users/${userId}`)
+    const raw = data.data
+    const userData = (data.user ?? (raw && 'user' in raw ? raw.user : raw) ?? null) as UserData | null
+    if (userData) {
+      username.value = userData.name
+      phone.value = userData.phone || ''
+      email.value = userData.email
+      isActive.value = userData.is_active
+      selectedRoleIds.value = userData.roles?.map(r => r.id) ?? []
+    } else {
+      errorMessage.value = 'لم يتم العثور على المستخدم'
+    }
+  } catch (err: unknown) {
+    const payload = (err as { data?: ApiErrorPayload })?.data
+    errorMessage.value = typeof payload?.message === 'string' ? payload.message : payload?.message?.ar ?? 'تعذر تحميل بيانات المستخدم'
+  } finally {
+    loadingUser.value = false
+  }
 }
 
 const toggleRole = (role: RoleItem, checked: boolean) => {
@@ -90,6 +139,24 @@ const toggleRole = (role: RoleItem, checked: boolean) => {
 const isRoleSelected = (role: RoleItem) => {
   const id = typeof role.id === 'string' ? parseInt(role.id, 10) : role.id
   return selectedRoleIds.value.includes(id)
+}
+
+const extractErrorMessage = (error: unknown) => {
+  const payload = ((error as { data?: ApiErrorPayload })?.data || {}) as ApiErrorPayload
+  const message =
+    typeof payload.message === 'string'
+      ? payload.message
+      : payload.message?.ar || payload.message?.en || ''
+  const errors = payload.errors ?? {}
+  fieldErrors.value = {
+    username: errors.name?.[0] ?? '',
+    phone: errors.phone?.[0] ?? '',
+    email: errors.email?.[0] ?? '',
+    role_ids: errors.role_ids?.[0] ?? '',
+    password: errors.password?.[0] ?? '',
+    password_confirmation: errors.password_confirmation?.[0] ?? errors['password_confirmation']?.[0] ?? '',
+  }
+  return message || 'تعذر تحديث المستخدم حالياً'
 }
 
 const selectedRolesLabel = computed(() => {
@@ -156,9 +223,7 @@ const updateUser = async () => {
     const failed = nameRules.find(r => !r.test(username.value))
     fieldErrors.value.username = failed?.label ?? ''
   }
-  if (!email.value.trim()) {
-    fieldErrors.value.email = 'يرجى إدخال البريد الإلكتروني'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+  if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
     fieldErrors.value.email = 'البريد الإلكتروني غير صالح'
   }
   if (phone.value.trim() && !phoneValid.value) {
@@ -181,13 +246,28 @@ const updateUser = async () => {
 
   submitting.value = true
   try {
-    // No endpoint - mock success
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const body: Record<string, unknown> = {
+      name: username.value.trim(),
+      phone: phone.value.trim() || undefined,
+      email: email.value.trim() || undefined,
+      is_active: isActive.value,
+      role_ids: selectedRoleIds.value,
+    }
+    if (showResetPassword.value) {
+      body.password = newPassword.value
+      body.password_confirmation = newPasswordConfirmation.value
+    }
+
+    await $api(`/users/${userId}`, {
+      method: 'PUT',
+      body,
+    })
+
     toast.success('تم تحديث المستخدم بنجاح')
     cancelResetPassword()
     await navigateTo('/users')
-  } catch {
-    errorMessage.value = 'تعذر تحديث المستخدم حالياً'
+  } catch (error: unknown) {
+    errorMessage.value = extractErrorMessage(error)
   } finally {
     submitting.value = false
   }
@@ -215,6 +295,26 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- Loading state -->
+    <div
+      v-if="loadingUser"
+      class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
+    >
+      <Loader2 class="size-5 animate-spin" />
+      جاري تحميل البيانات...
+    </div>
+
+    <!-- Error state (user not found) -->
+    <div
+      v-else-if="errorMessage && !username && !email"
+      class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+    >
+      <ShieldAlert class="size-8" />
+      <span>{{ errorMessage }}</span>
+      <Button variant="outline" size="sm" @click="loadUser">إعادة المحاولة</Button>
+    </div>
+
+    <template v-else>
     <div class="rounded-lg border p-5 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
@@ -241,7 +341,7 @@ onMounted(() => {
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium">البريد الإلكتروني <span class="text-red-500">*</span></label>
+          <label class="text-sm font-medium">البريد الإلكتروني</label>
           <Input
             v-model="email"
             type="email"
@@ -276,6 +376,17 @@ onMounted(() => {
           <p class="text-xs text-muted-foreground">
             رقم عراقي فريد — لا يُسمح بتكرار الأرقام
           </p>
+        </div>
+
+        <div class="space-y-2 flex flex-col justify-end">
+          <label class="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
+            <input
+              v-model="isActive"
+              type="checkbox"
+              class="size-4 cursor-pointer rounded border border-input accent-primary"
+            >
+            الحساب نشط
+          </label>
         </div>
       </div>
     </div>
@@ -323,15 +434,28 @@ onMounted(() => {
               v-for="role in roles"
               :key="role.id"
               type="button"
-              class="flex items-center w-full px-4 py-2.5 text-right text-sm select-none cursor-pointer transition-colors hover:bg-muted/50 rounded-sm shrink-0"
+              class="flex items-center w-full gap-2 px-4 py-2.5 text-right text-sm select-none cursor-pointer transition-colors hover:bg-muted/50 rounded-sm shrink-0"
               :class="isRoleSelected(role) ? 'bg-primary/15 text-primary font-medium' : ''"
               @click="toggleRole(role, !isRoleSelected(role))"
             >
+              <span class="inline-flex size-4 shrink-0 items-center justify-center">
+                <Check v-if="isRoleSelected(role)" class="size-3.5 text-primary" />
+              </span>
               {{ role.name_ar || role.name_en }}
             </button>
           </div>
         </PopoverContent>
       </Popover>
+      <div v-if="selectedRoleIds.length" class="mt-2 flex flex-wrap gap-1.5">
+        <span
+          v-for="role in roles.filter(r => selectedRoleIds.includes(typeof r.id === 'string' ? parseInt(r.id, 10) : r.id))"
+          :key="role.id"
+          class="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+        >
+          <Check class="size-3" />
+          {{ role.name_ar || role.name_en }}
+        </span>
+      </div>
     </div>
 
     <!-- Password field: always masked, not editable -->
@@ -428,5 +552,6 @@ onMounted(() => {
         {{ submitting ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
       </Button>
     </div>
+    </template>
   </div>
 </template>

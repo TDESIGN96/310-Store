@@ -152,9 +152,12 @@ const formatDate = (dateStr: string | null) => {
   }
 }
 
-const rolesDisplay = (roles: UserRole[]) => {
+const rolesDisplay = (roles: UserRole[], maxWords = 8) => {
   if (!roles?.length) return '—'
-  return roles.map(r => r.name_ar || r.name_en || r.name).join('، ')
+  const full = roles.map(r => r.name_ar || r.name_en || r.name).join('، ')
+  const words = full.split(/[\s،]+/).filter(Boolean)
+  if (words.length <= maxWords) return full
+  return words.slice(0, maxWords).join(' ') + '...'
 }
 
 onMounted(loadUsers)

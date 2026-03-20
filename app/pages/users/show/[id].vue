@@ -28,9 +28,7 @@ interface UserData {
 
 interface UserResponse {
   user?: UserData
-  data?: {
-    user?: UserData
-  }
+  data?: UserData | { user?: UserData }
 }
 
 const route = useRoute()
@@ -47,7 +45,8 @@ const loadUser = async () => {
 
   try {
     const data = await $api<UserResponse>(`/users/${userId}`)
-    const userData = data.user ?? data.data?.user ?? null
+    const raw = data.data
+    const userData = (data.user ?? (raw && 'user' in raw ? raw.user : raw) ?? null) as UserData | null
     user.value = userData
     if (!userData) {
       errorMessage.value = 'لم يتم العثور على المستخدم'
