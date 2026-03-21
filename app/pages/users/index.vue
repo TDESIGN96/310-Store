@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle, Eye } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle, Filter, UserX, UserCheck } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -61,7 +68,19 @@ interface UsersResponse {
   }
 }
 
+interface RoleFilterItem {
+  id: number | string
+  name_en: string
+  name_ar: string
+}
+
+interface RolesListResponse {
+  roles?: RoleFilterItem[]
+  data?: { roles?: RoleFilterItem[] }
+}
+
 const { $api } = useApi()
+const authStore = useAuthStore()
 
 const users = ref<UserItem[]>([])
 const search = ref('')
@@ -70,7 +89,25 @@ const errorMessage = ref('')
 const pagination = ref<UsersPagination | null>(null)
 const currentPage = ref(1)
 
+/** API query params: align with backend (e.g. role_id, is_active 0|1) */
+const filterRoleId = ref<string>('all')
+const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
+const rolesForFilter = ref<RoleFilterItem[]>([])
+const loadingRolesFilter = ref(false)
+
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const loadRolesForFilter = async () => {
+  loadingRolesFilter.value = true
+  try {
+    const data = await $api<RolesListResponse>('/roles', { params: { per_page: 100 } })
+    rolesForFilter.value = data.roles ?? data.data?.roles ?? []
+  } catch {
+    rolesForFilter.value = []
+  } finally {
+    loadingRolesFilter.value = false
+  }
+}
 
 const loadUsers = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
@@ -79,6 +116,16 @@ const loadUsers = async (page = currentPage.value, query = search.value.trim()) 
   try {
     const params: Record<string, string | number> = { page }
     if (query) params.search = query
+    const role = filterRoleId.value
+    if (role && role !== 'all') {
+      const id = Number(role)
+      if (!Number.isNaN(id)) params.role_id = id
+    }
+    if (filterStatus.value === 'active') {
+      params.is_active = 1
+    } else if (filterStatus.value === 'inactive') {
+      params.is_active = 0
+    }
 
     const data = await $api<UsersResponse>('/users', { params })
 
@@ -101,6 +148,11 @@ const goToPage = (page: number) => {
   loadUsers(page)
 }
 
+const resetPageAndFetchUsers = () => {
+  currentPage.value = 1
+  loadUsers(1, search.value.trim())
+}
+
 watch(search, (value) => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
@@ -109,12 +161,114 @@ watch(search, (value) => {
   }, 1000)
 })
 
+function onRoleFilterChange(value: unknown) {
+  filterRoleId.value = value != null && value !== '' ? String(value) : 'all'
+  resetPageAndFetchUsers()
+}
+
+function onStatusFilterChange(value: unknown) {
+  const v = String(value ?? 'all')
+  filterStatus.value =
+    v === 'active' || v === 'inactive' ? v : 'all'
+  resetPageAndFetchUsers()
+}
+
+const hasActiveFilters = computed(
+  () => filterRoleId.value !== 'all' || filterStatus.value !== 'all',
+)
+
 const handleEdit = (user: UserItem) => {
   navigateTo(`/users/edit/${user.id}`)
 }
 
-const handleShow = (user: UserItem) => {
-  navigateTo(`/users/show/${user.id}`)
+const isSelf = (user: UserItem) => Number(authStore.user?.id) === Number(user.id)
+
+/** Logged-in user is treated as admin (session). */
+const isLoggedInAdminSession = computed(() => {
+  const me = authStore.user as { is_admin?: boolean; role?: string } | null
+  if (!me) return false
+  if (me.is_admin === true) return true
+  const r = String(me.role || '').toLowerCase()
+  return r.includes('admin') || r === 'super_admin'
+})
+
+/**
+ * Only the admin user's own account cannot be activated/deactivated.
+ * Protected when this row is yours and (session is admin OR list marks you as admin).
+ */
+const cannotToggleUserActivation = (user: UserItem) =>
+  isSelf(user) &&
+  (isLoggedInAdminSession.value || user.is_admin === true)
+
+function buildUserStatusBody(user: UserItem, is_active: boolean) {
+  const email = user.email?.trim() ?? ''
+  return {
+    name: user.name.trim(),
+    phone: user.phone?.trim() || undefined,
+    email: email || undefined,
+    is_active,
+    role_ids: user.roles?.map(r => r.id) ?? [],
+  }
+}
+
+const userToDeactivate = ref<UserItem | null>(null)
+const togglingActiveId = ref<number | null>(null)
+
+const openDeactivateConfirm = (user: UserItem) => {
+  if (cannotToggleUserActivation(user)) {
+    toast.error('لا يمكن إيقاف أو تفعيل حساب المدير')
+    return
+  }
+  userToDeactivate.value = user
+}
+
+const confirmDeactivate = async () => {
+  const user = userToDeactivate.value
+  if (!user) return
+
+  togglingActiveId.value = user.id
+  userToDeactivate.value = null
+
+  try {
+    await $api(`/users/${user.id}`, {
+      method: 'PUT',
+      body: buildUserStatusBody(user, false),
+    })
+    toast.success('تم إيقاف حساب المستخدم بنجاح')
+    await loadUsers(currentPage.value)
+  } catch (error: any) {
+    const msg =
+      error?.data?.message?.ar ||
+      error?.data?.message ||
+      'تعذر إيقاف الحساب حالياً'
+    toast.error(msg)
+  } finally {
+    togglingActiveId.value = null
+  }
+}
+
+const reactivateUser = async (user: UserItem) => {
+  if (cannotToggleUserActivation(user)) {
+    toast.error('لا يمكن إيقاف أو تفعيل حساب المدير')
+    return
+  }
+  togglingActiveId.value = user.id
+  try {
+    await $api(`/users/${user.id}`, {
+      method: 'PUT',
+      body: buildUserStatusBody(user, true),
+    })
+    toast.success('تم تفعيل حساب المستخدم بنجاح')
+    await loadUsers(currentPage.value)
+  } catch (error: any) {
+    const msg =
+      error?.data?.message?.ar ||
+      error?.data?.message ||
+      'تعذر تفعيل الحساب حالياً'
+    toast.error(msg)
+  } finally {
+    togglingActiveId.value = null
+  }
 }
 
 const deletingId = ref<number | null>(null)
@@ -160,7 +314,10 @@ const rolesDisplay = (roles: UserRole[], maxWords = 8) => {
   return words.slice(0, maxWords).join(' ') + '...'
 }
 
-onMounted(loadUsers)
+onMounted(() => {
+  loadRolesForFilter()
+  loadUsers()
+})
 </script>
 
 <template>
@@ -175,17 +332,47 @@ onMounted(loadUsers)
     </div>
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div class="relative">
-        <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
-        <Input
-          v-model="search"
-          placeholder="ابحث بالاسم أو البريد الإلكتروني..."
-          class="pr-9 w-80 h-9"
-        />
-        <Loader2
-          v-if="loading && search"
-          class="absolute top-1/2 -translate-y-1/2 left-3 size-3.5 animate-spin text-muted-foreground"
-        />
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="relative">
+          <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
+          <Input
+            v-model="search"
+            placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+            class="pr-9 w-80 h-9"
+          />
+          <Loader2
+            v-if="loading && search"
+            class="absolute top-1/2 -translate-y-1/2 left-3 size-3.5 animate-spin text-muted-foreground"
+          />
+        </div>
+
+        <Select :model-value="filterRoleId" @update:model-value="onRoleFilterChange">
+          <SelectTrigger class="w-[min(100%,14rem)] h-9 gap-2" :disabled="loadingRolesFilter">
+            <Filter class="size-3.5 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="الدور" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">كل الأدوار</SelectItem>
+            <SelectItem
+              v-for="role in rolesForFilter"
+              :key="role.id"
+              :value="String(role.id)"
+            >
+              {{ role.name_ar || role.name_en }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
+          <SelectTrigger class="w-[min(100%,11rem)] h-9">
+            <SelectValue placeholder="الحالة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">كل الحالات</SelectItem>
+            <SelectItem value="active">نشط</SelectItem>
+            <SelectItem value="inactive">غير نشط</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
         <NuxtLink to="/users/create">
@@ -204,7 +391,6 @@ onMounted(loadUsers)
             <TableHead class="text-right font-medium">الهاتف</TableHead>
             <TableHead class="text-right font-medium">الأدوار</TableHead>
             <TableHead class="text-right font-medium">نشط</TableHead>
-            <TableHead class="text-right font-medium">مدير</TableHead>
             <TableHead class="text-right font-medium">تاريخ الإنشاء</TableHead>
             <TableHead class="text-right font-medium">الإجراءات</TableHead>
           </TableRow>
@@ -212,7 +398,7 @@ onMounted(loadUsers)
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="8" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 جاري تحميل المستخدمين...
@@ -221,7 +407,7 @@ onMounted(loadUsers)
           </TableRow>
 
           <TableRow v-else-if="errorMessage">
-            <TableCell :colspan="8" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
@@ -231,8 +417,12 @@ onMounted(loadUsers)
           </TableRow>
 
           <TableRow v-else-if="users.length === 0">
-            <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
-              {{ search ? 'لا توجد نتائج مطابقة للبحث' : 'لا يوجد مستخدمون' }}
+            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
+              {{
+                search || hasActiveFilters
+                  ? 'لا توجد نتائج مطابقة للبحث أو الفلاتر'
+                  : 'لا يوجد مستخدمون'
+              }}
             </TableCell>
           </TableRow>
 
@@ -242,7 +432,14 @@ onMounted(loadUsers)
             :key="user.id"
             class="hover:bg-muted/30 transition-colors"
           >
-            <TableCell class="font-medium">{{ user.name }}</TableCell>
+            <TableCell class="font-medium">
+              <NuxtLink
+                :to="`/users/show/${user.id}`"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              >
+                {{ user.name }}
+              </NuxtLink>
+            </TableCell>
             <TableCell>{{ user.email }}</TableCell>
             <TableCell>{{ user.phone || '—' }}</TableCell>
             <TableCell class="text-sm">{{ rolesDisplay(user.roles) }}</TableCell>
@@ -254,23 +451,30 @@ onMounted(loadUsers)
                 {{ user.is_active ? 'نعم' : 'لا' }}
               </span>
             </TableCell>
-            <TableCell>
-              <span
-                :class="user.is_admin ? 'text-amber-600' : 'text-muted-foreground'"
-                class="text-sm"
-              >
-                {{ user.is_admin ? 'نعم' : 'لا' }}
-              </span>
-            </TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ formatDate(user.created_at) }}</TableCell>
             <TableCell>
-              <div class="flex items-center gap-3 text-sm">
+              <div class="flex flex-wrap items-center gap-3 text-sm">
                 <button
-                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
-                  @click="handleShow(user)"
+                  v-if="user.is_active && !cannotToggleUserActivation(user)"
+                  type="button"
+                  class="inline-flex items-center gap-1 text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+                  :disabled="togglingActiveId === user.id || deletingId === user.id"
+                  @click="openDeactivateConfirm(user)"
                 >
-                  <Eye class="size-3.5" />
-                  عرض
+                  <LoaderCircle v-if="togglingActiveId === user.id" class="size-3.5 animate-spin" />
+                  <UserX v-else class="size-3.5" />
+                  إيقاف
+                </button>
+                <button
+                  v-else-if="!user.is_active && !cannotToggleUserActivation(user)"
+                  type="button"
+                  class="inline-flex items-center gap-1 text-green-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+                  :disabled="togglingActiveId === user.id || deletingId === user.id"
+                  @click="reactivateUser(user)"
+                >
+                  <LoaderCircle v-if="togglingActiveId === user.id" class="size-3.5 animate-spin" />
+                  <UserCheck v-else class="size-3.5" />
+                  تفعيل
                 </button>
                 <button
                   class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
@@ -368,6 +572,34 @@ onMounted(loadUsers)
         >
           <LoaderCircle v-if="deletingId" class="size-4 animate-spin" />
           نعم، احذف
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog :open="!!userToDeactivate" @update:open="val => { if (!val) userToDeactivate = null }">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>تأكيد إيقاف الحساب</AlertDialogTitle>
+        <AlertDialogDescription class="space-y-2">
+          <p>
+            هل أنت متأكد من إيقاف حساب المستخدم
+            <span class="font-semibold text-foreground">{{ userToDeactivate?.name }}</span>؟
+          </p>
+          <p>
+            بعد التأكيد لن يتمكن من تسجيل الدخول إلى النظام. يمكنك تفعيل الحساب لاحقاً من نفس القائمة.
+          </p>
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <Button
+          class="bg-amber-600 hover:bg-amber-700 text-white"
+          :disabled="!!togglingActiveId"
+          @click="confirmDeactivate"
+        >
+          <LoaderCircle v-if="togglingActiveId" class="size-4 animate-spin" />
+          نعم، أوقف الحساب
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
