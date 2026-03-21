@@ -99,6 +99,7 @@ const showToastForNotification = (notification: Notification) => {
   if (!import.meta.client) return
 
   toast(notification.title, {
+    position: 'top-left',
     description: notification.message,
     action: notification.link
       ? {
