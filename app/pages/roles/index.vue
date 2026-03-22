@@ -201,9 +201,9 @@ onMounted(loadRoles)
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="text-right font-medium">{{ t('roles_page.col_name_en') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('roles_page.col_name_ar') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('common.actions') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('roles_page.col_name_en') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('roles_page.col_name_ar') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 

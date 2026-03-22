@@ -590,7 +590,7 @@ onMounted(() => loadUnits())
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40 ">
             <!-- Bulk Checkbox -->
-            <TableHead class="w-10 text-right ">
+            <TableHead class="w-10 rtl:text-right ">
               <Checkbox
                 :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
                 class="mt-0.5 mx-4"
@@ -600,7 +600,7 @@ onMounted(() => loadUnits())
 
             <!-- Sortable Columns -->
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('name_ar')"
             >
               <div class="flex items-center gap-1.5">
@@ -612,7 +612,7 @@ onMounted(() => loadUnits())
             </TableHead>
 
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('name_en')"
             >
               <div class="flex items-center gap-1.5">
@@ -624,7 +624,7 @@ onMounted(() => loadUnits())
             </TableHead>
 
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('symbol')"
             >
               <div class="flex items-center gap-1.5">
@@ -636,7 +636,7 @@ onMounted(() => loadUnits())
             </TableHead>
 
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('status')"
             >
               <div class="flex items-center gap-1.5">
@@ -647,11 +647,11 @@ onMounted(() => loadUnits())
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">{{ t('common.added_by') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
 
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('created_at')"
             >
               <div class="flex items-center gap-1.5">
@@ -662,8 +662,8 @@ onMounted(() => loadUnits())
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">{{ t('common.updated_at') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('units_page.col_actions') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.updated_at') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('units_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 

@@ -677,7 +677,7 @@ onMounted(() => {
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <!-- Bulk Checkbox -->
-            <TableHead class="w-10 text-right">
+            <TableHead class="w-10 rtl:text-right">
               <Checkbox
                 :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
                 class="mt-0.5 mx-4"
@@ -687,7 +687,7 @@ onMounted(() => {
 
             <!-- Sortable: Arabic Name -->
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('name_ar')"
             >
               <div class="flex items-center gap-1.5">
@@ -700,10 +700,10 @@ onMounted(() => {
 
             <!-- Sortable: English Name -->
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('name_en')"
             >
-              <div class="flex items-center gap-1.5">
+              <div class="flex  gap-1.5">
                 {{ t('categories_page.col_name_en') }}
                 <ArrowUp v-if="sortBy === 'name_en' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'name_en' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
@@ -711,12 +711,12 @@ onMounted(() => {
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">{{ t('categories_page.col_parent') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('categories_page.col_description') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('categories_page.col_parent') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('categories_page.col_description') }}</TableHead>
 
             <!-- Sortable: Status -->
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('status')"
             >
               <div class="flex items-center gap-1.5">
@@ -727,8 +727,8 @@ onMounted(() => {
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">{{ t('common.added_by') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
 
             <!-- Sortable: Created At -->
             <TableHead
@@ -743,8 +743,8 @@ onMounted(() => {
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">{{ t('common.updated_at') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('common.actions') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.updated_at') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 

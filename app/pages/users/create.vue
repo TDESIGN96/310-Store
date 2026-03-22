@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowRight, ChevronDown, ShieldCheck } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'vue-sonner'
+import { permissionIdSet } from '@/config/permissions'
+import { normalizeLoadedPermissions, type RolePermissionModule } from '@/utils/rolePermissions'
 
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
+const { actionLabel } = usePermissionI18n()
 const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
 interface RoleItem {
@@ -36,6 +39,8 @@ const selectedRoleIds = ref<number[]>([])
 
 const roles = ref<RoleItem[]>([])
 const loadingRoles = ref(false)
+const effectivePermissions = ref<string[]>([])
+const loadingEffectivePermissions = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const fieldErrors = ref<Record<string, string>>({
@@ -59,6 +64,46 @@ const loadRoles = async () => {
     loadingRoles.value = false
   }
 }
+
+interface RoleDetailResponse {
+  data?: { permissions?: Array<string | RolePermissionModule> }
+}
+
+let effectivePermDebounce: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => [...selectedRoleIds.value],
+  (ids) => {
+    if (effectivePermDebounce) clearTimeout(effectivePermDebounce)
+    effectivePermDebounce = setTimeout(async () => {
+      if (!ids.length) {
+        effectivePermissions.value = []
+        loadingEffectivePermissions.value = false
+        return
+      }
+      loadingEffectivePermissions.value = true
+      try {
+        const results = await Promise.all(
+          ids.map(id =>
+            $api<RoleDetailResponse>(`/roles/${id}`).catch(() => null),
+          ),
+        )
+        const merged = new Set<string>()
+        for (const res of results) {
+          const raw = res?.data?.permissions
+          if (!Array.isArray(raw)) continue
+          normalizeLoadedPermissions(raw)
+            .filter(p => permissionIdSet.has(p))
+            .forEach(p => merged.add(p))
+        }
+        effectivePermissions.value = [...merged].sort((a, b) => a.localeCompare(b))
+      } finally {
+        loadingEffectivePermissions.value = false
+      }
+    }, 300)
+  },
+  { deep: true },
+)
 
 const toggleRole = (role: RoleItem, checked: boolean) => {
   const id = typeof role.id === 'string' ? parseInt(role.id, 10) : role.id
@@ -166,7 +211,9 @@ const createUser = async () => {
   } else if (!nameValid.value) {
     fieldErrors.value.name = getNameError()
   }
-  if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+  if (!email.value.trim()) {
+    fieldErrors.value.email = t('users_form.validation_email_required')
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
     fieldErrors.value.email = t('users_form.validation_email')
   }
   if (!password.value) {
@@ -194,7 +241,7 @@ const createUser = async () => {
       body: {
         name: name.value.trim(),
         phone: phone.value.trim() || undefined,
-        email: email.value.trim() || undefined,
+        email: email.value.trim(),
         is_active: isActive.value,
         password: password.value,
         password_confirmation: passwordConfirmation.value,
@@ -268,7 +315,7 @@ onMounted(loadRoles)
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium">{{ t('users_form.label_email') }}</label>
+          <label class="text-sm font-medium">{{ t('users_form.email') }} <span class="text-red-500">*</span></label>
           <Input
             v-model="email"
             type="email"
@@ -409,6 +456,37 @@ onMounted(loadRoles)
         </PopoverContent>
       </Popover>
       <p v-if="fieldErrors.role_ids" class="text-xs text-red-500">{{ fieldErrors.role_ids }}</p>
+    </div>
+
+    <!-- Effective permissions from selected roles (read-only; visible to everyone on this page) -->
+    <div class="rounded-lg border overflow-hidden">
+      <div class="bg-muted/40 px-4 py-3 border-b">
+        <h2 class="font-semibold flex items-center gap-2">
+          <ShieldCheck class="size-4" />
+          {{ t('users_form.effective_permissions_title') }}
+        </h2>
+        <p class="text-xs text-muted-foreground mt-1">{{ t('users_form.effective_permissions_hint') }}</p>
+      </div>
+      <div class="p-4">
+        <p v-if="!selectedRoleIds.length" class="text-sm text-muted-foreground">
+          {{ t('users_form.effective_permissions_select_roles') }}
+        </p>
+        <template v-else>
+          <div v-if="loadingEffectivePermissions" class="text-sm text-muted-foreground">
+            {{ t('users_form.effective_permissions_loading') }}
+          </div>
+          <div v-else-if="effectivePermissions.length" class="flex flex-wrap gap-2">
+            <span
+              v-for="perm in effectivePermissions"
+              :key="perm"
+              class="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
+            >
+              {{ actionLabel(perm) }}
+            </span>
+          </div>
+          <p v-else class="text-sm text-muted-foreground">{{ t('users_form.effective_permissions_empty') }}</p>
+        </template>
+      </div>
     </div>
 
     <div

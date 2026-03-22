@@ -394,14 +394,14 @@ onMounted(() => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="text-right font-medium">{{ t('users_page.col_name') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('users_page.col_email') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('users_page.col_phone') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('users_page.col_roles') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('users_page.col_active') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('users_page.col_added_by') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('users_page.col_created') }}</TableHead>
-            <TableHead class="text-right font-medium">{{ t('common.actions') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_name') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_email') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_phone') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_roles') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_active') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_added_by') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_created') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 

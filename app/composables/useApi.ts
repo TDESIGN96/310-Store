@@ -3,6 +3,8 @@ import { useAuthStore } from '@/stores/auth'
 export const useApi = () => {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
+  // Must run at setup time — not inside onResponseError (useI18n rules)
+  const { getErrorMessage } = useApiError()
 
   const $api = $fetch.create({
     baseURL: config.public.apiBase,
@@ -19,17 +21,16 @@ export const useApi = () => {
     },
 
     onResponseError({ response }) {
-      const { getErrorMessage } = useApiError()
-
       if (response.status === 401) {
         authStore.logout()
         navigateTo('/')
         return
       }
 
-      // 422 → field validation — handled per form with getFieldErrors()
+      // 422 → handled per form with getFieldErrors() + field UI
       if (response.status === 422) return
 
+      // Backend `message` (e.g. Arabic) — getErrorMessage reads `response._data`
       import('vue-sonner').then(({ toast }) => {
         toast.error(getErrorMessage({ response }))
       })

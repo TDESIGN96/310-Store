@@ -6,17 +6,13 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'vue-sonner'
 import { permissionGroups, permissionIdSet, type PermissionGroup } from '@/config/permissions'
+import { normalizeLoadedPermissions, type RolePermissionModule } from '@/utils/rolePermissions'
 
 definePageMeta({ layout: 'default' })
 
 const { t } = useI18n()
 const { groupLabel, actionLabel } = usePermissionI18n()
 const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
-
-interface RolePermissionModule {
-  module: string
-  actions: string[]
-}
 
 interface RoleData {
   id: string | number
@@ -29,22 +25,6 @@ interface RoleResponse {
   status?: string
   status_code?: number
   data?: RoleData
-}
-
-const normalizeLoadedPermissions = (
-  raw: Array<string | RolePermissionModule>,
-): string[] => {
-  const result: string[] = []
-  for (const item of raw) {
-    if (typeof item === 'string') {
-      result.push(item)
-    } else if (item?.module && Array.isArray(item.actions)) {
-      for (const action of item.actions) {
-        result.push(`${item.module}.${action}`)
-      }
-    }
-  }
-  return result
 }
 
 interface UpdateRoleResponse {

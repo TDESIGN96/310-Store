@@ -1,116 +1,112 @@
+/**
+ * KAMU / Laravel API errors: show backend strings as-is (e.g. Arabic).
+ * No mapping from API text → local i18n keys for API validation or top-level messages.
+ */
 export const useApiError = () => {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
-  // ── Maps backend English strings → translation keys ──
-  const errorMap: Record<string, string> = {
-    // Auth — exact Laravel messages
-    'The email field is required.': 'errors.email_required',
-    'The email field must be a valid email address.': 'errors.email_invalid',
-    'The email has already been taken.': 'errors.email_taken',
-    'The password field is required.': 'errors.password_required',
-    'The password field must be at least 8 characters.': 'errors.password_min',
-    'The password field confirmation does not match.': 'errors.password_confirmed',
-    'These credentials do not match our records.': 'errors.invalid_credentials',
-    'Unauthenticated.': 'errors.unauthorized',
-
-    // Phone (common in this API)
-    'The phone field is required.': 'errors.required',
-    'The phone has already been taken.': 'errors.unique',
-
-    // Users / roles
-    'The role ids field is required.': 'errors.roles_required',
-
-    // General Laravel validation rule keywords (partial matching)
-    required: 'errors.required',
-    unique: 'errors.unique',
-    min: 'errors.min_length',
-    max: 'errors.max_length',
-    numeric: 'errors.numeric',
-    exists: 'errors.not_found',
-    confirmed: 'errors.password_confirmed',
-    email: 'errors.email_invalid',
-    integer: 'errors.numeric',
-
-    // Business logic — add as backend defines them
-    'Insufficient stock': 'errors.insufficient_stock',
-    'Invoice is locked': 'errors.invoice_locked',
-    'Approval required': 'errors.approval_required',
-    'already been taken': 'errors.unique',
-    'has already been': 'errors.unique',
-    'does not exist': 'errors.not_found',
-    'is required': 'errors.required',
-  }
-
-  // Longer keys first so partial matches are more specific
-  const sortedEntries = Object.entries(errorMap).sort((a, b) => b[0].length - a[0].length)
-
-  const resolveMessage = (message: string): string => {
-    if (!message) return t('errors.unknown_error')
-
-    if (errorMap[message]) {
-      return t(errorMap[message])
-    }
-
-    const lower = message.toLowerCase()
-    for (const [key, translationKey] of sortedEntries) {
-      if (lower.includes(key.toLowerCase())) {
-        return t(translationKey)
-      }
-    }
-
-    return t('errors.unknown_error')
-  }
-
-  const normalizeMessage = (raw: unknown): string => {
-    if (typeof raw === 'string') return raw
+  /** String or `{ ar, en }` from API */
+  const pickLocalizedApiMessage = (raw: unknown): string => {
+    if (typeof raw === 'string') return raw.trim()
     if (raw && typeof raw === 'object') {
       const o = raw as { ar?: string; en?: string }
-      return o.ar || o.en || ''
+      if (locale.value === 'ar') return (o.ar || o.en || '').trim()
+      return (o.en || o.ar || '').trim()
     }
     return ''
   }
 
+  /** ofetch / $fetch: body on `error.data` or `error.response._data` */
+  const getPayload = (error: unknown) => {
+    const e = error as {
+      data?: { errors?: unknown; message?: unknown; status_code?: number }
+      response?: { status?: number; _data?: { errors?: unknown; message?: unknown; status_code?: number } }
+      statusCode?: number
+      status?: number
+      message?: string
+    }
+    return (e?.data ?? e?.response?._data ?? {}) as {
+      errors?: Record<string, string[] | string>
+      message?: unknown
+      status_code?: number
+    }
+  }
+
+  /** First validation message string from Laravel `errors` object */
+  const firstValidationMessage = (errors: Record<string, string[] | string> | undefined): string => {
+    if (!errors || typeof errors !== 'object') return ''
+    for (const messages of Object.values(errors)) {
+      const first = Array.isArray(messages) ? messages[0] : messages
+      if (typeof first === 'string' && first.trim()) return first.trim()
+    }
+    return ''
+  }
+
+  /**
+   * 422 field errors: first message per field, exactly as returned by the backend.
+   */
   const getFieldErrors = (error: unknown): Record<string, string> => {
     const fieldErrors: Record<string, string> = {}
-
-    const err = error as { data?: { errors?: Record<string, string[] | string> } }
-    const errors = err?.data?.errors
+    const errors = getPayload(error).errors
     if (!errors || typeof errors !== 'object') return fieldErrors
 
     for (const [field, messages] of Object.entries(errors)) {
       const first = Array.isArray(messages) ? messages[0] : messages
       if (typeof first !== 'string' || !first) continue
-      fieldErrors[field] = resolveMessage(first)
+      fieldErrors[field] = first.trim()
     }
-
     return fieldErrors
   }
 
+  /**
+   * Top-level or non-field error banner. Uses API `message` as-is when present.
+   * 422: never treated as "network" — use `message` or first `errors[...]` string from the endpoint.
+   */
   const getErrorMessage = (error: unknown): string => {
-    const err = error as {
-      response?: { status?: number; _data?: { message?: unknown; status_code?: number } }
+    const e = error as {
       data?: { message?: unknown; status_code?: number; errors?: unknown }
-      status?: number
+      response?: { status?: number; _data?: { message?: unknown; status_code?: number; errors?: unknown } }
       statusCode?: number
+      status?: number
       message?: string
     }
 
-    const res = err?.response
-    const data = (err?.data ?? res?._data ?? {}) as {
-      message?: unknown
-      status_code?: number
-    }
-
-    // Typical offline / DNS failure — no HTTP response
-    if (!res && !err?.data && !err?.statusCode) {
-      return t('errors.network_error')
-    }
+    const data = getPayload(e)
 
     const status =
-      res?.status ??
-      err?.statusCode ??
-      err?.status ??
+      e?.response?.status ??
+      e?.statusCode ??
+      e?.status ??
       data?.status_code
+
+    const is422 = status === 422 || data?.status_code === 422
+
+    const backendMessage =
+      pickLocalizedApiMessage(data?.message) ||
+      (typeof e?.message === 'string' ? e.message.trim() : '')
+
+    // 422: endpoint always wins — never show generic "network" for validation responses
+    if (is422) {
+      if (backendMessage) return backendMessage
+      const fromFields = firstValidationMessage(data.errors)
+      if (fromFields) return fromFields
+      return t('errors.unknown_error')
+    }
+
+    if (backendMessage) return backendMessage
+
+    const fromValidationBody = firstValidationMessage(data.errors)
+    if (fromValidationBody) return fromValidationBody
+
+    const res = e?.response
+    // Real network / offline: no HTTP error object and no parsed body
+    const hasParsedBody =
+      (e?.data && typeof e.data === 'object') ||
+      (data && (data.message !== undefined || data.errors !== undefined || data.status_code !== undefined))
+
+    if (!res && !hasParsedBody && e?.statusCode === undefined && e?.status === undefined) {
+      return t('errors.network_error')
+    }
 
     if (status === 401) return t('errors.unauthorized')
     if (status === 403) return t('errors.forbidden')
@@ -118,18 +114,10 @@ export const useApiError = () => {
     if (status === 429) return t('errors.too_many_requests')
     if (typeof status === 'number' && status >= 500) return t('errors.server_error')
 
-    const topMessage =
-      normalizeMessage(data?.message) ||
-      (typeof err?.message === 'string' ? err.message : '')
-
-    return resolveMessage(topMessage)
+    return t('errors.unknown_error')
   }
 
-  const addErrorMapping = (backendMessage: string, translationKey: string) => {
-    errorMap[backendMessage] = translationKey
-  }
-
-  /** Laravel 422 or payload with `errors` object */
+  /** Laravel 422 or any payload with an `errors` object */
   const isValidationError = (error: unknown): boolean => {
     const e = error as {
       statusCode?: number
@@ -139,14 +127,13 @@ export const useApiError = () => {
     }
     const s = e?.statusCode ?? e?.status ?? e?.response?.status
     if (s === 422) return true
-    return !!(e?.data?.errors && typeof e.data.errors === 'object')
+    const errors = getPayload(e).errors ?? e?.data?.errors
+    return !!(errors && typeof errors === 'object')
   }
 
   return {
-    getErrorMessage,
     getFieldErrors,
-    resolveMessage,
-    addErrorMapping,
+    getErrorMessage,
     isValidationError,
   }
 }
