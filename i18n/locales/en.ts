@@ -297,6 +297,10 @@ export default {
     alert_deactivate_p1: 'Are you sure you want to deactivate user {name}?',
     alert_deactivate_p2: 'They will not be able to sign in. You can reactivate the account later from this list.',
     alert_deactivate_confirm: 'Yes, deactivate account',
+    clone: 'Clone',
+    /** Appended to duplicated user display name, e.g. "John Doe" → "John Doe copy" */
+    clone_name_suffix: ' copy',
+    clone_success: 'User copy created. You can adjust details for {name}.',
   },
 
   users_form: {
@@ -346,6 +350,9 @@ export default {
     new_password_confirm: 'Confirm new password',
     new_password_confirm_placeholder: 'Re-enter password',
     user_not_found: 'User not found',
+    clone_prefill_banner:
+      'You are creating a user based on {name}. Enter a unique email and phone — they must not duplicate an existing account.',
+    loading_prefill: 'Loading user to copy…',
   },
 
   users_show: {

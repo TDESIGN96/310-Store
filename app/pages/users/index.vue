@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle, Filter, UserX, UserCheck } from 'lucide-vue-next'
+import { Search, Plus, Pencil, Trash2, Copy, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle, Filter, UserX, UserCheck } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -194,6 +194,11 @@ const handleEdit = (user: UserItem) => {
   navigateTo(`/users/edit/${user.id}`)
 }
 
+/** Prefill create form — unique email/phone entered by user before submit */
+const cloneUser = (user: UserItem) => {
+  navigateTo({ path: '/users/create', query: { from: String(user.id) } })
+}
+
 const isSelf = (user: UserItem) => Number(authStore.user?.id) === Number(user.id)
 
 /** Logged-in user is treated as admin (session). */
@@ -212,6 +217,9 @@ const isLoggedInAdminSession = computed(() => {
 const cannotToggleUserActivation = (user: UserItem) =>
   isSelf(user) &&
   (isLoggedInAdminSession.value || user.is_admin === true)
+
+/** Endpoint marks admin accounts — delete is not offered for them */
+const canDeleteUser = (user: UserItem) => user.is_admin !== true
 
 function buildUserStatusBody(user: UserItem, is_active: boolean) {
   const email = user.email?.trim() ?? ''
@@ -281,6 +289,10 @@ const userToDelete = ref<UserItem | null>(null)
 
 const confirmDelete = async () => {
   if (!userToDelete.value) return
+  if (userToDelete.value.is_admin === true) {
+    userToDelete.value = null
+    return
+  }
 
   const user = userToDelete.value
   deletingId.value = user.id
@@ -494,6 +506,16 @@ onMounted(() => {
                   {{ t('common.edit') }}
                 </button>
                 <button
+                  type="button"
+                  class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+                  :disabled="deletingId === user.id || togglingActiveId === user.id"
+                  @click="cloneUser(user)"
+                >
+                  <Copy class="size-3.5" />
+                  {{ t('users_page.clone') }}
+                </button>
+                <button
+                  v-if="canDeleteUser(user)"
                   class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="deletingId === user.id"
                   @click="userToDelete = user"
@@ -572,8 +594,8 @@ onMounted(() => {
   <AlertDialog :open="!!userToDelete" @update:open="val => { if (!val) userToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ t('users_page.alert_delete_title') }}</AlertDialogTitle>
-        <AlertDialogDescription>
+        <AlertDialogTitle class="rtl:text-right">{{ t('users_page.alert_delete_title') }}</AlertDialogTitle>
+        <AlertDialogDescription class="rtl:text-right">
           {{ t('users_page.alert_delete_body', { name: userToDelete?.name ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>

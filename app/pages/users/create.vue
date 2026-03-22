@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ArrowRight, ChevronDown, ShieldCheck } from 'lucide-vue-next'
+import { ArrowRight, ChevronDown, ShieldCheck, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -27,6 +27,29 @@ interface RolesResponse {
   roles?: RoleItem[]
 }
 
+interface UserRole {
+  id: number
+  name: string
+  name_en: string
+  name_ar: string
+}
+
+interface UserData {
+  id: number
+  name: string
+  email: string
+  phone: string
+  roles: UserRole[]
+  is_active: boolean
+}
+
+interface UserResponse {
+  user?: UserData
+  data?: UserData | { user?: UserData }
+}
+
+const route = useRoute()
+const router = useRouter()
 const { $api } = useApi()
 
 const name = ref('')
@@ -42,6 +65,9 @@ const loadingRoles = ref(false)
 const effectivePermissions = ref<string[]>([])
 const loadingEffectivePermissions = ref(false)
 const submitting = ref(false)
+const loadingPrefill = ref(false)
+const isClonePrefill = ref(false)
+const cloneSourceName = ref('')
 const errorMessage = ref('')
 const fieldErrors = ref<Record<string, string>>({
   name: '',
@@ -63,6 +89,55 @@ const loadRoles = async () => {
   } finally {
     loadingRoles.value = false
   }
+}
+
+const applyClonePrefill = async () => {
+  const raw = route.query.from
+  const fromId = Array.isArray(raw) ? raw[0] : raw
+  if (!fromId || !String(fromId).trim()) return
+
+  loadingPrefill.value = true
+  try {
+    const data = await $api<UserResponse>(`/users/${fromId}`)
+    const rawData = data.data
+    const userData = (
+      data.user
+      ?? (rawData && typeof rawData === 'object' && 'user' in rawData
+        ? (rawData as { user?: UserData }).user
+        : undefined)
+      ?? (rawData && typeof rawData === 'object' && 'id' in rawData ? rawData as UserData : undefined)
+      ?? null
+    ) as UserData | null
+
+    if (!userData?.name) {
+      toast.error(t('users_form.user_not_found'))
+      return
+    }
+
+    name.value = `${userData.name.trim()}${t('users_page.clone_name_suffix')}`
+    email.value = ''
+    phone.value = ''
+    isActive.value = userData.is_active
+    selectedRoleIds.value = userData.roles?.map(r => r.id) ?? []
+    cloneSourceName.value = userData.name
+    isClonePrefill.value = true
+    await router.replace({ query: {} })
+  } catch (err: unknown) {
+    toast.error(getErrorMessage(err))
+  } finally {
+    loadingPrefill.value = false
+  }
+}
+
+function extractNewUserIdFromCreateResponse(res: Record<string, unknown>): number | null {
+  const raw = res as Record<string, unknown> & {
+    data?: { user?: { id?: unknown }; id?: unknown }
+    user?: { id?: unknown }
+  }
+  const id = raw.data?.user?.id ?? raw.data?.id ?? raw.user?.id ?? raw.id
+  if (typeof id === 'number' && Number.isFinite(id)) return id
+  if (typeof id === 'string' && /^\d+$/.test(id)) return parseInt(id, 10)
+  return null
 }
 
 interface RoleDetailResponse {
@@ -236,7 +311,7 @@ const createUser = async () => {
   submitting.value = true
 
   try {
-    await $api('/users', {
+    const res = await $api<Record<string, unknown>>('/users', {
       method: 'POST',
       body: {
         name: name.value.trim(),
@@ -250,7 +325,12 @@ const createUser = async () => {
     })
 
     toast.success(t('toasts.save_success'))
-    await navigateTo('/users')
+    const newId = extractNewUserIdFromCreateResponse(res)
+    if (isClonePrefill.value && newId != null) {
+      await navigateTo(`/users/edit/${newId}`)
+    } else {
+      await navigateTo('/users')
+    }
   } catch (error: unknown) {
     if (isValidationError(error)) {
       const fe = getFieldErrors(error)
@@ -270,7 +350,10 @@ const createUser = async () => {
   }
 }
 
-onMounted(loadRoles)
+onMounted(async () => {
+  await loadRoles()
+  await applyClonePrefill()
+})
 </script>
 
 <template>
@@ -287,6 +370,22 @@ onMounted(loadRoles)
           {{ t('users_form.create_subtitle') }}
         </p>
       </div>
+    </div>
+
+    <div
+      v-if="loadingPrefill"
+      class="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"
+    >
+      <Loader2 class="size-5 animate-spin" />
+      {{ t('users_form.loading_prefill') }}
+    </div>
+
+    <template v-else>
+    <div
+      v-if="isClonePrefill"
+      class="rounded-lg border border-[#215260]/30 bg-[#215260]/5 px-4 py-3 text-sm text-foreground"
+    >
+      {{ t('users_form.clone_prefill_banner', { name: cloneSourceName }) }}
     </div>
 
     <div class="rounded-lg border p-5 space-y-4">
@@ -507,5 +606,6 @@ onMounted(loadRoles)
         {{ submitting ? t('common.saving') : t('users_form.submit_create') }}
       </Button>
     </div>
+    </template>
   </div>
 </template>

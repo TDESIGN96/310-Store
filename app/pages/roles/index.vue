@@ -335,8 +335,8 @@ onMounted(loadRoles)
   <AlertDialog :open="!!roleToDelete" @update:open="val => { if (!val) roleToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ t('roles_page.delete_title') }}</AlertDialogTitle>
-        <AlertDialogDescription>
+        <AlertDialogTitle class="rtl:text-right">{{ t('roles_page.delete_title') }}</AlertDialogTitle>
+        <AlertDialogDescription class="rtl:text-right">
           {{ t('roles_page.delete_body', { name: roleToDelete?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>

@@ -980,8 +980,8 @@ onMounted(() => {
   <AlertDialog :open="!!categoryToDelete" @update:open="val => { if (!val) categoryToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ t('categories_page.delete_dialog_title') }}</AlertDialogTitle>
-        <AlertDialogDescription>
+        <AlertDialogTitle class="rtl:text-right">{{ t('categories_page.delete_dialog_title') }}</AlertDialogTitle>
+        <AlertDialogDescription class="rtl:text-right">
           {{ t('categories_page.delete_dialog_body', { name: categoryToDelete?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>

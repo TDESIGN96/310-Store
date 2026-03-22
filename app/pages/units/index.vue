@@ -898,8 +898,8 @@ onMounted(() => loadUnits())
   <AlertDialog :open="!!unitToDelete" @update:open="val => { if (!val) unitToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ t('units_page.delete_dialog_title') }}</AlertDialogTitle>
-        <AlertDialogDescription>
+        <AlertDialogTitle class="rtl:text-right">{{ t('units_page.delete_dialog_title') }}</AlertDialogTitle>
+        <AlertDialogDescription class="rtl:text-right">
           {{ t('units_page.delete_dialog_body', { name: unitToDelete?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>

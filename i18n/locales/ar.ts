@@ -297,6 +297,9 @@ export default {
     alert_deactivate_p1: 'هل أنت متأكد من إيقاف حساب المستخدم {name}؟',
     alert_deactivate_p2: 'بعد التأكيد لن يتمكن من تسجيل الدخول إلى النظام. يمكنك تفعيل الحساب لاحقاً من نفس القائمة.',
     alert_deactivate_confirm: 'نعم، أوقف الحساب',
+    clone: 'نسخ',
+    clone_name_suffix: ' نسخة',
+    clone_success: 'تم إنشاء نسخة من المستخدم. يمكنك تعديل التفاصيل لـ {name}.',
   },
 
   users_form: {
@@ -346,6 +349,9 @@ export default {
     new_password_confirm: 'تأكيد كلمة المرور الجديدة',
     new_password_confirm_placeholder: 'أعد إدخال كلمة المرور',
     user_not_found: 'لم يتم العثور على المستخدم',
+    clone_prefill_banner:
+      'أنت تنشئ مستخدماً اعتماداً على {name}. أدخل بريداً إلكترونياً ورقماً فريدين — لا يجب أن يطابقا حساباً موجوداً.',
+    loading_prefill: 'جاري تحميل بيانات المستخدم للنسخ…',
   },
 
   users_show: {
