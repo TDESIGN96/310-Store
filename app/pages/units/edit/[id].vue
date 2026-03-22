@@ -15,6 +15,9 @@ import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
+const { t } = useI18n()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface UnitData {
@@ -31,11 +34,6 @@ interface UnitResponse {
   status?: string
   status_code?: number
   message?: string | null
-}
-
-interface ApiErrorPayload {
-  message?: string | { en?: string; ar?: string }
-  errors?: Record<string, string[] | undefined>
 }
 
 // ── Route & API ────────────────────────────────────────────────────────────────
@@ -93,7 +91,7 @@ const loadUnit = async () => {
     ) as UnitData | null
 
     if (!unit) {
-      fetchError.value = 'لم يتم العثور على الوحدة'
+      fetchError.value = t('units_form.unit_not_found')
       return
     }
 
@@ -103,12 +101,7 @@ const loadUnit = async () => {
     status.value = (unit.status === 'inactive' ? 'inactive' : 'active')
   }
   catch (error: unknown) {
-    const msg = (error as { data?: ApiErrorPayload })?.data?.message
-    fetchError.value = (
-      typeof msg === 'string' ? msg
-      : (msg as { ar?: string } | undefined)?.ar
-      ?? 'تعذر تحميل بيانات الوحدة'
-    )
+    fetchError.value = getErrorMessage(error)
   }
   finally {
     loadingUnit.value = false
@@ -121,43 +114,28 @@ const validateForm = (): boolean => {
   fieldErrors.value = { name_ar: '', name_en: '', symbol: '', status: '' }
 
   if (!nameAr.value.trim()) {
-    fieldErrors.value.name_ar = 'يرجى إدخال الاسم العربي'
+    fieldErrors.value.name_ar = t('units_form.validation_name_ar_required')
   }
   else if (!ARABIC_RE.test(nameAr.value.trim())) {
-    fieldErrors.value.name_ar = 'يجب أن يحتوي الاسم العربي على أحرف عربية فقط'
+    fieldErrors.value.name_ar = t('units_form.validation_name_ar_letters')
   }
 
   if (!nameEn.value.trim()) {
-    fieldErrors.value.name_en = 'يرجى إدخال الاسم الإنجليزي'
+    fieldErrors.value.name_en = t('units_form.validation_name_en_required')
   }
   else if (!ENGLISH_RE.test(nameEn.value.trim())) {
-    fieldErrors.value.name_en = 'يجب أن يحتوي الاسم الإنجليزي على أحرف إنجليزية فقط'
+    fieldErrors.value.name_en = t('units_form.validation_name_en_letters')
   }
 
   if (!symbol.value.trim()) {
-    fieldErrors.value.symbol = 'يرجى إدخال الرمز'
+    fieldErrors.value.symbol = t('units_form.validation_symbol_required')
   }
 
   if (!status.value) {
-    fieldErrors.value.status = 'يرجى اختيار الحالة'
+    fieldErrors.value.status = t('units_form.validation_status_required')
   }
 
   return !Object.values(fieldErrors.value).some(Boolean)
-}
-
-// ── Error extraction ───────────────────────────────────────────────────────────
-
-const extractErrorMessage = (error: unknown): string => {
-  const payload = ((error as { data?: ApiErrorPayload })?.data ?? {}) as ApiErrorPayload
-  const msg = payload.message
-  const message = typeof msg === 'object' ? msg?.ar || msg?.en || '' : msg || ''
-
-  fieldErrors.value.name_ar = payload.errors?.name_ar?.[0] ?? ''
-  fieldErrors.value.name_en = payload.errors?.name_en?.[0] ?? ''
-  fieldErrors.value.symbol = payload.errors?.symbol?.[0] ?? ''
-  fieldErrors.value.status = payload.errors?.status?.[0] ?? ''
-
-  return message || 'تعذر تحديث الوحدة حالياً'
 }
 
 // ── Submit ─────────────────────────────────────────────────────────────────────
@@ -177,11 +155,20 @@ const updateUnit = async () => {
         status: status.value,
       },
     })
-    toast.success('تم تحديث الوحدة بنجاح')
+    toast.success(t('toasts.save_success'))
     await navigateTo('/units')
   }
   catch (error: unknown) {
-    errorMessage.value = extractErrorMessage(error)
+    if (isValidationError(error)) {
+      const fe = getFieldErrors(error)
+      fieldErrors.value.name_ar = fe.name_ar ?? ''
+      fieldErrors.value.name_en = fe.name_en ?? ''
+      fieldErrors.value.symbol = fe.symbol ?? ''
+      fieldErrors.value.status = fe.status ?? ''
+    }
+    else {
+      errorMessage.value = getErrorMessage(error)
+    }
   }
   finally {
     submitting.value = false
@@ -201,9 +188,9 @@ onMounted(loadUnit)
         </NuxtLink>
       </Button>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">تعديل الوحدة</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('units_form.edit_title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          تعديل بيانات وحدة القياس
+          {{ t('units_form.edit_subtitle') }}
         </p>
       </div>
     </div>
@@ -214,9 +201,9 @@ onMounted(loadUnit)
       class="flex flex-col items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-6 py-10 text-center text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
     >
       <ShieldAlert class="size-8" />
-      <p class="font-medium">ليس لديك صلاحية لتعديل الوحدات</p>
+      <p class="font-medium">{{ t('units_form.no_permission') }}</p>
       <Button variant="outline" size="sm" as-child>
-        <NuxtLink to="/units">العودة إلى القائمة</NuxtLink>
+        <NuxtLink to="/units">{{ t('units_form.back_to_list') }}</NuxtLink>
       </Button>
     </div>
 
@@ -227,7 +214,7 @@ onMounted(loadUnit)
         class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
       >
         <Loader2 class="size-5 animate-spin" />
-        جارٍ تحميل البيانات...
+        {{ t('units_form.loading') }}
       </div>
 
       <!-- Fetch error -->
@@ -239,10 +226,10 @@ onMounted(loadUnit)
         <p>{{ fetchError }}</p>
         <div class="flex gap-2">
           <Button variant="outline" size="sm" @click="loadUnit">
-            إعادة المحاولة
+            {{ t('common.retry') }}
           </Button>
           <Button variant="ghost" size="sm" as-child>
-            <NuxtLink to="/units">العودة إلى القائمة</NuxtLink>
+            <NuxtLink to="/units">{{ t('units_form.back_to_list') }}</NuxtLink>
           </Button>
         </div>
       </div>
@@ -255,12 +242,12 @@ onMounted(loadUnit)
             <!-- Arabic Name -->
             <div class="space-y-2">
               <label class="text-sm font-medium">
-                الاسم العربي <span class="text-red-500">*</span>
+                {{ t('units_form.name_ar') }} <span class="text-red-500">*</span>
               </label>
               <Input
                 v-model="nameAr"
                 dir="rtl"
-                placeholder="مثال: كيلوغرام"
+                :placeholder="t('units_form.placeholder_name_ar')"
                 :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
                 @input="fieldErrors.name_ar = ''"
               />
@@ -272,12 +259,12 @@ onMounted(loadUnit)
             <!-- English Name -->
             <div class="space-y-2">
               <label class="text-sm font-medium">
-                الاسم الإنجليزي <span class="text-red-500">*</span>
+                {{ t('units_form.name_en') }} <span class="text-red-500">*</span>
               </label>
               <Input
                 v-model="nameEn"
                 dir="ltr"
-                placeholder="e.g. Kilogram"
+                :placeholder="t('units_form.placeholder_name_en')"
                 :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
                 @input="fieldErrors.name_en = ''"
               />
@@ -289,7 +276,7 @@ onMounted(loadUnit)
             <!-- Symbol -->
             <div class="space-y-2">
               <label class="text-sm font-medium">
-                الرمز <span class="text-red-500">*</span>
+                {{ t('units_form.symbol') }} <span class="text-red-500">*</span>
               </label>
               <Input
                 v-model="symbol"
@@ -302,25 +289,25 @@ onMounted(loadUnit)
                 {{ fieldErrors.symbol }}
               </p>
               <p class="text-xs text-muted-foreground">
-                يدعم جميع أحرف Unicode (مثال: kg، م، μg)
+                {{ t('units_form.symbol_hint') }}
               </p>
             </div>
 
             <!-- Status -->
             <div class="space-y-2">
               <label class="text-sm font-medium">
-                الحالة <span class="text-red-500">*</span>
+                {{ t('units_form.status') }} <span class="text-red-500">*</span>
               </label>
               <Select
                 :model-value="status"
                 @update:model-value="val => { status = (val as 'active' | 'inactive'); fieldErrors.status = '' }"
               >
                 <SelectTrigger :class="fieldErrors.status ? 'border-red-500 focus-visible:ring-red-500' : ''">
-                  <SelectValue placeholder="اختر الحالة" />
+                  <SelectValue :placeholder="t('units_form.select_status')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">نشط</SelectItem>
-                  <SelectItem value="inactive">غير نشط</SelectItem>
+                  <SelectItem value="active">{{ t('common.active') }}</SelectItem>
+                  <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
                 </SelectContent>
               </Select>
               <p v-if="fieldErrors.status" class="text-xs text-red-500">
@@ -345,7 +332,7 @@ onMounted(loadUnit)
         <!-- Actions -->
         <div class="flex items-center justify-end gap-2">
           <Button variant="outline" :disabled="submitting" as-child>
-            <NuxtLink to="/units">إلغاء</NuxtLink>
+            <NuxtLink to="/units">{{ t('common.cancel') }}</NuxtLink>
           </Button>
           <Button
             class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
@@ -353,7 +340,7 @@ onMounted(loadUnit)
             @click="updateUnit"
           >
             <Loader2 v-if="submitting" class="size-4 animate-spin ml-2" />
-            {{ submitting ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
+            {{ submitting ? t('common.saving') : t('units_form.submit_save') }}
           </Button>
         </div>
       </template>

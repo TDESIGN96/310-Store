@@ -2,69 +2,44 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
-import { Button } from '@/components/ui/button'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
 const phone = ref('')
 const password = ref('')
 const remember = ref(false)
 const showPass = ref(false)
 const isLoading = ref(false)
-const error = ref('')
-
-interface LoginErrorPayload {
-  message?: string
-  errors?: {
-    phone?: string[]
-    password?: string[]
-  }
-}
-
-const extractLoginError = (e: unknown) => {
-  const payload = ((e as { data?: LoginErrorPayload })?.data || {}) as LoginErrorPayload
-
-  const phoneError = payload.errors?.phone?.[0]
-  if (phoneError) return phoneError
-
-  const passwordError = payload.errors?.password?.[0]
-  if (passwordError) return passwordError
-
-  if (payload.message) return payload.message
-
-  return 'بيانات الدخول غير صحيحة'
-}
+const formError = ref('')
+const fieldErrors = ref({ phone: '', password: '' })
 
 const handleLogin = async () => {
   isLoading.value = true
-  error.value = ''
-
-  const phoneValue = phone.value
+  formError.value = ''
+  fieldErrors.value = { phone: '', password: '' }
 
   try {
-    await toast.promise(
-      authStore.login({
-        phone: phoneValue,
-        password: password.value,
-      }),
-      {
-        loading: 'جارٍ تسجيل الدخول...',
-        success: () => {
-          const name = authStore.user?.name ?? ''
-          navigateTo('/mainCards')
-          return name ? `مرحباً بعودتك، ${name}` : 'مرحباً بعودتك'
-        },
-        error: (e: unknown) => {
-          const message = extractLoginError(e)
-          error.value = message
-          return message
-        },
-      },
-    )
-
-  } catch {
-    // Error toast + inline message are already handled above.
-  } finally {
+    await authStore.login({
+      phone: phone.value,
+      password: password.value,
+    })
+    const name = authStore.user?.name ?? ''
+    toast.success(name ? t('auth.welcome_back_named', { name }) : t('auth.welcome_back'))
+    await navigateTo('/mainCards')
+  }
+  catch (e: unknown) {
+    if (isValidationError(e)) {
+      const fe = getFieldErrors(e)
+      fieldErrors.value.phone = fe.phone ?? ''
+      fieldErrors.value.password = fe.password ?? ''
+    }
+    else {
+      formError.value = getErrorMessage(e)
+    }
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -79,28 +54,37 @@ const handleLogin = async () => {
         <div class="card-logo-sm anim-fade-down" style="--delay: 0.2s">
           <img src="/logo.png" alt="KAMU Group" class="logo-img-sm" />
         </div>
-        <h2 class="card-title anim-fade-up" style="--delay: 0.3s">مرحباً بعودتك</h2>
-        <p class="card-subtitle anim-fade-up" style="--delay: 0.4s">سجّل دخولك للوصول إلى لوحة التحكم</p>
+        <h2 class="card-title anim-fade-up" style="--delay: 0.3s">{{ t('auth.welcome_back') }}</h2>
+        <p class="card-subtitle anim-fade-up" style="--delay: 0.4s">{{ t('auth.subtitle') }}</p>
       </div>
 
       <div class="login-form">
 
         <div class="form-group anim-fade-up" style="--delay: 0.5s">
-          <label class="form-label">رقم الهاتف</label>
+          <label class="form-label">{{ t('auth.phone') }}</label>
           <div class="input-wrap">
             <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="2">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.8 12.8 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.8 12.8 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             </svg>
-            <input v-model="phone" type="tel" inputmode="tel" class="form-input" placeholder="أدخل رقم الهاتف"
-              @keyup.enter="handleLogin" />
+            <input
+              v-model="phone"
+              type="tel"
+              inputmode="tel"
+              class="form-input"
+              :class="{ '!border-red-500': fieldErrors.phone }"
+              :placeholder="t('auth.placeholder_phone')"
+              @keyup.enter="handleLogin"
+              @input="fieldErrors.phone = ''"
+            />
           </div>
+          <p v-if="fieldErrors.phone" class="text-xs text-red-600 mt-1">{{ fieldErrors.phone }}</p>
         </div>
 
         <div class="form-group anim-fade-up" style="--delay: 0.6s">
           <div class="label-row">
-            <label class="form-label">كلمة المرور</label>
-            <a href="#" class="forgot-link">نسيت كلمة المرور؟</a>
+            <label class="form-label">{{ t('auth.password') }}</label>
+            <a href="#" class="forgot-link">{{ t('auth.forgot_password') }}</a>
           </div>
           <div class="input-wrap">
             <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -108,8 +92,15 @@ const handleLogin = async () => {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <input v-model="password" :type="showPass ? 'text' : 'password'" class="form-input"
-              placeholder="أدخل كلمة المرور" @keyup.enter="handleLogin" />
+            <input
+              v-model="password"
+              :type="showPass ? 'text' : 'password'"
+              class="form-input"
+              :class="{ '!border-red-500': fieldErrors.password }"
+              :placeholder="t('auth.placeholder_password')"
+              @keyup.enter="handleLogin"
+              @input="fieldErrors.password = ''"
+            />
             <button class="pass-toggle" @click="showPass = !showPass">
               <svg v-if="!showPass" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
@@ -124,29 +115,30 @@ const handleLogin = async () => {
               </svg>
             </button>
           </div>
+          <p v-if="fieldErrors.password" class="text-xs text-red-600 mt-1">{{ fieldErrors.password }}</p>
         </div>
 
-        <div v-if="error" class="error-msg">
+        <div v-if="formError" class="error-msg">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          {{ error }}
+          {{ formError }}
         </div>
 
         <div class="remember-row anim-fade-up" style="--delay: 0.7s">
           <label class="checkbox-wrap">
             <input type="checkbox" v-model="remember" class="checkbox-input" />
             <span class="checkbox-box"></span>
-            <span class="checkbox-label">تذكرني</span>
+            <span class="checkbox-label">{{ t('auth.remember_me') }}</span>
           </label>
         </div>
 
         <button class="login-btn anim-fade-up" :class="{ loading: isLoading }"
           @click="handleLogin" :disabled="isLoading">
           <span v-if="!isLoading" class="inline-flex items-center gap-2">
-            تسجيل الدخول
+            {{ t('auth.sign_in') }}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="m15 18-6-6 6-6" />
             </svg>
@@ -156,21 +148,6 @@ const handleLogin = async () => {
           </span>
         </button>
 
-        <Button
-    variant="outline"
-    @click="() =>
-      toast('Event has been created', {
-        description: 'Sunday, December 03, 2023 at 9:00 AM',
-        action: {
-          label: 'Undo',
-          onClick: () => console.log('Undo'),
-        },
-      })
-    "
-  >
-    Show Toast
-  </Button>
-
       </div>
 
       <div class="card-footer anim-fade-up" style="--delay: 0.9s">
@@ -179,14 +156,14 @@ const handleLogin = async () => {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            <span>اتصال آمن SSL</span>
+            <span>{{ t('auth.ssl_secure') }}</span>
           </div>
           <div class="security-badge">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span>بيانات مشفرة</span>
+            <span>{{ t('auth.data_encrypted') }}</span>
           </div>
         </div>
       </div>
@@ -194,7 +171,7 @@ const handleLogin = async () => {
     </div>
 
     <p class="login-note anim-fade-up" style="--delay: 1s">
-      هل تحتاج الى التسجيل في النظام؟ <a href="#" class="login-note-link">تواصل مع شركة كامو</a>
+      {{ t('auth.footer_register') }} <a href="#" class="login-note-link">{{ t('auth.contact_company') }}</a>
     </p>
   </div>
 </template>

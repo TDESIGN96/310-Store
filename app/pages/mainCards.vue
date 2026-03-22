@@ -6,15 +6,17 @@ definePageMeta({
   layout: 'default',
 })
 
-const cards = [
+const { t } = useI18n()
+
+const cards = computed(() => [
   {
     id: 'sales_today',
-    title: 'المبيعات اليوم',
-    value: '٢٤,٥٠٠ د.ع',
-    change: '+١٢٪',
+    title: t('dashboard.cards.sales_today.title'),
+    value: t('dashboard.demo_sales_value'),
+    change: t('dashboard.demo_sales_change'),
     changeType: 'up' as const,
-    description: 'تتجه نحو الأعلى هذا الشهر',
-    subtitle: 'مقارنة بأمس',
+    description: t('dashboard.cards.sales_today.description'),
+    subtitle: t('dashboard.cards.sales_today.subtitle'),
     icon: ShoppingCart,
     color: 'text-emerald-600',
     bg: 'bg-emerald-500/10',
@@ -23,30 +25,30 @@ const cards = [
   },
   {
     id: 'pending_invoices',
-    title: 'الفواتير المعلقة',
-    value: '١٨',
-    change: '+٣',
+    title: t('dashboard.cards.pending_invoices.title'),
+    value: t('dashboard.demo_pending_value'),
+    change: t('dashboard.demo_pending_change'),
     changeType: 'down' as const,
-    description: 'تحتاج مراجعة فورية',
-    subtitle: 'مقارنة بالأمس',
+    description: t('dashboard.cards.pending_invoices.description'),
+    subtitle: t('dashboard.cards.pending_invoices.subtitle'),
     icon: FileText,
     color: 'text-red-500',
     bg: 'bg-red-500/10',
     roles: ['admin', 'manager', 'accountant'],
     link: '/sales/invoices',
   },
-]
+])
 </script>
 
 <template>
   <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
     <div class="p-6">
-      <h1 class="text-2xl font-bold">لوحة التحكم</h1>
-      <p class="text-muted-foreground">مرحباً بك في نظام KAMU</p>
+      <h1 class="text-2xl font-bold">{{ t('dashboard.title') }}</h1>
+      <p class="text-muted-foreground">{{ t('dashboard.subtitle') }}</p>
     </div>
     <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-          <KpiCard v-for="card in cards" :key="card.id" v-bind="card" class="col-span-1"/>
-  </div>
+      <KpiCard v-for="card in cards" :key="card.id" v-bind="card" class="col-span-1" />
+    </div>
 
     <div class="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
   </div>

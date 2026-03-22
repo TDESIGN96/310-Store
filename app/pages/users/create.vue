@@ -8,6 +8,9 @@ import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
+const { t, locale } = useI18n()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
+
 interface RoleItem {
   id: number | string
   name_en: string
@@ -19,11 +22,6 @@ interface RolesResponse {
     roles?: RoleItem[]
   }
   roles?: RoleItem[]
-}
-
-interface ApiErrorPayload {
-  message?: string | { en?: string; ar?: string }
-  errors?: Record<string, string[] | undefined>
 }
 
 const { $api } = useApi()
@@ -71,6 +69,7 @@ const toggleRole = (role: RoleItem, checked: boolean) => {
   } else {
     selectedRoleIds.value = selectedRoleIds.value.filter(rid => rid !== id)
   }
+  fieldErrors.value.role_ids = ''
 }
 
 const isRoleSelected = (role: RoleItem) => {
@@ -84,16 +83,17 @@ const selectedRolesLabel = computed(() => {
     const id = typeof r.id === 'string' ? parseInt(r.id, 10) : r.id
     return selectedRoleIds.value.includes(id)
   })
-  return selected.map(r => r.name_ar || r.name_en).join('، ')
+  const sep = locale.value === 'ar' ? '، ' : ', '
+  return selected.map(r => r.name_ar || r.name_en).join(sep)
 })
 
-const nameRules = [
-  { id: 'length', label: '3 أحرف على الأقل', test: (n: string) => n.trim().length >= 3 },
-  { id: 'nonumbers', label: 'بدون أرقام', test: (n: string) => !/[0-9]/.test(n) },
-]
+const nameRules = computed(() => [
+  { id: 'length', label: t('validation_hints.name_min'), test: (n: string) => n.trim().length >= 3 },
+  { id: 'nonumbers', label: t('validation_hints.name_no_digits'), test: (n: string) => !/[0-9]/.test(n) },
+])
 
 const nameRuleStatus = computed(() =>
-  nameRules.map(rule => ({
+  nameRules.value.map(rule => ({
     ...rule,
     pass: rule.test(name.value),
   })),
@@ -102,17 +102,17 @@ const nameRuleStatus = computed(() =>
 const nameValid = computed(() => nameRuleStatus.value.every(r => r.pass))
 
 const getNameError = (): string => {
-  if (!name.value.trim()) return 'يرجى إدخال الاسم'
-  const failed = nameRules.find(r => !r.test(name.value))
+  if (!name.value.trim()) return t('users_form.validation_name')
+  const failed = nameRules.value.find(r => !r.test(name.value))
   return failed ? failed.label : ''
 }
 
-const phoneRules = [
-  { id: 'format', label: '11 رقماً تبدأ بـ 07', test: (p: string) => /^07\d{9}$/.test(p.replace(/\s/g, '')) },
-]
+const phoneRules = computed(() => [
+  { id: 'format', label: t('validation_hints.phone_format'), test: (p: string) => /^07\d{9}$/.test(p.replace(/\s/g, '')) },
+])
 
 const phoneRuleStatus = computed(() =>
-  phoneRules.map(rule => ({
+  phoneRules.value.map(rule => ({
     ...rule,
     pass: rule.test(phone.value),
   })),
@@ -122,21 +122,21 @@ const phoneValid = computed(() => !phone.value.trim() || phoneRuleStatus.value.e
 
 const getPhoneError = (): string => {
   if (!phone.value.trim()) return ''
-  const failed = phoneRules.find(r => !r.test(phone.value))
+  const failed = phoneRules.value.find(r => !r.test(phone.value))
   return failed ? failed.label : ''
 }
 
-const passwordRules = [
-  { id: 'length', label: '8 أحرف على الأقل', test: (p: string) => p.length >= 8 },
-  { id: 'uppercase', label: 'حرف كبير واحد على الأقل (A–Z)', test: (p: string) => /[A-Z]/.test(p) },
-  { id: 'lowercase', label: 'حرف صغير واحد على الأقل (a–z)', test: (p: string) => /[a-z]/.test(p) },
-  { id: 'number', label: 'رقم واحد على الأقل (0–9)', test: (p: string) => /[0-9]/.test(p) },
-  { id: 'special', label: 'رمز خاص واحد على الأقل (@ # $ % & - _)', test: (p: string) => /[@#$%&\-_]/.test(p) },
-  { id: 'nospace', label: 'بدون مسافات', test: (p: string) => !/\s/.test(p) },
-]
+const passwordRules = computed(() => [
+  { id: 'length', label: t('validation_hints.password_min'), test: (p: string) => p.length >= 8 },
+  { id: 'uppercase', label: t('validation_hints.password_upper'), test: (p: string) => /[A-Z]/.test(p) },
+  { id: 'lowercase', label: t('validation_hints.password_lower'), test: (p: string) => /[a-z]/.test(p) },
+  { id: 'number', label: t('validation_hints.password_number'), test: (p: string) => /[0-9]/.test(p) },
+  { id: 'special', label: t('validation_hints.password_special'), test: (p: string) => /[@#$%&\-_]/.test(p) },
+  { id: 'nospace', label: t('validation_hints.password_nospace'), test: (p: string) => !/\s/.test(p) },
+])
 
 const passwordRuleStatus = computed(() =>
-  passwordRules.map(rule => ({
+  passwordRules.value.map(rule => ({
     ...rule,
     pass: rule.test(password.value),
   })),
@@ -145,29 +145,9 @@ const passwordRuleStatus = computed(() =>
 const passwordValid = computed(() => passwordRuleStatus.value.every(r => r.pass))
 
 const getPasswordError = (): string => {
-  if (!password.value) return 'يرجى إدخال كلمة المرور'
-  const failed = passwordRules.find(r => !r.test(password.value))
+  if (!password.value) return t('users_form.validation_password')
+  const failed = passwordRules.value.find(r => !r.test(password.value))
   return failed ? failed.label : ''
-}
-
-const extractErrorMessage = (error: unknown) => {
-  const payload = ((error as { data?: ApiErrorPayload })?.data || {}) as ApiErrorPayload
-  const message =
-    typeof payload.message === 'string'
-      ? payload.message
-      : payload.message?.ar || payload.message?.en || ''
-
-  const errors = payload.errors ?? {}
-  fieldErrors.value = {
-    name: errors.name?.[0] ?? '',
-    phone: errors.phone?.[0] ?? '',
-    email: errors.email?.[0] ?? '',
-    password: errors.password?.[0] ?? '',
-    password_confirmation: errors.password_confirmation?.[0] ?? errors['password_confirmation']?.[0] ?? '',
-    role_ids: errors.role_ids?.[0] ?? '',
-  }
-
-  return message || 'تعذر إنشاء المستخدم حالياً'
 }
 
 const createUser = async () => {
@@ -182,23 +162,26 @@ const createUser = async () => {
   }
 
   if (!name.value.trim()) {
-    fieldErrors.value.name = 'يرجى إدخال الاسم'
+    fieldErrors.value.name = t('users_form.validation_name')
   } else if (!nameValid.value) {
     fieldErrors.value.name = getNameError()
   }
   if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
-    fieldErrors.value.email = 'البريد الإلكتروني غير صالح'
+    fieldErrors.value.email = t('users_form.validation_email')
   }
   if (!password.value) {
-    fieldErrors.value.password = 'يرجى إدخال كلمة المرور'
+    fieldErrors.value.password = t('users_form.validation_password')
   } else if (!passwordValid.value) {
     fieldErrors.value.password = getPasswordError()
   }
   if (password.value !== passwordConfirmation.value) {
-    fieldErrors.value.password_confirmation = 'كلمة المرور غير متطابقة'
+    fieldErrors.value.password_confirmation = t('users_form.validation_password_confirm')
   }
   if (phone.value.trim() && !phoneValid.value) {
-    fieldErrors.value.phone = getPhoneError() || 'رقم الهاتف غير صالح'
+    fieldErrors.value.phone = getPhoneError() || t('users_form.validation_phone')
+  }
+  if (selectedRoleIds.value.length === 0) {
+    fieldErrors.value.role_ids = t('errors.roles_required')
   }
 
   if (Object.values(fieldErrors.value).some(Boolean)) return
@@ -219,10 +202,22 @@ const createUser = async () => {
       },
     })
 
-    toast.success('تم إنشاء المستخدم بنجاح')
+    toast.success(t('toasts.save_success'))
     await navigateTo('/users')
   } catch (error: unknown) {
-    errorMessage.value = extractErrorMessage(error)
+    if (isValidationError(error)) {
+      const fe = getFieldErrors(error)
+      fieldErrors.value = {
+        name: fe.name ?? '',
+        phone: fe.phone ?? '',
+        email: fe.email ?? '',
+        password: fe.password ?? '',
+        password_confirmation: fe.password_confirmation ?? '',
+        role_ids: fe.role_ids ?? '',
+      }
+    } else {
+      errorMessage.value = getErrorMessage(error)
+    }
   } finally {
     submitting.value = false
   }
@@ -240,9 +235,9 @@ onMounted(loadRoles)
         </NuxtLink>
       </Button>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">إنشاء مستخدم</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('users_form.create_title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          إضافة مستخدم جديد للنظام
+          {{ t('users_form.create_subtitle') }}
         </p>
       </div>
     </div>
@@ -250,10 +245,10 @@ onMounted(loadRoles)
     <div class="rounded-lg border p-5 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
-          <label class="text-sm font-medium">الاسم <span class="text-red-500">*</span></label>
+          <label class="text-sm font-medium">{{ t('users_form.name') }} <span class="text-red-500">*</span></label>
           <Input
             v-model="name"
-            placeholder="مثال: أحمد محمد"
+            :placeholder="t('users_form.name_placeholder')"
             :class="fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''"
             @input="fieldErrors.name = ''"
           />
@@ -273,7 +268,7 @@ onMounted(loadRoles)
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium">البريد الإلكتروني</label>
+          <label class="text-sm font-medium">{{ t('users_form.label_email') }}</label>
           <Input
             v-model="email"
             type="email"
@@ -285,7 +280,7 @@ onMounted(loadRoles)
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium">الهاتف</label>
+          <label class="text-sm font-medium">{{ t('users_form.phone') }}</label>
           <Input
             v-model="phone"
             placeholder="07XXXXXXXXX"
@@ -306,7 +301,7 @@ onMounted(loadRoles)
             </li>
           </ul>
           <p class="text-xs text-muted-foreground">
-            رقم عراقي فريد — لا يُسمح بتكرار الأرقام
+            {{ t('users_form.phone_hint') }}
           </p>
         </div>
 
@@ -317,16 +312,16 @@ onMounted(loadRoles)
               type="checkbox"
               class="size-4 cursor-pointer rounded border border-input accent-primary"
             >
-            الحساب نشط
+            {{ t('users_form.account_active') }}
           </label>
         </div>
 
         <div class="space-y-2 md:col-span-1">
-          <label class="text-sm font-medium">كلمة المرور <span class="text-red-500">*</span></label>
+          <label class="text-sm font-medium">{{ t('users_form.password') }} <span class="text-red-500">*</span></label>
           <Input
             v-model="password"
             type="text"
-            placeholder="أدخل كلمة مرور قوية"
+            :placeholder="t('users_form.password_placeholder')"
             :class="fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''"
             @input="fieldErrors.password = ''"
           />
@@ -346,11 +341,11 @@ onMounted(loadRoles)
         </div>
 
         <div class="space-y-2 md:col-span-1">
-          <label class="text-sm font-medium">تأكيد كلمة المرور <span class="text-red-500">*</span></label>
+          <label class="text-sm font-medium">{{ t('users_form.password_confirm') }} <span class="text-red-500">*</span></label>
           <Input
             v-model="passwordConfirmation"
             type="text"
-            placeholder="أعد إدخال كلمة المرور"
+            :placeholder="t('users_form.password_confirm_placeholder')"
             :class="fieldErrors.password_confirmation ? 'border-red-500 focus-visible:ring-red-500' : ''"
             @input="fieldErrors.password_confirmation = ''"
           />
@@ -362,24 +357,25 @@ onMounted(loadRoles)
     <div>
       <h2 class="text-xl font-semibold flex items-center gap-2">
         <ShieldCheck class="size-4" />
-        الأدوار
+        {{ t('users_form.roles_section') }}
       </h2>
       <p class="text-sm text-muted-foreground mt-1">
-        اختر الأدوار المرتبطة بهذا المستخدم
+        {{ t('users_form.roles_hint') }}
       </p>
     </div>
 
     <div class="space-y-2">
-      <label class="text-sm font-medium">الأدوار</label>
+      <label class="text-sm font-medium">{{ t('users_form.roles_label') }} <span class="text-red-500">*</span></label>
       <Popover>
         <PopoverTrigger as-child>
           <Button
             variant="outline"
             role="combobox"
             class="w-full justify-between font-normal"
+            :class="fieldErrors.role_ids ? 'border-red-500 focus-visible:ring-red-500' : ''"
           >
             <span class="truncate">
-              {{ selectedRolesLabel || 'اختر الأدوار...' }}
+              {{ selectedRolesLabel || t('users_form.roles_placeholder') }}
             </span>
             <ChevronDown class="size-4 shrink-0 opacity-50" />
           </Button>
@@ -390,10 +386,10 @@ onMounted(loadRoles)
           side="bottom"
         >
           <div v-if="loadingRoles" class="p-4 text-sm text-muted-foreground text-center">
-            جاري تحميل الأدوار...
+            {{ t('users_form.loading_roles') }}
           </div>
           <div v-else-if="roles.length === 0" class="p-4 text-sm text-muted-foreground text-center">
-            لا توجد أدوار متاحة
+            {{ t('users_form.no_roles') }}
           </div>
           <div
             v-else
@@ -427,10 +423,10 @@ onMounted(loadRoles)
 
     <div class="flex items-center justify-end gap-2">
       <Button variant="outline" :disabled="submitting" as-child>
-        <NuxtLink to="/users">إلغاء</NuxtLink>
+        <NuxtLink to="/users">{{ t('common.cancel') }}</NuxtLink>
       </Button>
       <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="createUser">
-        {{ submitting ? 'جارٍ الحفظ...' : 'إنشاء المستخدم' }}
+        {{ submitting ? t('common.saving') : t('users_form.submit_create') }}
       </Button>
     </div>
   </div>

@@ -4,7 +4,7 @@ import {
   Search, Plus, Pencil, Trash2, Loader2, ShieldAlert,
   ChevronRight, ChevronLeft, LoaderCircle, Filter,
   Eye, Download, ArrowUp, ArrowDown, ArrowUpDown,
-  UserX, UserCheck, X, FileSpreadsheet,
+  UserX, UserCheck, X,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +37,8 @@ import {
 import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
+
+const { t, tm, locale } = useI18n()
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -157,7 +159,7 @@ const loadUnits = async (page = currentPage.value, query = search.value.trim()) 
     errorMessage.value
       = error?.data?.message?.ar
       ?? error?.data?.message
-      ?? 'تعذر تحميل قائمة الوحدات حالياً'
+      ?? t('units_page.load_error')
   }
   finally {
     loading.value = false
@@ -220,7 +222,8 @@ const toggleSort = (field: SortField) => {
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return '—'
   try {
-    return new Date(dateStr).toLocaleDateString('ar-EG', {
+    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
+    return new Date(dateStr).toLocaleDateString(loc, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -240,11 +243,11 @@ const authorDisplay = (value?: UnitAuthor | number | null) => {
 const statusConfig = (status: string) => {
   switch (status) {
     case 'active':
-      return { label: 'نشط', class: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' }
+      return { label: t('common.active'), class: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' }
     case 'inactive':
-      return { label: 'غير نشط', class: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
+      return { label: t('common.inactive'), class: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
     case 'deleted':
-      return { label: 'محذوف', class: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' }
+      return { label: t('common.deleted'), class: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' }
     default:
       return { label: status || '—', class: 'bg-muted text-muted-foreground' }
   }
@@ -274,11 +277,11 @@ const confirmDelete = async () => {
   unitToDelete.value = null
   try {
     await $api(`/units/${unit.id}`, { method: 'DELETE' })
-    toast.success(`تم حذف "${unit.name_ar}" بنجاح`)
+    toast.success(t('units_page.delete_success', { name: unit.name_ar }))
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
-    toast.error(error?.data?.message?.ar ?? error?.data?.message ?? 'تعذر حذف الوحدة حالياً')
+    toast.error(error?.data?.message?.ar ?? error?.data?.message ?? t('units_page.delete_error'))
   }
   finally {
     deletingId.value = null
@@ -300,14 +303,14 @@ const confirmDeactivate = async () => {
       method: 'PUT',
       body: buildUnitStatusBody(unit, 'inactive'),
     })
-    toast.success(`تم إيقاف الوحدة "${unit.name_ar}" بنجاح`)
+    toast.success(t('units_page.deactivate_success', { name: unit.name_ar }))
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
     const msg =
       error?.data?.message?.ar ||
       error?.data?.message ||
-      'تعذر إيقاف الوحدة حالياً'
+      t('units_page.deactivate_error')
     toast.error(msg)
   }
   finally {
@@ -325,14 +328,14 @@ const confirmActivate = async () => {
       method: 'PUT',
       body: buildUnitStatusBody(unit, 'active'),
     })
-    toast.success(`تم تفعيل الوحدة "${unit.name_ar}" بنجاح`)
+    toast.success(t('units_page.activate_success', { name: unit.name_ar }))
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
     const msg =
       error?.data?.message?.ar ||
       error?.data?.message ||
-      'تعذر تفعيل الوحدة حالياً'
+      t('units_page.activate_error')
     toast.error(msg)
   }
   finally {
@@ -359,14 +362,13 @@ const confirmBulkAction = async () => {
 
   const ids = [...selectedIds.value]
   const newStatus = type === 'activate' ? 'active' : 'inactive'
-  const label = type === 'activate' ? 'تفعيل' : 'إيقاف'
 
   try {
     const rows = ids
       .map(id => units.value.find(u => u.id === id))
       .filter((u): u is UnitItem => u != null)
     if (rows.length !== ids.length) {
-      toast.error('تعذر تحديد بعض الوحدات المحددة — أعد تحميل الصفحة وحاول مرة أخرى')
+      toast.error(t('units_page.bulk_resolve_error'))
       return
     }
     await Promise.all(
@@ -377,7 +379,11 @@ const confirmBulkAction = async () => {
         }),
       ),
     )
-    toast.success(`تم ${label} ${ids.length} وحدة بنجاح`)
+    toast.success(
+      type === 'activate'
+        ? t('units_page.bulk_activated_n', { count: ids.length })
+        : t('units_page.bulk_deactivated_n', { count: ids.length }),
+    )
     selectedIds.value = new Set()
     await loadUnits(currentPage.value)
   }
@@ -385,7 +391,7 @@ const confirmBulkAction = async () => {
     const msg =
       error?.data?.message?.ar ||
       error?.data?.message ||
-      `تعذر ${label} الوحدات المحددة`
+      (type === 'activate' ? t('units_page.bulk_activate_failed') : t('units_page.bulk_deactivate_failed'))
     toast.error(msg)
   }
   finally {
@@ -400,12 +406,12 @@ const confirmBulkDelete = async () => {
   const ids = [...selectedIds.value]
   try {
     await Promise.all(ids.map(id => $api(`/units/${id}`, { method: 'DELETE' })))
-    toast.success(`تم حذف ${ids.length} وحدة بنجاح`)
+    toast.success(t('units_page.bulk_delete_success', { count: ids.length }))
     selectedIds.value = new Set()
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
-    toast.error(error?.data?.message?.ar ?? error?.data?.message ?? 'تعذر حذف الوحدات المحددة')
+    toast.error(error?.data?.message?.ar ?? error?.data?.message ?? t('units_page.bulk_delete_error'))
   }
   finally {
     bulkActionLoading.value = false
@@ -430,10 +436,10 @@ const buildExportRows = (source: UnitItem[]) =>
 const exportCSV = () => {
   const selectedUnits = units.value.filter(u => selectedIds.value.has(u.id))
   if (selectedUnits.length === 0) {
-    toast.error('يرجى تحديد عنصر واحد على الأقل للتصدير')
+    toast.error(t('common.export_min_one'))
     return
   }
-  const headers = ['المعرف', 'الاسم العربي', 'الاسم الإنجليزي', 'الرمز', 'الحالة', 'أُضيف بواسطة', 'آخر تعديل بواسطة', 'تاريخ الإنشاء', 'تاريخ التعديل']
+  const headers = tm('units_page.export_headers') as unknown as string[]
   const rows = buildExportRows(selectedUnits).map(r => [
     r.id, r.name_ar, r.name_en, r.symbol, r.status,
     r.created_by, r.updated_by, r.created_at, r.updated_at,
@@ -447,37 +453,7 @@ const exportCSV = () => {
   link.download = `units-${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
   URL.revokeObjectURL(link.href)
-  toast.success('تم تصدير الملف CSV بنجاح')
-}
-
-const exportExcel = () => {
-  const selectedUnits = units.value.filter(u => selectedIds.value.has(u.id))
-  if (selectedUnits.length === 0) {
-    toast.error('يرجى تحديد عنصر واحد على الأقل للتصدير')
-    return
-  }
-  const headers = ['المعرف', 'الاسم العربي', 'الاسم الإنجليزي', 'الرمز', 'الحالة', 'أُضيف بواسطة', 'آخر تعديل بواسطة', 'تاريخ الإنشاء', 'تاريخ التعديل']
-  const rows = buildExportRows(selectedUnits).map(r => [
-    r.id, r.name_ar, r.name_en, r.symbol, r.status,
-    r.created_by, r.updated_by, r.created_at, r.updated_at,
-  ])
-
-  // Build HTML table that Excel can open natively
-  const tableRows = [headers, ...rows]
-    .map(row => `<tr>${row.map(cell => `<td>${String(cell ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`)
-    .join('')
-
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">`
-    + `<head><meta charset="UTF-8"></head>`
-    + `<body><table border="1">${tableRows}</table></body></html>`
-
-  const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `units-${new Date().toISOString().slice(0, 10)}.xls`
-  link.click()
-  URL.revokeObjectURL(link.href)
-  toast.success('تم تصدير الملف Excel بنجاح')
+  toast.success(t('common.export_success'))
 }
 
 onMounted(() => loadUnits())
@@ -488,9 +464,9 @@ onMounted(() => loadUnits())
     <!-- Header -->
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">إدارة الوحدات</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('units_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          عرض وإدارة وحدات القياس المستخدمة في النظام
+          {{ t('units_page.subtitle') }}
         </p>
       </div>
       
@@ -504,7 +480,7 @@ onMounted(() => loadUnits())
           <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
           <Input
             v-model="search"
-            placeholder="ابحث بالاسم أو الرمز..."
+            :placeholder="t('units_page.search_placeholder')"
             class="pr-9 h-9"
           />
           <Loader2
@@ -517,12 +493,12 @@ onMounted(() => loadUnits())
         <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
           <SelectTrigger class="w-[min(100%,11rem)] h-9">
             <Filter class="size-3.5 shrink-0 text-muted-foreground ml-1" />
-            <SelectValue placeholder="الحالة" />
+            <SelectValue :placeholder="t('common.status')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الحالات</SelectItem>
-            <SelectItem value="active">نشط</SelectItem>
-            <SelectItem value="inactive">غير نشط</SelectItem>
+            <SelectItem value="all">{{ t('users_page.all_statuses') }}</SelectItem>
+            <SelectItem value="active">{{ t('common.active') }}</SelectItem>
+            <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -535,7 +511,7 @@ onMounted(() => loadUnits())
           @click="clearAllFilters"
         >
           <X class="size-3.5" />
-          مسح الفلاتر
+          {{ t('users_page.clear_filters') }}
         </Button>
 
      
@@ -545,15 +521,11 @@ onMounted(() => loadUnits())
           <Download class="size-3.5" />
           CSV
         </Button>
-        <Button variant="outline" size="sm" class="h-9 gap-2" @click="exportExcel">
-          <FileSpreadsheet class="size-3.5" />
-          Excel
-        </Button>
         <div class="flex-1" />
         <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
         <NuxtLink to="/units/create">
           <Plus class="size-4" />
-          إنشاء وحدة
+          {{ t('units_page.create') }}
         </NuxtLink>
       </Button>
       </div>
@@ -564,7 +536,7 @@ onMounted(() => loadUnits())
         class="flex items-center gap-3 rounded-lg border border-[#215260]/30 bg-[#215260]/5 px-4 py-2.5 flex-wrap"
       >
         <span class="text-sm font-medium text-[#215260]">
-          تم تحديد {{ selectedCount }} وحدة
+          {{ t('units_page.bulk_selected', { count: selectedCount }) }}
         </span>
         <div class="flex items-center gap-2 mr-auto">
           <Button
@@ -576,7 +548,7 @@ onMounted(() => loadUnits())
           >
             <LoaderCircle v-if="bulkActionLoading" class="size-3.5 animate-spin" />
             <UserCheck v-else class="size-3.5" />
-            تفعيل المحدد
+            {{ t('units_page.bulk_activate') }}
           </Button>
           <Button
             variant="outline"
@@ -587,7 +559,7 @@ onMounted(() => loadUnits())
           >
             <LoaderCircle v-if="bulkActionLoading" class="size-3.5 animate-spin" />
             <UserX v-else class="size-3.5" />
-            إيقاف المحدد
+            {{ t('units_page.bulk_deactivate') }}
           </Button>
           <Button
             variant="outline"
@@ -598,7 +570,7 @@ onMounted(() => loadUnits())
           >
             <LoaderCircle v-if="bulkActionLoading" class="size-3.5 animate-spin" />
             <Trash2 v-else class="size-3.5" />
-            حذف المحدد
+            {{ t('units_page.bulk_delete') }}
           </Button>
           <Button
             variant="ghost"
@@ -606,7 +578,7 @@ onMounted(() => loadUnits())
             class="h-8 text-muted-foreground"
             @click="selectedIds = new Set()"
           >
-            إلغاء التحديد
+            {{ t('common.deselect') }}
           </Button>
         </div>
       </div>
@@ -632,7 +604,7 @@ onMounted(() => loadUnits())
               @click="toggleSort('name_ar')"
             >
               <div class="flex items-center gap-1.5">
-                الاسم العربي
+                {{ t('units_page.col_name_ar') }}
                 <ArrowUp v-if="sortBy === 'name_ar' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'name_ar' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
@@ -644,7 +616,7 @@ onMounted(() => loadUnits())
               @click="toggleSort('name_en')"
             >
               <div class="flex items-center gap-1.5">
-                الاسم الإنجليزي
+                {{ t('units_page.col_name_en') }}
                 <ArrowUp v-if="sortBy === 'name_en' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'name_en' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
@@ -656,7 +628,7 @@ onMounted(() => loadUnits())
               @click="toggleSort('symbol')"
             >
               <div class="flex items-center gap-1.5">
-                الرمز
+                {{ t('units_page.col_symbol') }}
                 <ArrowUp v-if="sortBy === 'symbol' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'symbol' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
@@ -668,30 +640,30 @@ onMounted(() => loadUnits())
               @click="toggleSort('status')"
             >
               <div class="flex items-center gap-1.5">
-                الحالة
+                {{ t('units_page.col_status') }}
                 <ArrowUp v-if="sortBy === 'status' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'status' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">أُضيف بواسطة</TableHead>
-            <TableHead class="text-right font-medium">آخر تعديل بواسطة</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
 
             <TableHead
               class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('created_at')"
             >
               <div class="flex items-center gap-1.5">
-                تاريخ الإنشاء
+                {{ t('common.created_at') }}
                 <ArrowUp v-if="sortBy === 'created_at' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'created_at' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">آخر تحديث</TableHead>
-            <TableHead class="text-right font-medium">الإجراءات</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.updated_at') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('units_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -701,7 +673,7 @@ onMounted(() => loadUnits())
             <TableCell :colspan="10" class="py-14 text-center ">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground ">
                 <Loader2 class="size-4 animate-spin" />
-                جاري تحميل الوحدات...
+                {{ t('units_page.loading') }}
               </div>
             </TableCell>
           </TableRow>
@@ -713,7 +685,7 @@ onMounted(() => loadUnits())
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
                 <Button variant="outline" size="sm" @click="loadUnits()">
-                  إعادة المحاولة
+                  {{ t('common.retry') }}
                 </Button>
               </div>
             </TableCell>
@@ -724,8 +696,8 @@ onMounted(() => loadUnits())
             <TableCell :colspan="10" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
-                  ? 'لا توجد نتائج مطابقة للبحث أو الفلاتر'
-                  : 'لا توجد وحدات مضافة حتى الآن'
+                  ? t('units_page.no_results')
+                  : t('units_page.no_units')
               }}
             </TableCell>
           </TableRow>
@@ -811,7 +783,7 @@ onMounted(() => loadUnits())
                   @click="handleEdit(unit)"
                 >
                   <Pencil class="size-3.5" />
-                  تعديل
+                  {{ t('common.edit') }}
                 </button>
 
                 <!-- Deactivate -->
@@ -824,7 +796,7 @@ onMounted(() => loadUnits())
                 >
                   <LoaderCircle v-if="togglingId === unit.id" class="size-3.5 animate-spin" />
                   <UserX v-else class="size-3.5" />
-                  إيقاف
+                  {{ t('common.deactivate') }}
                 </button>
 
                 <!-- Activate -->
@@ -837,7 +809,7 @@ onMounted(() => loadUnits())
                 >
                   <LoaderCircle v-if="togglingId === unit.id" class="size-3.5 animate-spin" />
                   <UserCheck v-else class="size-3.5" />
-                  تفعيل
+                  {{ t('common.activate') }}
                 </button>
 
                 <!-- Delete -->
@@ -850,7 +822,7 @@ onMounted(() => loadUnits())
                 >
                   <LoaderCircle v-if="deletingId === unit.id" class="size-3.5 animate-spin" />
                   <Trash2 v-else class="size-3.5" />
-                  حذف
+                  {{ t('common.delete') }}
                 </button>
               </div>
             </TableCell>
@@ -861,7 +833,13 @@ onMounted(() => loadUnits())
       <!-- Pagination -->
       <div v-if="pagination && pagination.last_page > 1" class="flex items-center justify-between gap-3 border-t px-4 py-3">
         <p class="text-xs text-muted-foreground">
-          عرض {{ (currentPage - 1) * pagination.per_page + 1 }}–{{ Math.min(currentPage * pagination.per_page, pagination.total) }} من إجمالي {{ pagination.total }} وحدة
+          {{
+            t('units_page.pagination', {
+              from: (currentPage - 1) * pagination.per_page + 1,
+              to: Math.min(currentPage * pagination.per_page, pagination.total),
+              total: pagination.total,
+            })
+          }}
         </p>
 
         <div class="flex items-center gap-1">
@@ -909,7 +887,7 @@ onMounted(() => loadUnits())
       </div>
 
       <div v-else-if="pagination" class="border-t px-4 py-3">
-        <p class="text-xs text-muted-foreground">إجمالي {{ pagination.total }} وحدة</p>
+        <p class="text-xs text-muted-foreground">{{ t('units_page.total', { total: pagination.total }) }}</p>
       </div>
     </div>
   </div>
@@ -920,22 +898,20 @@ onMounted(() => loadUnits())
   <AlertDialog :open="!!unitToDelete" @update:open="val => { if (!val) unitToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('units_page.delete_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من حذف الوحدة
-          <span class="font-semibold text-foreground">{{ unitToDelete?.name_ar }}</span>؟
-          لا يمكن التراجع عن هذا الإجراء.
+          {{ t('units_page.delete_dialog_body', { name: unitToDelete?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-red-600 hover:bg-red-700 text-white"
           :disabled="!!deletingId"
           @click="confirmDelete"
         >
           <LoaderCircle v-if="deletingId" class="size-4 animate-spin ml-2" />
-          نعم، احذف
+          {{ t('units_page.confirm_yes_delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -945,24 +921,23 @@ onMounted(() => loadUnits())
   <AlertDialog :open="!!unitToDeactivate" @update:open="val => { if (!val) unitToDeactivate = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد إيقاف الوحدة</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('units_page.deactivate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="space-y-2">
           <p>
-            هل أنت متأكد من إيقاف الوحدة
-            <span class="font-semibold text-foreground">{{ unitToDeactivate?.name_ar }}</span>؟
+            {{ t('units_page.deactivate_dialog_body', { name: unitToDeactivate?.name_ar ?? '' }) }}
           </p>
-          <p>يمكنك تفعيلها مجدداً في أي وقت من نفس القائمة.</p>
+          <p>{{ t('units_page.deactivate_dialog_hint') }}</p>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-amber-600 hover:bg-amber-700 text-white"
           :disabled="!!togglingId"
           @click="confirmDeactivate"
         >
           <LoaderCircle v-if="togglingId" class="size-4 animate-spin ml-2" />
-          نعم، أوقف
+          {{ t('units_page.confirm_yes_deactivate') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -972,21 +947,20 @@ onMounted(() => loadUnits())
   <AlertDialog :open="!!unitToActivate" @update:open="val => { if (!val) unitToActivate = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد تفعيل الوحدة</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('units_page.activate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من تفعيل الوحدة
-          <span class="font-semibold text-foreground">{{ unitToActivate?.name_ar }}</span>؟
+          {{ t('units_page.activate_dialog_body', { name: unitToActivate?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-green-600 hover:bg-green-700 text-white"
           :disabled="!!togglingId"
           @click="confirmActivate"
         >
           <LoaderCircle v-if="togglingId" class="size-4 animate-spin ml-2" />
-          نعم، فعّل
+          {{ t('units_page.confirm_yes_activate') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -1000,25 +974,33 @@ onMounted(() => loadUnits())
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>
-          {{ bulkConfirmType === 'activate' ? 'تأكيد التفعيل الجماعي' : 'تأكيد الإيقاف الجماعي' }}
+          {{
+            bulkConfirmType === 'activate'
+              ? t('units_page.bulk_activate_title')
+              : t('units_page.bulk_deactivate_title')
+          }}
         </AlertDialogTitle>
         <AlertDialogDescription>
           {{
             bulkConfirmType === 'activate'
-              ? `هل أنت متأكد من تفعيل ${selectedCount} وحدة محددة؟`
-              : `هل أنت متأكد من إيقاف ${selectedCount} وحدة محددة؟ يمكنك تفعيلها مجدداً لاحقاً.`
+              ? t('units_page.bulk_activate_body', { count: selectedCount })
+              : t('units_page.bulk_deactivate_body', { count: selectedCount })
           }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           :class="bulkConfirmType === 'activate' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'"
           :disabled="bulkActionLoading"
           @click="confirmBulkAction"
         >
           <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin ml-2" />
-          {{ bulkConfirmType === 'activate' ? 'نعم، فعّل الجميع' : 'نعم، أوقف الجميع' }}
+          {{
+            bulkConfirmType === 'activate'
+              ? t('units_page.bulk_confirm_activate')
+              : t('units_page.bulk_confirm_deactivate')
+          }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -1028,20 +1010,20 @@ onMounted(() => loadUnits())
   <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="val => { bulkDeleteConfirmOpen = val }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد الحذف الجماعي</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('units_page.bulk_delete_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من حذف {{ selectedCount }} وحدة محددة؟ لا يمكن التراجع عن هذا الإجراء.
+          {{ t('units_page.bulk_delete_body', { count: selectedCount }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-red-600 hover:bg-red-700 text-white"
           :disabled="bulkActionLoading"
           @click="confirmBulkDelete"
         >
           <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin ml-2" />
-          نعم، احذف الجميع
+          {{ t('units_page.bulk_confirm_delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

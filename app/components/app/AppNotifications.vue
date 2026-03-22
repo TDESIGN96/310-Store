@@ -21,6 +21,7 @@ import { toast } from 'vue-sonner'
 
 const authStore = useAuthStore()
 const nuxtApp = useNuxtApp()
+const { t } = useI18n()
 const STORAGE_PREFIX = 'app_notifications'
 const MAX_NOTIFICATIONS = 50
 
@@ -54,21 +55,21 @@ interface EchoNotificationPayload {
 const notifications = ref<Notification[]>([])
 const activeChannelName = ref<string | null>(null)
 
-const toRelativeArabicTime = (value?: string) => {
-  if (!value) return 'الآن'
+const toRelativeTime = (value?: string) => {
+  if (!value) return t('notifications.now')
 
   const timestamp = new Date(value).getTime()
-  if (Number.isNaN(timestamp)) return 'الآن'
+  if (Number.isNaN(timestamp)) return t('notifications.now')
 
   const minutes = Math.floor((Date.now() - timestamp) / (1000 * 60))
-  if (minutes < 1) return 'الآن'
-  if (minutes < 60) return `منذ ${minutes} دقيقة`
+  if (minutes < 1) return t('notifications.now')
+  if (minutes < 60) return t('notifications.minutes_ago', { n: minutes })
 
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `منذ ${hours} ساعة`
+  if (hours < 24) return t('notifications.hours_ago', { n: hours })
 
   const days = Math.floor(hours / 24)
-  return `منذ ${days} يوم`
+  return t('notifications.days_ago', { n: days })
 }
 
 const resolveNotificationType = (payload: EchoNotificationPayload): Notification['type'] => {
@@ -103,7 +104,7 @@ const showToastForNotification = (notification: Notification) => {
     description: notification.message,
     action: notification.link
       ? {
-          label: 'عرض',
+          label: t('notifications.view'),
           onClick: () => navigateTo(notification.link as string),
         }
       : undefined,
@@ -330,13 +331,13 @@ const remove = (id: string) => {
       <!-- Header -->
       <div class="flex items-center justify-between px-4 py-3">
         <div class="flex items-center gap-2">
-          <span class="font-semibold text-sm">الإشعارات</span>
+          <span class="font-semibold text-sm">{{ t('notifications.title') }}</span>
           <Badge
             v-if="unreadCount > 0"
             variant="secondary"
             class="text-xs px-1.5 py-0"
           >
-            {{ unreadCount }} جديد
+            {{ t('notifications.new_count', { count: unreadCount }) }}
           </Badge>
         </div>
         <Button
@@ -346,7 +347,7 @@ const remove = (id: string) => {
           class="text-xs text-muted-foreground h-7"
           @click="markAllRead"
         >
-          تحديد الكل كمقروء
+          {{ t('notifications.mark_all_read') }}
         </Button>
       </div>
 
@@ -361,7 +362,7 @@ const remove = (id: string) => {
           class="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground"
         >
           <Bell class="size-8 opacity-20" />
-          <span class="text-sm">لا توجد إشعارات</span>
+          <span class="text-sm">{{ t('notifications.empty') }}</span>
         </div>
 
         <!-- List -->
@@ -402,7 +403,7 @@ const remove = (id: string) => {
                 {{ notification.message }}
               </p>
               <span class="text-[11px] text-muted-foreground/50 mt-1 block">
-                {{ toRelativeArabicTime(notification.createdAt) }}
+                {{ toRelativeTime(notification.createdAt) }}
               </span>
             </div>
 

@@ -21,6 +21,9 @@ import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryLis
 
 definePageMeta({ layout: 'default' })
 
+const { t } = useI18n()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface CategoryItem {
@@ -52,11 +55,6 @@ interface CategoryListResponse {
   data?: { categories?: CategoryItem[] }
   status?: string
   status_code?: number
-}
-
-interface ApiErrorPayload {
-  message?: string | { en?: string; ar?: string }
-  errors?: Record<string, string[] | undefined>
 }
 
 // ── Route & Auth ───────────────────────────────────────────────────────────────
@@ -100,7 +98,7 @@ const loadCategoryData = async () => {
     const res = await $api<CategoryShowResponse>(`/categories/${categoryId}`)
     const data = res.data?.category ?? res.category ?? null
     if (!data || typeof data !== 'object' || !('id' in data)) {
-      categoryError.value = 'لم يتم العثور على التصنيف'
+      categoryError.value = t('categories_form.category_not_found')
       return
     }
     nameAr.value = data.name_ar ?? ''
@@ -110,10 +108,7 @@ const loadCategoryData = async () => {
     parentId.value = data.parent_id ?? null
   }
   catch (error: unknown) {
-    const msg = (error as { data?: { message?: string | { ar?: string } } })?.data?.message
-    categoryError.value = typeof msg === 'string'
-      ? msg
-      : (msg as { ar?: string } | undefined)?.ar ?? 'تعذر تحميل بيانات التصنيف'
+    categoryError.value = getErrorMessage(error)
   }
   finally {
     categoryLoading.value = false
@@ -208,37 +203,37 @@ const validateLocal = (): boolean => {
   fieldErrors.value = { name_ar: '', name_en: '', parent_id: '', description: '', status: '' }
 
   if (!nameAr.value.trim()) {
-    fieldErrors.value.name_ar = 'يرجى إدخال الاسم العربي'
+    fieldErrors.value.name_ar = t('categories_form.validation_name_ar_required')
   }
   else if (!ARABIC_RE.test(nameAr.value.trim())) {
-    fieldErrors.value.name_ar = 'يجب أن يحتوي الاسم العربي على أحرف عربية فقط'
+    fieldErrors.value.name_ar = t('categories_form.validation_name_ar_letters')
   }
 
   if (!nameEn.value.trim()) {
-    fieldErrors.value.name_en = 'يرجى إدخال الاسم الإنجليزي'
+    fieldErrors.value.name_en = t('categories_form.validation_name_en_required')
   }
   else if (!ENGLISH_RE.test(nameEn.value.trim())) {
-    fieldErrors.value.name_en = 'يجب أن يحتوي الاسم الإنجليزي على أحرف إنجليزية فقط'
+    fieldErrors.value.name_en = t('categories_form.validation_name_en_letters')
   }
 
   if (descriptionOverLimit.value) {
-    fieldErrors.value.description = `الوصف لا يمكن أن يتجاوز 500 حرف (الحالي: ${descriptionLength.value})`
+    fieldErrors.value.description = t('categories_form.validation_description_max', { count: descriptionLength.value })
   }
 
   if (parentId.value !== null) {
     if (parentId.value === categoryId) {
-      fieldErrors.value.parent_id = 'لا يمكن تعيين التصنيف أصلاً لنفسه'
+      fieldErrors.value.parent_id = t('categories_form.validation_parent_self')
     }
     else if (descendantIds.value.has(parentId.value)) {
-      fieldErrors.value.parent_id = 'لا يمكن تعيين تصنيف فرعي كتصنيف أصلي (مرجع دائري)'
+      fieldErrors.value.parent_id = t('categories_form.validation_parent_cycle')
     }
     else {
       const parent = allCategories.value.find(c => c.id === parentId.value)
       if (!parent) {
-        fieldErrors.value.parent_id = 'التصنيف الأصلي المحدد غير موجود'
+        fieldErrors.value.parent_id = t('categories_form.validation_parent_missing')
       }
       else if (parent.status !== 'active') {
-        fieldErrors.value.parent_id = 'لا يمكن تعيين تصنيف أصلي غير نشط أو محذوف'
+        fieldErrors.value.parent_id = t('categories_form.validation_parent_inactive')
       }
     }
   }
@@ -266,22 +261,6 @@ const checkNameUnique = async (field: 'name_ar' | 'name_en', value: string): Pro
   }
 }
 
-// ── Error Extraction ───────────────────────────────────────────────────────────
-
-const extractErrorMessage = (error: unknown): string => {
-  const payload = ((error as { data?: ApiErrorPayload })?.data ?? {}) as ApiErrorPayload
-  const msg = payload.message
-  const message = typeof msg === 'object' ? msg?.ar || msg?.en || '' : msg || ''
-
-  fieldErrors.value.name_ar = payload.errors?.name_ar?.[0] ?? ''
-  fieldErrors.value.name_en = payload.errors?.name_en?.[0] ?? ''
-  fieldErrors.value.parent_id = payload.errors?.parent_id?.[0] ?? ''
-  fieldErrors.value.description = payload.errors?.description?.[0] ?? ''
-  fieldErrors.value.status = payload.errors?.status?.[0] ?? ''
-
-  return message || 'تعذر تحديث التصنيف حالياً'
-}
-
 // ── Submit ─────────────────────────────────────────────────────────────────────
 
 const updateCategory = async () => {
@@ -303,8 +282,8 @@ const updateCategory = async () => {
       checkNameUnique('name_en', nameEn.value.trim()),
     ])
 
-    if (!arUnique) fieldErrors.value.name_ar = 'هذا الاسم العربي مستخدم بالفعل'
-    if (!enUnique) fieldErrors.value.name_en = 'هذا الاسم الإنجليزي مستخدم بالفعل'
+    if (!arUnique) fieldErrors.value.name_ar = t('categories_form.validation_duplicate_ar')
+    if (!enUnique) fieldErrors.value.name_en = t('categories_form.validation_duplicate_en')
 
     if (!arUnique || !enUnique) {
       submitting.value = false
@@ -321,11 +300,21 @@ const updateCategory = async () => {
     if (description.value.trim()) body.description = description.value.trim()
 
     await $api(`/categories/${categoryId}`, { method: 'PUT', body })
-    toast.success('تم تحديث الفئة بنجاح')
+    toast.success(t('toasts.save_success'))
     await navigateTo('/categories')
   }
   catch (error: unknown) {
-    errorMessage.value = extractErrorMessage(error)
+    if (isValidationError(error)) {
+      const fe = getFieldErrors(error)
+      fieldErrors.value.name_ar = fe.name_ar ?? ''
+      fieldErrors.value.name_en = fe.name_en ?? ''
+      fieldErrors.value.parent_id = fe.parent_id ?? ''
+      fieldErrors.value.description = fe.description ?? ''
+      fieldErrors.value.status = fe.status ?? ''
+    }
+    else {
+      errorMessage.value = getErrorMessage(error)
+    }
   }
   finally {
     submitting.value = false
@@ -348,9 +337,9 @@ onMounted(async () => {
         </NuxtLink>
       </Button>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">تعديل التصنيف</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('categories_form.edit_title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          تعديل بيانات التصنيف المحدد
+          {{ t('categories_form.edit_subtitle') }}
         </p>
       </div>
     </div>
@@ -361,9 +350,9 @@ onMounted(async () => {
       class="flex flex-col items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-6 py-10 text-center text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
     >
       <ShieldAlert class="size-8" />
-      <p class="font-medium">ليس لديك صلاحية لتعديل هذا التصنيف</p>
+      <p class="font-medium">{{ t('categories_form.no_permission') }}</p>
       <Button variant="outline" size="sm" as-child>
-        <NuxtLink to="/categories">العودة إلى القائمة</NuxtLink>
+        <NuxtLink to="/categories">{{ t('categories_show.back') }}</NuxtLink>
       </Button>
     </div>
 
@@ -374,7 +363,7 @@ onMounted(async () => {
         class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
       >
         <Loader2 class="size-5 animate-spin" />
-        جاري تحميل بيانات التصنيف...
+        {{ t('categories_form.loading_data') }}
       </div>
 
       <!-- Load Error -->
@@ -386,10 +375,10 @@ onMounted(async () => {
         <span>{{ categoryError }}</span>
         <div class="flex gap-2">
           <Button variant="outline" size="sm" @click="loadCategoryData">
-            إعادة المحاولة
+            {{ t('common.retry') }}
           </Button>
           <Button variant="ghost" size="sm" as-child>
-            <NuxtLink to="/categories">العودة إلى القائمة</NuxtLink>
+            <NuxtLink to="/categories">{{ t('categories_show.back') }}</NuxtLink>
           </Button>
         </div>
       </div>
@@ -400,7 +389,7 @@ onMounted(async () => {
         <div class="rounded-lg border p-5 space-y-5">
           <div class="flex items-center gap-2 pb-1 border-b">
             <Tag class="size-4 text-muted-foreground" />
-            <h2 class="font-semibold text-sm">المعلومات الأساسية</h2>
+            <h2 class="font-semibold text-sm">{{ t('categories_form.section_basic') }}</h2>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -408,12 +397,12 @@ onMounted(async () => {
             <!-- Arabic Name -->
             <div class="space-y-2">
               <label class="text-sm font-medium">
-                الاسم العربي <span class="text-red-500">*</span>
+                {{ t('categories_form.name_ar') }} <span class="text-red-500">*</span>
               </label>
               <Input
                 v-model="nameAr"
                 dir="rtl"
-                placeholder="مثال: إلكترونيات"
+                :placeholder="t('categories_form.placeholder_name_ar')"
                 :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
                 @input="fieldErrors.name_ar = ''"
               />
@@ -421,19 +410,19 @@ onMounted(async () => {
                 {{ fieldErrors.name_ar }}
               </p>
               <p v-else class="text-xs text-muted-foreground">
-                يدعم الحروف العربية والتشكيل
+                {{ t('categories_form.name_ar_hint') }}
               </p>
             </div>
 
             <!-- English Name -->
             <div class="space-y-2">
               <label class="text-sm font-medium">
-                الاسم الإنجليزي <span class="text-red-500">*</span>
+                {{ t('categories_form.name_en') }} <span class="text-red-500">*</span>
               </label>
               <Input
                 v-model="nameEn"
                 dir="ltr"
-                placeholder="e.g. Electronics"
+                :placeholder="t('categories_form.placeholder_name_en')"
                 :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
                 @input="fieldErrors.name_en = ''"
               />
@@ -441,13 +430,13 @@ onMounted(async () => {
                 {{ fieldErrors.name_en }}
               </p>
               <p v-else class="text-xs text-muted-foreground">
-                أحرف إنجليزية فقط
+                {{ t('categories_form.name_en_hint') }}
               </p>
             </div>
 
             <!-- Parent Category -->
             <div class="space-y-2">
-              <label class="text-sm font-medium">التصنيف الأصلي</label>
+              <label class="text-sm font-medium">{{ t('categories_form.parent') }}</label>
               <Popover v-model:open="parentPopoverOpen">
                 <PopoverTrigger as-child>
                   <Button
@@ -457,9 +446,9 @@ onMounted(async () => {
                     :class="fieldErrors.parent_id ? 'border-red-500' : ''"
                   >
                     <span class="truncate text-sm">
-                      <span v-if="loadingParents" class="text-muted-foreground">جاري التحميل...</span>
+                      <span v-if="loadingParents" class="text-muted-foreground">{{ t('categories_form.parent_loading') }}</span>
                       <span v-else-if="selectedParentLabel" class="text-foreground">{{ selectedParentLabel }}</span>
-                      <span v-else class="text-muted-foreground">اختر التصنيف الأصلي (اختياري)</span>
+                      <span v-else class="text-muted-foreground">{{ t('categories_form.parent_placeholder') }}</span>
                     </span>
                     <ChevronDown class="size-4 shrink-0 opacity-50" />
                   </Button>
@@ -474,7 +463,7 @@ onMounted(async () => {
                     <input
                       v-model="parentSearchQuery"
                       type="text"
-                      placeholder="ابحث عن تصنيف..."
+                      :placeholder="t('categories_form.parent_search')"
                       class="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                       dir="rtl"
                     />
@@ -486,17 +475,17 @@ onMounted(async () => {
                       class="flex items-center w-full px-4 py-2.5 text-right text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
                       @click="selectParent(null)"
                     >
-                      بدون تصنيف أصلي
+                      {{ t('categories_form.parent_none') }}
                     </button>
 
                     <div v-if="loadingParents" class="p-4 text-sm text-muted-foreground text-center">
-                      جاري تحميل التصنيفات...
+                      {{ t('categories_form.parent_loading_list') }}
                     </div>
                     <div
                       v-else-if="filteredParentCategories.length === 0"
                       class="p-4 text-sm text-muted-foreground text-center"
                     >
-                      لا توجد تصنيفات نشطة متاحة
+                      {{ t('categories_form.parent_empty') }}
                     </div>
                     <button
                       v-for="cat in filteredParentCategories"
@@ -517,25 +506,25 @@ onMounted(async () => {
                 {{ fieldErrors.parent_id }}
               </p>
               <p v-else class="text-xs text-muted-foreground">
-                يُستثنى هذا التصنيف وأبناؤه من الخيارات
+                {{ t('categories_form.parent_exclude_hint') }}
               </p>
             </div>
 
             <!-- Status -->
             <div class="space-y-2">
               <label class="text-sm font-medium">
-                الحالة <span class="text-red-500">*</span>
+                {{ t('categories_form.status') }} <span class="text-red-500">*</span>
               </label>
               <Select
                 :model-value="status"
                 @update:model-value="val => { status = (val as 'active' | 'inactive'); fieldErrors.status = '' }"
               >
                 <SelectTrigger :class="fieldErrors.status ? 'border-red-500 focus-visible:ring-red-500' : ''">
-                  <SelectValue placeholder="اختر الحالة" />
+                  <SelectValue :placeholder="t('units_form.select_status')" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">نشط</SelectItem>
-                  <SelectItem value="inactive">غير نشط</SelectItem>
+                  <SelectItem value="active">{{ t('common.active') }}</SelectItem>
+                  <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
                 </SelectContent>
               </Select>
               <p v-if="fieldErrors.status" class="text-xs text-red-500">
@@ -546,7 +535,7 @@ onMounted(async () => {
             <!-- Description (full width) -->
             <div class="space-y-2 md:col-span-2">
               <label class="text-sm font-medium flex items-center justify-between">
-                <span>الوصف</span>
+                <span>{{ t('categories_form.description') }}</span>
                 <span
                   class="text-xs font-normal"
                   :class="descriptionOverLimit ? 'text-red-500' : 'text-muted-foreground'"
@@ -558,7 +547,7 @@ onMounted(async () => {
                 v-model="description"
                 dir="rtl"
                 rows="4"
-                placeholder="أدخل وصفاً للتصنيف (اختياري)..."
+                :placeholder="t('categories_form.description_placeholder')"
                 class="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none resize-none placeholder:text-muted-foreground dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                 :class="fieldErrors.description ? 'border-red-500 focus-visible:ring-red-500' : ''"
                 @input="fieldErrors.description = ''"
@@ -567,7 +556,7 @@ onMounted(async () => {
                 {{ fieldErrors.description }}
               </p>
               <p v-else class="text-xs text-muted-foreground">
-                اختياري — بحد أقصى 500 حرف
+                {{ t('categories_form.description_hint') }}
               </p>
             </div>
           </div>
@@ -587,7 +576,7 @@ onMounted(async () => {
         <!-- Actions -->
         <div class="flex items-center justify-end gap-2">
           <Button variant="outline" :disabled="submitting" as-child>
-            <NuxtLink to="/categories">إلغاء</NuxtLink>
+            <NuxtLink to="/categories">{{ t('common.cancel') }}</NuxtLink>
           </Button>
           <Button
             class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
@@ -595,7 +584,7 @@ onMounted(async () => {
             @click="updateCategory"
           >
             <Loader2 v-if="submitting" class="size-4 animate-spin ml-2" />
-            {{ submitting ? 'جارٍ الحفظ...' : 'حفظ التغييرات' }}
+            {{ submitting ? t('common.saving') : t('categories_form.submit_save') }}
           </Button>
         </div>
       </template>

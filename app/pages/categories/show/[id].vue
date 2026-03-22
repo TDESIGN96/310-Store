@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 
 definePageMeta({ layout: 'default' })
 
+const { t, locale } = useI18n()
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface CategoryAuthor {
@@ -66,7 +68,8 @@ const errorMessage = ref('')
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return '—'
   try {
-    return new Date(dateStr).toLocaleDateString('ar-EG', {
+    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
+    return new Date(dateStr).toLocaleDateString(loc, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -94,11 +97,11 @@ const parentLabel = (cat: CategoryDetail) => {
 const statusConfig = (status: string) => {
   switch (status) {
     case 'active':
-      return { label: 'نشط', class: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' }
+      return { label: t('common.active'), class: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' }
     case 'inactive':
-      return { label: 'غير نشط', class: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
+      return { label: t('common.inactive'), class: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
     case 'deleted':
-      return { label: 'محذوف', class: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' }
+      return { label: t('common.deleted'), class: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' }
     default:
       return { label: status || '—', class: 'bg-muted text-muted-foreground' }
   }
@@ -115,7 +118,7 @@ const loadCategory = async () => {
     const res = await $api<CategoryShowResponse>(`/categories/${categoryId}`)
     const data = res.data?.category ?? res.category ?? null
     if (!data || typeof data !== 'object' || !('id' in data)) {
-      errorMessage.value = 'لم يتم العثور على التصنيف'
+      errorMessage.value = t('categories_show.not_found')
       return
     }
     category.value = data as CategoryDetail
@@ -126,7 +129,7 @@ const loadCategory = async () => {
       typeof msg === 'string'
         ? msg
         : (msg as { ar?: string } | undefined)?.ar
-        ?? 'تعذر تحميل بيانات التصنيف'
+        ?? t('categories_show.load_error')
   }
   finally {
     loading.value = false
@@ -149,9 +152,9 @@ onMounted(() => {
           </NuxtLink>
         </Button>
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">عرض التصنيف</h1>
+          <h1 class="text-2xl font-bold tracking-tight">{{ t('categories_show.title') }}</h1>
           <p class="text-sm text-muted-foreground mt-1">
-            تفاصيل تصنيف المنتجات
+            {{ t('categories_show.subtitle') }}
           </p>
         </div>
       </div>
@@ -159,7 +162,7 @@ onMounted(() => {
         <Button variant="outline" size="sm" class="gap-2" as-child>
           <NuxtLink :to="`/categories/edit/${category.id}`">
             <Pencil class="size-4" />
-            تعديل التصنيف
+            {{ t('categories_show.edit_category') }}
           </NuxtLink>
         </Button>
       </div>
@@ -171,9 +174,9 @@ onMounted(() => {
       class="flex flex-col items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-6 py-10 text-center text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
     >
       <ShieldAlert class="size-8" />
-      <p class="font-medium">ليس لديك صلاحية لعرض تفاصيل التصنيف</p>
+      <p class="font-medium">{{ t('categories_show.no_view_permission') }}</p>
       <Button variant="outline" size="sm" as-child>
-        <NuxtLink to="/categories">العودة إلى القائمة</NuxtLink>
+        <NuxtLink to="/categories">{{ t('categories_show.back') }}</NuxtLink>
       </Button>
     </div>
 
@@ -184,7 +187,7 @@ onMounted(() => {
         class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
       >
         <Loader2 class="size-5 animate-spin" />
-        جاري تحميل البيانات...
+        {{ t('categories_show.loading') }}
       </div>
 
       <!-- Error -->
@@ -196,10 +199,10 @@ onMounted(() => {
         <span>{{ errorMessage }}</span>
         <div class="flex gap-2">
           <Button variant="outline" size="sm" @click="loadCategory">
-            إعادة المحاولة
+            {{ t('categories_show.retry') }}
           </Button>
           <Button variant="ghost" size="sm" as-child>
-            <NuxtLink to="/categories">العودة إلى القائمة</NuxtLink>
+            <NuxtLink to="/categories">{{ t('categories_show.back') }}</NuxtLink>
           </Button>
         </div>
       </div>
@@ -211,25 +214,25 @@ onMounted(() => {
           <div class="bg-muted/40 px-4 py-3 border-b">
             <h2 class="font-semibold flex items-center gap-2">
               <Tag class="size-4" />
-              المعلومات الأساسية
+              {{ t('categories_show.basic_info') }}
             </h2>
           </div>
           <div class="p-4 space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">الاسم العربي</p>
-                <p class="font-medium" dir="rtl">{{ category.name_ar || '—' }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.name_ar') }}</p>
+                <p class="font-medium" dir="rtl">{{ category.name_ar || t('categories_show.none') }}</p>
               </div>
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">الاسم الإنجليزي</p>
-                <p class="font-medium" dir="ltr">{{ category.name_en || '—' }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.name_en') }}</p>
+                <p class="font-medium" dir="ltr">{{ category.name_en || t('categories_show.none') }}</p>
               </div>
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">التصنيف الأصلي</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.parent') }}</p>
                 <p class="text-sm font-medium">{{ parentLabel(category) }}</p>
               </div>
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">الحالة</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.status') }}</p>
                 <span
                   class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                   :class="statusConfig(category.status).class"
@@ -238,7 +241,7 @@ onMounted(() => {
                 </span>
               </div>
               <div v-if="category.description" class="space-y-1 md:col-span-2">
-                <p class="text-xs text-muted-foreground">الوصف</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.description') }}</p>
                 <p class="text-sm leading-relaxed">{{ category.description }}</p>
               </div>
             </div>
@@ -250,29 +253,29 @@ onMounted(() => {
           <div class="bg-muted/40 px-4 py-3 border-b">
             <h2 class="font-semibold flex items-center gap-2">
               <Calendar class="size-4" />
-              معلومات التدقيق
+              {{ t('categories_show.audit_info') }}
             </h2>
           </div>
           <div class="p-4 space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">أُضيف بواسطة</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.added_by') }}</p>
                 <p class="text-sm font-medium">{{ authorDisplay(category.created_by) }}</p>
               </div>
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">آخر تعديل بواسطة</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.updated_by') }}</p>
                 <p class="text-sm font-medium">{{ authorDisplay(category.updated_by) }}</p>
               </div>
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">تاريخ الإنشاء</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.created_at') }}</p>
                 <p class="text-sm">{{ formatDate(category.created_at) }}</p>
               </div>
               <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">آخر تحديث</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.updated_at') }}</p>
                 <p class="text-sm">{{ formatDate(category.updated_at) }}</p>
               </div>
               <div v-if="category.deleted_at" class="space-y-1 md:col-span-2">
-                <p class="text-xs text-muted-foreground">تاريخ الحذف</p>
+                <p class="text-xs text-muted-foreground">{{ t('categories_show.deleted_at') }}</p>
                 <p class="text-sm text-red-600">{{ formatDate(category.deleted_at) }}</p>
               </div>
             </div>
@@ -281,7 +284,7 @@ onMounted(() => {
 
         <div class="flex justify-end">
           <Button variant="outline" as-child>
-            <NuxtLink to="/categories">العودة إلى القائمة</NuxtLink>
+            <NuxtLink to="/categories">{{ t('categories_show.back') }}</NuxtLink>
           </Button>
         </div>
       </template>

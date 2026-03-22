@@ -2,9 +2,12 @@
 import { onMounted, ref } from 'vue'
 import { ArrowRight, Loader2, ShieldAlert, User, Mail, Phone, ShieldCheck, Calendar, CheckCircle, XCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { permissionGroups } from '@/config/permissions'
 
 definePageMeta({ layout: 'default' })
+
+const { t, locale } = useI18n()
+const { actionLabel } = usePermissionI18n()
+const { getErrorMessage } = useApiError()
 
 interface UserRole {
   id: number
@@ -52,10 +55,6 @@ const roles = ref<RoleItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
-const permissionLabelMap = Object.fromEntries(
-  permissionGroups.flatMap(group => group.permissions.map(permission => [permission.id, permission.label])),
-) as Record<string, string>
-
 const loadUser = async () => {
   loading.value = true
   errorMessage.value = ''
@@ -66,10 +65,10 @@ const loadUser = async () => {
     const userData = (data.user ?? (raw && 'user' in raw ? raw.user : raw) ?? null) as UserData | null
     user.value = userData
     if (!userData) {
-      errorMessage.value = 'لم يتم العثور على المستخدم'
+      errorMessage.value = t('errors.not_found')
     }
-  } catch (error: any) {
-    errorMessage.value = error?.data?.message ?? 'تعذر تحميل بيانات المستخدم'
+  } catch (error: unknown) {
+    errorMessage.value = getErrorMessage(error)
   } finally {
     loading.value = false
   }
@@ -79,7 +78,8 @@ const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '—'
   try {
     const d = new Date(dateStr)
-    return d.toLocaleDateString('ar-EG', {
+    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
+    return d.toLocaleDateString(loc, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -106,9 +106,7 @@ const roleLabel = (role: UserRole) => {
   return role.name_ar || role.name_en || role.name
 }
 
-const permissionLabel = (permission: string) => {
-  return permissionLabelMap[permission] || permission
-}
+const permissionLabel = (permission: string) => actionLabel(permission)
 onMounted(() => {
   loadUser()
   loadRoles()
@@ -124,9 +122,9 @@ onMounted(() => {
         </NuxtLink>
       </Button>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">عرض المستخدم</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('users_show.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          عرض تفاصيل المستخدم
+          {{ t('users_show.subtitle') }}
         </p>
       </div>
     </div>
@@ -137,7 +135,7 @@ onMounted(() => {
       class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
     >
       <Loader2 class="size-5 animate-spin" />
-      جاري تحميل البيانات...
+      {{ t('users_show.loading') }}
     </div>
 
     <!-- Error state -->
@@ -147,7 +145,7 @@ onMounted(() => {
     >
       <ShieldAlert class="size-8" />
       <span>{{ errorMessage }}</span>
-      <Button variant="outline" size="sm" @click="loadUser">إعادة المحاولة</Button>
+      <Button variant="outline" size="sm" @click="loadUser">{{ t('common.retry') }}</Button>
     </div>
 
     <!-- User details -->
@@ -156,52 +154,52 @@ onMounted(() => {
         <div class="bg-muted/40 px-4 py-3 border-b">
           <h2 class="font-semibold flex items-center gap-2">
             <User class="size-4" />
-            المعلومات الأساسية
+            {{ t('users_show.basic_info') }}
           </h2>
         </div>
         <div class="p-4 space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">الاسم</p>
+              <p class="text-xs text-muted-foreground">{{ t('users_show.label_name') }}</p>
               <p class="font-medium">{{ user.name }}</p>
             </div>
             <div class="space-y-1">
               <p class="text-xs text-muted-foreground flex items-center gap-1">
                 <Mail class="size-3.5" />
-                البريد الإلكتروني
+                {{ t('users_show.label_email') }}
               </p>
               <p class="font-medium">{{ user.email }}</p>
             </div>
             <div class="space-y-1">
               <p class="text-xs text-muted-foreground flex items-center gap-1">
                 <Phone class="size-3.5" />
-                الهاتف
+                {{ t('users_show.label_phone') }}
               </p>
               <p class="font-medium">{{ user.phone || '—' }}</p>
             </div>
             <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">الحالة</p>
+              <p class="text-xs text-muted-foreground">{{ t('users_show.label_status') }}</p>
               <div class="flex items-center gap-2">
                 <CheckCircle v-if="user.is_active" class="size-4 text-green-600" />
                 <XCircle v-else class="size-4 text-muted-foreground" />
                 <span :class="user.is_active ? 'text-green-600' : 'text-muted-foreground'">
-                  {{ user.is_active ? 'نشط' : 'غير نشط' }}
+                  {{ user.is_active ? t('common.active') : t('common.inactive') }}
                 </span>
               </div>
             </div>
             <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">مدير النظام</p>
+              <p class="text-xs text-muted-foreground">{{ t('users_show.label_admin') }}</p>
               <div class="flex items-center gap-2">
                 <CheckCircle v-if="user.is_admin" class="size-4 text-amber-600" />
                 <XCircle v-else class="size-4 text-muted-foreground" />
                 <span :class="user.is_admin ? 'text-amber-600' : 'text-muted-foreground'">
-                  {{ user.is_admin ? 'نعم' : 'لا' }}
+                  {{ user.is_admin ? t('common.yes') : t('common.no') }}
                 </span>
               </div>
             </div>
             <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">التحقق من البريد</p>
-              <p class="font-medium">{{ user.email_verified_at ? 'تم التحقق' : 'لم يتم التحقق' }}</p>
+              <p class="text-xs text-muted-foreground">{{ t('users_show.label_verified') }}</p>
+              <p class="font-medium">{{ user.email_verified_at ? t('users_show.verified_yes') : t('users_show.verified_no') }}</p>
             </div>
           </div>
 
@@ -209,14 +207,14 @@ onMounted(() => {
             <div class="space-y-1">
               <p class="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar class="size-3.5" />
-                تاريخ الإنشاء
+                {{ t('users_show.created_at') }}
               </p>
               <p class="text-sm">{{ formatDate(user.created_at) }}</p>
             </div>
             <div class="space-y-1">
               <p class="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar class="size-3.5" />
-                آخر تحديث
+                {{ t('users_show.updated_at') }}
               </p>
               <p class="text-sm">{{ formatDate(user.updated_at) }}</p>
             </div>
@@ -229,7 +227,7 @@ onMounted(() => {
         <div class="bg-muted/40 px-4 py-3 border-b">
           <h2 class="font-semibold flex items-center gap-2">
             <ShieldCheck class="size-4" />
-            الأدوار
+            {{ t('users_show.roles') }}
           </h2>
         </div>
         <div class="p-4">
@@ -242,7 +240,7 @@ onMounted(() => {
               {{ roleLabel(role) }}
             </span>
           </div>
-          <p v-else class="text-sm text-muted-foreground">لا توجد أدوار مخصصة</p>
+          <p v-else class="text-sm text-muted-foreground">{{ t('users_show.no_roles') }}</p>
         </div>
       </div>
 
@@ -251,7 +249,7 @@ onMounted(() => {
         <div class="bg-muted/40 px-4 py-3 border-b">
           <h2 class="font-semibold flex items-center gap-2">
             <ShieldCheck class="size-4" />
-            الصلاحيات
+            {{ t('users_show.permissions') }}
           </h2>
         </div>
         <div class="p-4">
@@ -264,7 +262,7 @@ onMounted(() => {
               {{ permissionLabel(perm) }}
             </span>
           </div>
-          <p v-else class="text-sm text-muted-foreground">لا توجد صلاحيات إضافية</p>
+          <p v-else class="text-sm text-muted-foreground">{{ t('users_show.no_permissions') }}</p>
         </div>
       </div>
     </template>

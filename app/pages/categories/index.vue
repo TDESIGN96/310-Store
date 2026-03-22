@@ -4,7 +4,7 @@ import {
   Search, Plus, Pencil, Trash2, Loader2, ShieldAlert,
   ChevronRight, ChevronLeft, LoaderCircle, Filter,
   Download, ArrowUp, ArrowDown, ArrowUpDown,
-  UserX, UserCheck, X, FileSpreadsheet, Tag,
+  UserX, UserCheck, X, Tag,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +37,8 @@ import { toast } from 'vue-sonner'
 import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryList'
 
 definePageMeta({ layout: 'default' })
+
+const { t, tm, locale } = useI18n()
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -196,7 +198,7 @@ const loadCategories = async (page = currentPage.value, query = search.value.tri
     errorMessage.value
       = error?.data?.message?.ar
       ?? error?.data?.message
-      ?? 'تعذر تحميل قائمة التصنيفات حالياً'
+      ?? t('categories_page.load_error')
   }
   finally {
     loading.value = false
@@ -265,7 +267,8 @@ const toggleSort = (field: SortField) => {
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return '—'
   try {
-    return new Date(dateStr).toLocaleDateString('ar-EG', {
+    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
+    return new Date(dateStr).toLocaleDateString(loc, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -299,11 +302,11 @@ const truncateDescription = (text: string | null | undefined) => {
 const statusConfig = (status: string) => {
   switch (status) {
     case 'active':
-      return { label: 'نشط', class: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' }
+      return { label: t('common.active'), class: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' }
     case 'inactive':
-      return { label: 'غير نشط', class: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
+      return { label: t('common.inactive'), class: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
     case 'deleted':
-      return { label: 'محذوف', class: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' }
+      return { label: t('common.deleted'), class: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' }
     default:
       return { label: status || '—', class: 'bg-muted text-muted-foreground' }
   }
@@ -334,11 +337,11 @@ const confirmDelete = async () => {
   categoryToDelete.value = null
   try {
     await $api(`/categories/${cat.id}`, { method: 'DELETE' })
-    toast.success(`تم حذف "${cat.name_ar}" بنجاح`)
+    toast.success(t('categories_page.delete_success', { name: cat.name_ar }))
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || 'تعذر حذف التصنيف حالياً'
+    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.delete_error')
     toast.error(msg)
   }
   finally {
@@ -361,11 +364,11 @@ const confirmDeactivate = async () => {
       method: 'PUT',
       body: buildCategoryStatusBody(cat, 'inactive'),
     })
-    toast.success(`تم إيقاف التصنيف "${cat.name_ar}" بنجاح`)
+    toast.success(t('categories_page.deactivate_success', { name: cat.name_ar }))
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || 'تعذر إيقاف التصنيف حالياً'
+    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.deactivate_error')
     toast.error(msg)
   }
   finally {
@@ -383,11 +386,11 @@ const confirmActivate = async () => {
       method: 'PUT',
       body: buildCategoryStatusBody(cat, 'active'),
     })
-    toast.success(`تم تفعيل التصنيف "${cat.name_ar}" بنجاح`)
+    toast.success(t('categories_page.activate_success', { name: cat.name_ar }))
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || 'تعذر تفعيل التصنيف حالياً'
+    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.activate_error')
     toast.error(msg)
   }
   finally {
@@ -414,14 +417,13 @@ const confirmBulkAction = async () => {
 
   const ids = [...selectedIds.value]
   const newStatus = type === 'activate' ? 'active' : 'inactive'
-  const label = type === 'activate' ? 'تفعيل' : 'إيقاف'
 
   try {
     const rows = ids
       .map(id => categories.value.find(c => c.id === id))
       .filter((c): c is CategoryItem => c != null)
     if (rows.length !== ids.length) {
-      toast.error('تعذر تحديد بعض التصنيفات — أعد تحميل الصفحة وحاول مرة أخرى')
+      toast.error(t('categories_page.bulk_resolve_error'))
       return
     }
     await Promise.all(
@@ -432,12 +434,19 @@ const confirmBulkAction = async () => {
         }),
       ),
     )
-    toast.success(`تم ${label} ${ids.length} تصنيف بنجاح`)
+    toast.success(
+      type === 'activate'
+        ? t('categories_page.bulk_activated_n', { count: ids.length })
+        : t('categories_page.bulk_deactivated_n', { count: ids.length }),
+    )
     selectedIds.value = new Set()
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || `تعذر ${label} التصنيفات المحددة`
+    const msg =
+      error?.data?.message?.ar ||
+      error?.data?.message ||
+      (type === 'activate' ? t('categories_page.bulk_activate_failed') : t('categories_page.bulk_deactivate_failed'))
     toast.error(msg)
   }
   finally {
@@ -452,12 +461,12 @@ const confirmBulkDelete = async () => {
   const ids = [...selectedIds.value]
   try {
     await Promise.all(ids.map(id => $api(`/categories/${id}`, { method: 'DELETE' })))
-    toast.success(`تم حذف ${ids.length} تصنيف بنجاح`)
+    toast.success(t('categories_page.bulk_delete_success', { count: ids.length }))
     selectedIds.value = new Set()
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || 'تعذر حذف التصنيفات المحددة'
+    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.bulk_delete_error')
     toast.error(msg)
   }
   finally {
@@ -481,8 +490,6 @@ const buildExportRows = (source: CategoryItem[]) =>
     updated_at: formatDate(c.updated_at),
   }))
 
-const exportHeaders = ['المعرف', 'الاسم العربي', 'الاسم الإنجليزي', 'التصنيف الأصلي', 'الوصف', 'الحالة', 'أُضيف بواسطة', 'آخر تعديل بواسطة', 'تاريخ الإنشاء', 'تاريخ التعديل']
-
 const getExportRows = () =>
   buildExportRows(categories.value.filter(c => selectedIds.value.has(c.id)))
     .map(r => [r.id, r.name_ar, r.name_en, r.parent, r.description, r.status, r.created_by, r.updated_by, r.created_at, r.updated_at])
@@ -490,9 +497,10 @@ const getExportRows = () =>
 const exportCSV = () => {
   const rows = getExportRows()
   if (rows.length === 0) {
-    toast.error('يرجى تحديد عنصر واحد على الأقل للتصدير')
+    toast.error(t('common.export_min_one'))
     return
   }
+  const exportHeaders = tm('categories_page.export_headers') as unknown as string[]
   const csv = [exportHeaders, ...rows]
     .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
     .join('\n')
@@ -502,28 +510,7 @@ const exportCSV = () => {
   link.download = `categories-${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
   URL.revokeObjectURL(link.href)
-  toast.success('تم تصدير الملف CSV بنجاح')
-}
-
-const exportExcel = () => {
-  const rows = getExportRows()
-  if (rows.length === 0) {
-    toast.error('يرجى تحديد عنصر واحد على الأقل للتصدير')
-    return
-  }
-  const tableRows = [exportHeaders, ...rows]
-    .map(row => `<tr>${row.map(cell => `<td>${String(cell ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`)
-    .join('')
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">`
-    + `<head><meta charset="UTF-8"></head>`
-    + `<body><table border="1">${tableRows}</table></body></html>`
-  const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `categories-${new Date().toISOString().slice(0, 10)}.xls`
-  link.click()
-  URL.revokeObjectURL(link.href)
-  toast.success('تم تصدير الملف Excel بنجاح')
+  toast.success(t('common.export_success'))
 }
 
 // ── Permissions ────────────────────────────────────────────────────────────────
@@ -544,9 +531,9 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">إدارة التصنيفات</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('categories_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          عرض وإدارة تصنيفات المنتجات
+          {{ t('categories_page.subtitle') }}
         </p>
       </div>
     </div>
@@ -559,7 +546,7 @@ onMounted(() => {
           <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
           <Input
             v-model="search"
-            placeholder="ابحث بالاسم العربي أو الإنجليزي..."
+            :placeholder="t('categories_page.search_placeholder')"
             class="pr-9 h-9"
           />
           <Loader2
@@ -572,12 +559,12 @@ onMounted(() => {
         <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
           <SelectTrigger class="w-[min(100%,11rem)] h-9">
             <Filter class="size-3.5 shrink-0 text-muted-foreground ml-1" />
-            <SelectValue placeholder="الحالة" />
+            <SelectValue :placeholder="t('common.status')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الحالات</SelectItem>
-            <SelectItem value="active">نشط</SelectItem>
-            <SelectItem value="inactive">غير نشط</SelectItem>
+            <SelectItem value="all">{{ t('users_page.all_statuses') }}</SelectItem>
+            <SelectItem value="active">{{ t('common.active') }}</SelectItem>
+            <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -585,10 +572,10 @@ onMounted(() => {
         <Select :model-value="filterParentId" @update:model-value="onParentFilterChange">
           <SelectTrigger class="w-[min(100%,13rem)] h-9">
             <Tag class="size-3.5 shrink-0 text-muted-foreground ml-1" />
-            <SelectValue placeholder="التصنيف الأصلي" />
+            <SelectValue :placeholder="t('categories_page.filter_parent')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل التصنيفات</SelectItem>
+            <SelectItem value="all">{{ t('categories_page.all_parents') }}</SelectItem>
             <SelectItem
               v-for="parent in parentsForFilter"
               :key="parent.id"
@@ -608,7 +595,7 @@ onMounted(() => {
           @click="clearAllFilters"
         >
           <X class="size-3.5" />
-          مسح الفلاتر
+          {{ t('users_page.clear_filters') }}
         </Button>
 
         <!-- Export Buttons -->
@@ -616,18 +603,14 @@ onMounted(() => {
           <Download class="size-3.5" />
           CSV
         </Button>
-        <Button variant="outline" size="sm" class="h-9 gap-2" @click="exportExcel">
-          <FileSpreadsheet class="size-3.5" />
-          Excel
-        </Button>
 
         <div class="flex-1" />
 
         <Button v-if="canCreate" class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
           <NuxtLink to="/categories/create">
             <Plus class="size-4" />
-            إنشاء تصنيف
-          </NuxtLink>
+            {{ t('categories_page.create') }}
+        </NuxtLink>
         </Button>
       </div>
 
@@ -637,7 +620,7 @@ onMounted(() => {
         class="flex items-center gap-3 rounded-lg border border-[#215260]/30 bg-[#215260]/5 px-4 py-2.5 flex-wrap"
       >
         <span class="text-sm font-medium text-[#215260]">
-          تم تحديد {{ selectedCount }} تصنيف
+          {{ t('categories_page.bulk_selected', { count: selectedCount }) }}
         </span>
         <div class="flex items-center gap-2 mr-auto">
           <Button
@@ -650,7 +633,7 @@ onMounted(() => {
           >
             <LoaderCircle v-if="bulkActionLoading" class="size-3.5 animate-spin" />
             <UserCheck v-else class="size-3.5" />
-            تفعيل المحدد
+            {{ t('categories_page.bulk_activate') }}
           </Button>
           <Button
             v-if="canUpdate"
@@ -662,7 +645,7 @@ onMounted(() => {
           >
             <LoaderCircle v-if="bulkActionLoading" class="size-3.5 animate-spin" />
             <UserX v-else class="size-3.5" />
-            إيقاف المحدد
+            {{ t('categories_page.bulk_deactivate') }}
           </Button>
           <Button
             v-if="canDestroy"
@@ -674,7 +657,7 @@ onMounted(() => {
           >
             <LoaderCircle v-if="bulkActionLoading" class="size-3.5 animate-spin" />
             <Trash2 v-else class="size-3.5" />
-            حذف المحدد
+            {{ t('categories_page.bulk_delete') }}
           </Button>
           <Button
             variant="ghost"
@@ -682,7 +665,7 @@ onMounted(() => {
             class="h-8 text-muted-foreground"
             @click="selectedIds = new Set()"
           >
-            إلغاء التحديد
+            {{ t('common.deselect') }}
           </Button>
         </div>
       </div>
@@ -708,7 +691,7 @@ onMounted(() => {
               @click="toggleSort('name_ar')"
             >
               <div class="flex items-center gap-1.5">
-                الاسم العربي
+                {{ t('categories_page.col_name_ar') }}
                 <ArrowUp v-if="sortBy === 'name_ar' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'name_ar' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
@@ -721,15 +704,15 @@ onMounted(() => {
               @click="toggleSort('name_en')"
             >
               <div class="flex items-center gap-1.5">
-                الاسم الإنجليزي
+                {{ t('categories_page.col_name_en') }}
                 <ArrowUp v-if="sortBy === 'name_en' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'name_en' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">التصنيف الأصلي</TableHead>
-            <TableHead class="text-right font-medium">الوصف</TableHead>
+            <TableHead class="text-right font-medium">{{ t('categories_page.col_parent') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('categories_page.col_description') }}</TableHead>
 
             <!-- Sortable: Status -->
             <TableHead
@@ -737,15 +720,15 @@ onMounted(() => {
               @click="toggleSort('status')"
             >
               <div class="flex items-center gap-1.5">
-                الحالة
+                {{ t('categories_page.col_status') }}
                 <ArrowUp v-if="sortBy === 'status' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'status' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">أُضيف بواسطة</TableHead>
-            <TableHead class="text-right font-medium">آخر تعديل بواسطة</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
 
             <!-- Sortable: Created At -->
             <TableHead
@@ -753,15 +736,15 @@ onMounted(() => {
               @click="toggleSort('created_at')"
             >
               <div class="flex items-center gap-1.5">
-                تاريخ الإنشاء
+                {{ t('common.created_at') }}
                 <ArrowUp v-if="sortBy === 'created_at' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
                 <ArrowDown v-else-if="sortBy === 'created_at' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
 
-            <TableHead class="text-right font-medium">آخر تحديث</TableHead>
-            <TableHead class="text-right font-medium">الإجراءات</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.updated_at') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -771,7 +754,7 @@ onMounted(() => {
             <TableCell :colspan="11" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
-                جاري تحميل التصنيفات...
+                {{ t('categories_page.loading') }}
               </div>
             </TableCell>
           </TableRow>
@@ -783,7 +766,7 @@ onMounted(() => {
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
                 <Button variant="outline" size="sm" @click="loadCategories()">
-                  إعادة المحاولة
+                  {{ t('common.retry') }}
                 </Button>
               </div>
             </TableCell>
@@ -794,8 +777,8 @@ onMounted(() => {
             <TableCell :colspan="11" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
-                  ? 'لا توجد نتائج مطابقة للبحث أو الفلاتر'
-                  : 'لا توجد تصنيفات مضافة حتى الآن'
+                  ? t('categories_page.no_results')
+                  : t('categories_page.no_categories')
               }}
             </TableCell>
           </TableRow>
@@ -886,7 +869,7 @@ onMounted(() => {
                   @click="handleEdit(cat)"
                 >
                   <Pencil class="size-3.5" />
-                  تعديل
+                  {{ t('common.edit') }}
                 </button>
 
                 <!-- Deactivate -->
@@ -899,7 +882,7 @@ onMounted(() => {
                 >
                   <LoaderCircle v-if="togglingId === cat.id" class="size-3.5 animate-spin" />
                   <UserX v-else class="size-3.5" />
-                  إيقاف
+                  {{ t('common.deactivate') }}
                 </button>
 
                 <!-- Activate -->
@@ -912,7 +895,7 @@ onMounted(() => {
                 >
                   <LoaderCircle v-if="togglingId === cat.id" class="size-3.5 animate-spin" />
                   <UserCheck v-else class="size-3.5" />
-                  تفعيل
+                  {{ t('common.activate') }}
                 </button>
 
                 <!-- Delete -->
@@ -925,7 +908,7 @@ onMounted(() => {
                 >
                   <LoaderCircle v-if="deletingId === cat.id" class="size-3.5 animate-spin" />
                   <Trash2 v-else class="size-3.5" />
-                  حذف
+                  {{ t('common.delete') }}
                 </button>
               </div>
             </TableCell>
@@ -936,7 +919,13 @@ onMounted(() => {
       <!-- Pagination -->
       <div v-if="pagination && pagination.last_page > 1" class="flex items-center justify-between gap-3 border-t px-4 py-3">
         <p class="text-xs text-muted-foreground">
-          عرض {{ (currentPage - 1) * pagination.per_page + 1 }}–{{ Math.min(currentPage * pagination.per_page, pagination.total) }} من إجمالي {{ pagination.total }} تصنيف
+          {{
+            t('categories_page.pagination', {
+              from: (currentPage - 1) * pagination.per_page + 1,
+              to: Math.min(currentPage * pagination.per_page, pagination.total),
+              total: pagination.total,
+            })
+          }}
         </p>
         <div class="flex items-center gap-1">
           <Button
@@ -980,7 +969,7 @@ onMounted(() => {
         </div>
       </div>
       <div v-else-if="pagination" class="border-t px-4 py-3">
-        <p class="text-xs text-muted-foreground">إجمالي {{ pagination.total }} تصنيف</p>
+        <p class="text-xs text-muted-foreground">{{ t('categories_page.total', { total: pagination.total }) }}</p>
       </div>
     </div>
   </div>
@@ -991,22 +980,20 @@ onMounted(() => {
   <AlertDialog :open="!!categoryToDelete" @update:open="val => { if (!val) categoryToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('categories_page.delete_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من حذف التصنيف
-          <span class="font-semibold text-foreground">{{ categoryToDelete?.name_ar }}</span>؟
-          لا يمكن التراجع عن هذا الإجراء.
+          {{ t('categories_page.delete_dialog_body', { name: categoryToDelete?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-red-600 hover:bg-red-700 text-white"
           :disabled="!!deletingId"
           @click="confirmDelete"
         >
           <LoaderCircle v-if="deletingId" class="size-4 animate-spin ml-2" />
-          نعم، احذف
+          {{ t('categories_page.confirm_yes_delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -1016,24 +1003,23 @@ onMounted(() => {
   <AlertDialog :open="!!categoryToDeactivate" @update:open="val => { if (!val) categoryToDeactivate = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد إيقاف التصنيف</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('categories_page.deactivate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="space-y-2">
           <p>
-            هل أنت متأكد من إيقاف التصنيف
-            <span class="font-semibold text-foreground">{{ categoryToDeactivate?.name_ar }}</span>؟
+            {{ t('categories_page.deactivate_dialog_body', { name: categoryToDeactivate?.name_ar ?? '' }) }}
           </p>
-          <p>يمكنك تفعيله مجدداً في أي وقت من نفس القائمة.</p>
+          <p>{{ t('categories_page.deactivate_dialog_hint') }}</p>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-amber-600 hover:bg-amber-700 text-white"
           :disabled="!!togglingId"
           @click="confirmDeactivate"
         >
           <LoaderCircle v-if="togglingId" class="size-4 animate-spin ml-2" />
-          نعم، أوقف
+          {{ t('categories_page.confirm_yes_deactivate') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -1043,21 +1029,20 @@ onMounted(() => {
   <AlertDialog :open="!!categoryToActivate" @update:open="val => { if (!val) categoryToActivate = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد تفعيل التصنيف</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('categories_page.activate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من تفعيل التصنيف
-          <span class="font-semibold text-foreground">{{ categoryToActivate?.name_ar }}</span>؟
+          {{ t('categories_page.activate_dialog_body', { name: categoryToActivate?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-green-600 hover:bg-green-700 text-white"
           :disabled="!!togglingId"
           @click="confirmActivate"
         >
           <LoaderCircle v-if="togglingId" class="size-4 animate-spin ml-2" />
-          نعم، فعّل
+          {{ t('categories_page.confirm_yes_activate') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -1071,25 +1056,33 @@ onMounted(() => {
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>
-          {{ bulkConfirmType === 'activate' ? 'تأكيد التفعيل الجماعي' : 'تأكيد الإيقاف الجماعي' }}
+          {{
+            bulkConfirmType === 'activate'
+              ? t('categories_page.bulk_activate_title')
+              : t('categories_page.bulk_deactivate_title')
+          }}
         </AlertDialogTitle>
         <AlertDialogDescription>
           {{
             bulkConfirmType === 'activate'
-              ? `هل أنت متأكد من تفعيل ${selectedCount} تصنيف محدد؟`
-              : `هل أنت متأكد من إيقاف ${selectedCount} تصنيف محدد؟ يمكنك تفعيلها مجدداً لاحقاً.`
+              ? t('categories_page.bulk_activate_body', { count: selectedCount })
+              : t('categories_page.bulk_deactivate_body', { count: selectedCount })
           }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           :class="bulkConfirmType === 'activate' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'"
           :disabled="bulkActionLoading"
           @click="confirmBulkAction"
         >
           <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin ml-2" />
-          {{ bulkConfirmType === 'activate' ? 'نعم، فعّل الجميع' : 'نعم، أوقف الجميع' }}
+          {{
+            bulkConfirmType === 'activate'
+              ? t('categories_page.bulk_confirm_activate')
+              : t('categories_page.bulk_confirm_deactivate')
+          }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -1099,20 +1092,20 @@ onMounted(() => {
   <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="val => { bulkDeleteConfirmOpen = val }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد الحذف الجماعي</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('categories_page.bulk_delete_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من حذف {{ selectedCount }} تصنيف محدد؟ لا يمكن التراجع عن هذا الإجراء.
+          {{ t('categories_page.bulk_delete_body', { count: selectedCount }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-red-600 hover:bg-red-700 text-white"
           :disabled="bulkActionLoading"
           @click="confirmBulkDelete"
         >
           <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin ml-2" />
-          نعم، احذف الجميع
+          {{ t('categories_page.bulk_confirm_delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

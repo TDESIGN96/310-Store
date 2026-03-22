@@ -5,19 +5,27 @@ definePageMeta({
   layout: 'auth',
 })
 
+const { t } = useI18n()
+const { dir } = useDocumentDir()
+
 const authStore = useAuthStore()
 if (authStore.isLoggedIn) {
   await navigateTo('/mainCards', { replace: true })
 }
 
-const modulePills = [
-  'نقاط البيع', 'المخزون', 'الفواتير',
-  'المندوبين', 'الشحن', 'المحاسبة', 'الصلاحيات'
-]
+const modulePills = computed(() => [
+  t('landing.pill_pos'),
+  t('landing.pill_inventory'),
+  t('landing.pill_invoices'),
+  t('landing.pill_agents'),
+  t('landing.pill_shipping'),
+  t('landing.pill_accounting'),
+  t('landing.pill_permissions'),
+])
 </script>
 
 <template>
-  <div class="font-['Readex_Pro',sans-serif] bg-white text-[#1a1a1a] min-h-screen relative overflow-hidden" dir="rtl">
+  <div class="font-['Readex_Pro',sans-serif] bg-white text-[#1a1a1a] min-h-screen relative overflow-hidden" :dir="dir">
 
     <!-- Decorative backgrounds -->
     <div class="kamu-bg-noise"></div>
@@ -46,30 +54,29 @@ const modulePills = [
 
           <!-- Brand message -->
           <div class="flex-1 flex flex-col justify-center py-[60px] pr-8 max-[900px]:py-8 max-[900px]:pr-0">
-            <div class="kamu-eyebrow kamu-anim-fade-right" style="--delay: 0.2s">نظام إدارة المتجر</div>
+            <div class="kamu-eyebrow kamu-anim-fade-right" style="--delay: 0.2s">{{ t('landing.eyebrow') }}</div>
 
             <h1 class="kamu-headline kamu-anim-fade-right" style="--delay: 0.3s">
-              تحكم كامل
-              <span class="kamu-headline-accent kamu-anim-glow">بعملك.</span>
+              {{ t('landing.headline') }}
+              <span class="kamu-headline-accent kamu-anim-glow">{{ t('landing.headline_accent') }}</span>
             </h1>
 
             <p class="text-[15px] leading-[1.8] text-white/70 max-w-[360px] mb-10 font-light kamu-anim-fade-right"
               style="--delay: 0.4s">
-              منصة متكاملة لنقاط البيع، إدارة المخزون،
-              والمحاسبة — كل شيء في مكان واحد.
+              {{ t('landing.description') }}
             </p>
 
             <!-- Stats -->
             <div class="flex items-center gap-7 kamu-anim-fade-up" style="--delay: 0.5s">
               <div class="text-center group">
                 <span class="kamu-stat-value block text-[26px] font-bold text-white tracking-[-1px] counter"
-                  data-target="7">٧</span>
-                <span class="block text-[11px] text-white/50 mt-0.5">وحدات متكاملة</span>
+                  data-target="7">{{ t('landing.stat_units_value') }}</span>
+                <span class="block text-[11px] text-white/50 mt-0.5">{{ t('landing.stat_units') }}</span>
               </div>
               <div class="w-px h-9 bg-white/15 shrink-0"></div>
               <div class="text-center group">
-                <span class="kamu-stat-value block text-[26px] font-bold text-white tracking-[-1px]">٩٩.٩٪</span>
-                <span class="block text-[11px] text-white/50 mt-0.5">وقت التشغيل</span>
+                <span class="kamu-stat-value block text-[26px] font-bold text-white tracking-[-1px]">{{ t('landing.stat_uptime_value') }}</span>
+                <span class="block text-[11px] text-white/50 mt-0.5">{{ t('landing.stat_uptime') }}</span>
               </div>
             </div>
           </div>
@@ -89,7 +96,7 @@ const modulePills = [
             style="--delay: 1s">
             <div class="flex items-center gap-2 text-[11px] text-white/50">
               <span class="kamu-status-dot"></span>
-              <span>جميع الأنظمة تعمل بشكل طبيعي</span>
+              <span>{{ t('landing.systems_ok') }}</span>
             </div>
             <span class="text-[11px] text-white/50">© 2026 KAMU</span>
           </div>
@@ -111,7 +118,7 @@ const modulePills = [
       </div>
 
       <!-- ── Right Panel — Login form ── -->
-    <AuthLoginForm />
+      <AuthLoginForm />
 
     </div>
   </div>

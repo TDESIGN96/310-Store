@@ -10,6 +10,7 @@ import { navItems } from '@/config/navigation'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const visibleSections = computed(() => {
   return navItems
@@ -25,24 +26,24 @@ const visibleSections = computed(() => {
 </script>
 
 <template>
- <SidebarGroup
+  <SidebarGroup
     v-for="section in visibleSections"
-    :key="section.group"
+    :key="section.groupKey"
   >
-  <SidebarGroupLabel>{{ section.group }}</SidebarGroupLabel>
-  <SidebarMenu>
-    <SidebarMenuItem
+    <SidebarGroupLabel>{{ t(section.groupKey) }}</SidebarGroupLabel>
+    <SidebarMenu>
+      <SidebarMenuItem
         v-for="item in section.items"
         :key="item.path"
       >
-      <SidebarMenuButton
+        <SidebarMenuButton
           as-child
           :is-active="route.path.startsWith(item.path) || (item.path === '/mainCards' && (route.path === '/dashboard' || route.path === '/'))"
-          :tooltip="item.label"
+          :tooltip="t(item.labelKey)"
         >
-        <NuxtLink :to="item.path">
+          <NuxtLink :to="item.path">
             <component :is="item.icon" />
-            <span>{{ item.label }}</span>
+            <span>{{ t(item.labelKey) }}</span>
           </NuxtLink>
         </SidebarMenuButton>
       </SidebarMenuItem>

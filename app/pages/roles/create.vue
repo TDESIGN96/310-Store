@@ -9,17 +9,16 @@ import { permissionGroups, type PermissionGroup } from '@/config/permissions'
 
 definePageMeta({ layout: 'default' })
 
+const { t } = useI18n()
+const { groupLabel, actionLabel } = usePermissionI18n()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
+
 interface CreateRoleResponse {
   role?: {
     id: string | number
     name_en: string
     name_ar: string
   }
-}
-
-interface ApiErrorPayload {
-  message?: string | { en?: string; ar?: string }
-  errors?: Record<string, string[] | undefined>
 }
 
 const { $api } = useApi()
@@ -73,44 +72,23 @@ const onPermissionChange = (permissionKey: string, event: Event) => {
 
 const permissionsError = computed(() => {
   if (selectedPermissions.value.length > 0) return ''
-  return 'يجب اختيار صلاحية واحدة على الأقل'
+  return t('roles_form.permission_required')
 })
-
-const extractErrorMessage = (error: unknown) => {
-  const payload = ((error as { data?: ApiErrorPayload })?.data || {}) as ApiErrorPayload
-  const message =
-    typeof payload.message === 'string'
-      ? payload.message
-      : payload.message?.ar || payload.message?.en || ''
-
-  fieldErrors.value.name_en = payload.errors?.name_en?.[0] ?? ''
-  fieldErrors.value.name_ar = payload.errors?.name_ar?.[0] ?? ''
-
-  const firstPermissionError = Object.entries(payload.errors || {}).find(([key]) =>
-    key.startsWith('permissions'),
-  )?.[1]?.[0]
-
-  return (
-    firstPermissionError ||
-    message ||
-    'تعذر حفظ الصلاحية حالياً'
-  )
-}
 
 const saveRole = async () => {
   errorMessage.value = ''
   fieldErrors.value = { name_en: '', name_ar: '' }
 
   if (!nameEn.value.trim()) {
-    fieldErrors.value.name_en = 'يرجى إدخال اسم الصلاحية بالإنجليزية'
+    fieldErrors.value.name_en = t('roles_form.name_en_required')
   } else if (nameEn.value.trim().length < 3) {
-    fieldErrors.value.name_en = 'يجب أن يكون الاسم 3 أحرف على الأقل'
+    fieldErrors.value.name_en = t('roles_form.name_min')
   }
 
   if (!nameAr.value.trim()) {
-    fieldErrors.value.name_ar = 'يرجى إدخال اسم الصلاحية بالعربية'
+    fieldErrors.value.name_ar = t('roles_form.name_ar_required')
   } else if (nameAr.value.trim().length < 3) {
-    fieldErrors.value.name_ar = 'يجب أن يكون الاسم 3 أحرف على الأقل'
+    fieldErrors.value.name_ar = t('roles_form.name_min')
   }
 
   if (fieldErrors.value.name_en || fieldErrors.value.name_ar) return
@@ -132,10 +110,18 @@ const saveRole = async () => {
       },
     })
 
-    toast.success('تم إنشاء الصلاحية بنجاح')
+    toast.success(t('toasts.save_success'))
     await navigateTo('/roles')
   } catch (error: unknown) {
-    errorMessage.value = extractErrorMessage(error)
+    if (isValidationError(error)) {
+      const fe = getFieldErrors(error)
+      fieldErrors.value.name_en = fe.name_en ?? ''
+      fieldErrors.value.name_ar = fe.name_ar ?? ''
+      const permKey = Object.keys(fe).find(k => k.startsWith('permissions'))
+      errorMessage.value = permKey ? fe[permKey]! : ''
+    } else {
+      errorMessage.value = getErrorMessage(error)
+    }
   } finally {
     submitting.value = false
   }
@@ -151,9 +137,9 @@ const saveRole = async () => {
         </NuxtLink>
       </Button>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">إنشاء صلاحية</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('roles_form.create_title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          أنشئ دوراً جديداً وحدد الصلاحيات الخاصة به
+          {{ t('roles_form.create_subtitle') }}
         </p>
       </div>
     </div>
@@ -161,10 +147,10 @@ const saveRole = async () => {
     <div class="rounded-lg border p-5 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
-          <label class="text-sm font-medium">اسم الصلاحية (EN) <span class="text-red-500">*</span></label>
+          <label class="text-sm font-medium">{{ t('roles_form.name_en') }} <span class="text-red-500">*</span></label>
           <Input
             v-model="nameEn"
-            placeholder="مثال: Editor"
+            :placeholder="t('roles_form.placeholder_en')"
             :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
             @input="fieldErrors.name_en = ''"
           />
@@ -172,10 +158,10 @@ const saveRole = async () => {
         </div>
 
         <div class="space-y-2">
-          <label class="text-sm font-medium">اسم الصلاحية (AR) <span class="text-red-500">*</span></label>
+          <label class="text-sm font-medium">{{ t('roles_form.name_ar') }} <span class="text-red-500">*</span></label>
           <Input
             v-model="nameAr"
-            placeholder="مثال: محرر"
+            :placeholder="t('roles_form.placeholder_ar')"
             :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
             @input="fieldErrors.name_ar = ''"
           />
@@ -183,14 +169,14 @@ const saveRole = async () => {
         </div>
       </div>
       <p class="text-xs text-muted-foreground">
-        لا يوجد قيد على لغة الإدخال لكل حقل. يمكنك إدخال أي لغة في أي حقل.
+        {{ t('roles_form.name_hint') }}
       </p>
     </div>
 
     <div>
-      <h2 class="text-xl font-semibold">إعداد الصلاحيات</h2>
+      <h2 class="text-xl font-semibold">{{ t('roles_form.permissions_title') }}</h2>
       <p class="text-sm text-muted-foreground mt-1">
-        اختر الإجراءات المسموح بها لهذا الدور. يجب اختيار صلاحية واحدة على الأقل.
+        {{ t('roles_form.permissions_subtitle') }}
       </p>
     </div>
 
@@ -199,7 +185,7 @@ const saveRole = async () => {
         <div class="bg-muted/40 px-4 py-3 flex items-center justify-between">
           <div class="inline-flex items-center gap-2">
             <ShieldCheck class="size-4 text-muted-foreground" />
-            <span class="font-medium">{{ group.label }}</span>
+            <span class="font-medium">{{ groupLabel(group.id) }}</span>
           </div>
           <label class="inline-flex items-center gap-2 text-sm select-none cursor-pointer">
             <input
@@ -208,7 +194,7 @@ const saveRole = async () => {
               :checked="isGroupSelected(group)"
               @change="onGroupChange(group, $event)"
             >
-            <span>تحديد الكل</span>
+            <span>{{ t('roles_form.select_all') }}</span>
           </label>
         </div>
 
@@ -224,7 +210,7 @@ const saveRole = async () => {
               :checked="isPermissionSelected(permission.id)"
               @change="onPermissionChange(permission.id, $event)"
             >
-            <span>{{ permission.label }}</span>
+            <span>{{ actionLabel(permission.id) }}</span>
           </label>
         </div>
       </div>
@@ -242,10 +228,10 @@ const saveRole = async () => {
 
     <div class="flex items-center justify-end gap-2">
       <Button variant="outline" :disabled="submitting" as-child>
-        <NuxtLink to="/roles">إلغاء</NuxtLink>
+        <NuxtLink to="/roles">{{ t('common.cancel') }}</NuxtLink>
       </Button>
       <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="saveRole">
-        {{ submitting ? 'جارٍ الحفظ...' : 'انشاء الصلاحية' }}
+        {{ submitting ? t('common.saving') : t('roles_form.submit_create') }}
       </Button>
     </div>
   </div>

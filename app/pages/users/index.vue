@@ -31,6 +31,9 @@ import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
+const { t, locale } = useI18n()
+const { getErrorMessage } = useApiError()
+
 interface UserRole {
   id: number
   name: string
@@ -146,8 +149,8 @@ const loadUsers = async (page = currentPage.value, query = search.value.trim()) 
     users.value = usersList
     pagination.value = paginationData
     currentPage.value = paginationData?.current_page ?? page
-  } catch (error: any) {
-    errorMessage.value = error?.data?.message ?? 'تعذر تحميل قائمة المستخدمين حالياً'
+  } catch (error: unknown) {
+    errorMessage.value = getErrorMessage(error)
   } finally {
     loading.value = false
   }
@@ -226,7 +229,7 @@ const togglingActiveId = ref<number | null>(null)
 
 const openDeactivateConfirm = (user: UserItem) => {
   if (cannotToggleUserActivation(user)) {
-    toast.error('لا يمكن إيقاف أو تفعيل حساب المدير')
+    toast.error(t('errors.cannot_toggle_admin_account'))
     return
   }
   userToDeactivate.value = user
@@ -244,14 +247,10 @@ const confirmDeactivate = async () => {
       method: 'PUT',
       body: buildUserStatusBody(user, false),
     })
-    toast.success('تم إيقاف حساب المستخدم بنجاح')
+    toast.success(t('toasts.user_deactivated'))
     await loadUsers(currentPage.value)
-  } catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      'تعذر إيقاف الحساب حالياً'
-    toast.error(msg)
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
   } finally {
     togglingActiveId.value = null
   }
@@ -259,7 +258,7 @@ const confirmDeactivate = async () => {
 
 const reactivateUser = async (user: UserItem) => {
   if (cannotToggleUserActivation(user)) {
-    toast.error('لا يمكن إيقاف أو تفعيل حساب المدير')
+    toast.error(t('errors.cannot_toggle_admin_account'))
     return
   }
   togglingActiveId.value = user.id
@@ -268,14 +267,10 @@ const reactivateUser = async (user: UserItem) => {
       method: 'PUT',
       body: buildUserStatusBody(user, true),
     })
-    toast.success('تم تفعيل حساب المستخدم بنجاح')
+    toast.success(t('toasts.user_reactivated'))
     await loadUsers(currentPage.value)
-  } catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      'تعذر تفعيل الحساب حالياً'
-    toast.error(msg)
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
   } finally {
     togglingActiveId.value = null
   }
@@ -293,14 +288,10 @@ const confirmDelete = async () => {
 
   try {
     await $api(`/users/${user.id}`, { method: 'DELETE' })
-    toast.success(`تم حذف "${user.name}" بنجاح`)
+    toast.success(t('toasts.user_deleted_named', { name: user.name }))
     await loadUsers(currentPage.value)
-  } catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      'تعذر حذف المستخدم حالياً'
-    toast.error(msg)
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
   } finally {
     deletingId.value = null
   }
@@ -318,7 +309,8 @@ const formatDate = (dateStr: string | null) => {
 
 const rolesDisplay = (roles: UserRole[], maxWords = 8) => {
   if (!roles?.length) return '—'
-  const full = roles.map(r => r.name_ar || r.name_en || r.name).join('، ')
+  const sep = locale.value === 'ar' ? '، ' : ', '
+  const full = roles.map(r => r.name_ar || r.name_en || r.name).join(sep)
   const words = full.split(/[\s،]+/).filter(Boolean)
   if (words.length <= maxWords) return full
   return words.slice(0, maxWords).join(' ') + '...'
@@ -340,9 +332,9 @@ onMounted(() => {
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">إدارة المستخدمين</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('users_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          إدارة حسابات المستخدمين وصلاحياتهم
+          {{ t('users_page.subtitle') }}
         </p>
       </div>
     </div>
@@ -353,7 +345,7 @@ onMounted(() => {
           <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
           <Input
             v-model="search"
-            placeholder="ابحث باسم المستخدم..."
+            :placeholder="t('users_page.search_placeholder')"
             class="pr-9 w-80 h-9"
           />
           <Loader2
@@ -365,10 +357,10 @@ onMounted(() => {
         <Select :model-value="filterRoleId" @update:model-value="onRoleFilterChange">
           <SelectTrigger class="w-full sm:w-[min(100%,14rem)] h-9 gap-2" :disabled="loadingRolesFilter">
             <Filter class="size-3.5 shrink-0 text-muted-foreground" />
-            <SelectValue placeholder="الدور" />
+            <SelectValue :placeholder="t('users_page.filter_role')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الأدوار</SelectItem>
+            <SelectItem value="all">{{ t('users_page.all_roles') }}</SelectItem>
             <SelectItem
               v-for="role in rolesForFilter"
               :key="role.id"
@@ -381,19 +373,19 @@ onMounted(() => {
 
         <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
           <SelectTrigger class="w-full sm:w-[min(100%,11rem)] h-9">
-            <SelectValue placeholder="الحالة" />
+            <SelectValue :placeholder="t('users_page.filter_status')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الحالات</SelectItem>
-            <SelectItem value="active">نشط</SelectItem>
-            <SelectItem value="inactive">غير نشط</SelectItem>
+            <SelectItem value="all">{{ t('users_page.all_statuses') }}</SelectItem>
+            <SelectItem value="active">{{ t('common.active') }}</SelectItem>
+            <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
         <NuxtLink to="/users/create">
           <Plus class="size-4" />
-          إنشاء مستخدم
+          {{ t('users_page.create_user') }}
         </NuxtLink>
       </Button>
     </div>
@@ -402,14 +394,14 @@ onMounted(() => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="text-right font-medium">الاسم</TableHead>
-            <TableHead class="text-right font-medium">البريد الإلكتروني</TableHead>
-            <TableHead class="text-right font-medium">الهاتف</TableHead>
-            <TableHead class="text-right font-medium">الأدوار</TableHead>
-            <TableHead class="text-right font-medium">نشط</TableHead>
-            <TableHead class="text-right font-medium">أُضيف بواسطة</TableHead>
-            <TableHead class="text-right font-medium">تاريخ الإنشاء</TableHead>
-            <TableHead class="text-right font-medium">الإجراءات</TableHead>
+            <TableHead class="text-right font-medium">{{ t('users_page.col_name') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('users_page.col_email') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('users_page.col_phone') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('users_page.col_roles') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('users_page.col_active') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('users_page.col_added_by') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('users_page.col_created') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -418,7 +410,7 @@ onMounted(() => {
             <TableCell :colspan="8" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
-                جاري تحميل المستخدمين...
+                {{ t('users_page.loading') }}
               </div>
             </TableCell>
           </TableRow>
@@ -428,7 +420,7 @@ onMounted(() => {
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
-                <Button variant="outline" size="sm" @click="loadUsers">إعادة المحاولة</Button>
+                <Button variant="outline" size="sm" @click="loadUsers">{{ t('common.retry') }}</Button>
               </div>
             </TableCell>
           </TableRow>
@@ -437,8 +429,8 @@ onMounted(() => {
             <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
-                  ? 'لا توجد نتائج مطابقة للبحث أو الفلاتر'
-                  : 'لا يوجد مستخدمون'
+                  ? t('users_page.no_results')
+                  : t('users_page.no_users')
               }}
             </TableCell>
           </TableRow>
@@ -465,7 +457,7 @@ onMounted(() => {
                 :class="user.is_active ? 'text-green-600' : 'text-muted-foreground'"
                 class="text-sm"
               >
-                {{ user.is_active ? 'نعم' : 'لا' }}
+                {{ user.is_active ? t('common.yes') : t('common.no') }}
               </span>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(user.created_by) }}</TableCell>
@@ -481,7 +473,7 @@ onMounted(() => {
                 >
                   <LoaderCircle v-if="togglingActiveId === user.id" class="size-3.5 animate-spin" />
                   <UserX v-else class="size-3.5" />
-                  إيقاف
+                  {{ t('common.deactivate') }}
                 </button>
                 <button
                   v-else-if="!user.is_active && !cannotToggleUserActivation(user)"
@@ -492,14 +484,14 @@ onMounted(() => {
                 >
                   <LoaderCircle v-if="togglingActiveId === user.id" class="size-3.5 animate-spin" />
                   <UserCheck v-else class="size-3.5" />
-                  تفعيل
+                  {{ t('common.activate') }}
                 </button>
                 <button
                   class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
                   @click="handleEdit(user)"
                 >
                   <Pencil class="size-3.5" />
-                  تعديل
+                  {{ t('common.edit') }}
                 </button>
                 <button
                   class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
@@ -508,7 +500,7 @@ onMounted(() => {
                 >
                   <LoaderCircle v-if="deletingId === user.id" class="size-3.5 animate-spin" />
                   <Trash2 v-else class="size-3.5" />
-                  حذف
+                  {{ t('common.delete') }}
                 </button>
               </div>
             </TableCell>
@@ -518,7 +510,13 @@ onMounted(() => {
 
       <div v-if="pagination && pagination.last_page > 1" class="flex items-center justify-between gap-3 border-t px-4 py-3">
         <p class="text-xs text-muted-foreground">
-          عرض {{ (currentPage - 1) * pagination.per_page + 1 }}–{{ Math.min(currentPage * pagination.per_page, pagination.total) }} من إجمالي {{ pagination.total }} مستخدم
+          {{
+            t('users_page.pagination', {
+              from: (currentPage - 1) * pagination.per_page + 1,
+              to: Math.min(currentPage * pagination.per_page, pagination.total),
+              total: pagination.total,
+            })
+          }}
         </p>
 
         <div class="flex items-center gap-1">
@@ -566,7 +564,7 @@ onMounted(() => {
       </div>
 
       <div v-else-if="pagination" class="border-t px-4 py-3">
-        <p class="text-xs text-muted-foreground">إجمالي {{ pagination.total }} مستخدم</p>
+        <p class="text-xs text-muted-foreground">{{ t('users_page.total', { total: pagination.total }) }}</p>
       </div>
     </div>
   </div>
@@ -574,22 +572,20 @@ onMounted(() => {
   <AlertDialog :open="!!userToDelete" @update:open="val => { if (!val) userToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('users_page.alert_delete_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من حذف المستخدم
-          <span class="font-semibold text-foreground">{{ userToDelete?.name }}</span>؟
-          لا يمكن التراجع عن هذا الإجراء.
+          {{ t('users_page.alert_delete_body', { name: userToDelete?.name ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-red-600 hover:bg-red-700 text-white"
           :disabled="!!deletingId"
           @click="confirmDelete"
         >
           <LoaderCircle v-if="deletingId" class="size-4 animate-spin" />
-          نعم، احذف
+          {{ t('users_page.alert_delete_confirm') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -598,26 +594,25 @@ onMounted(() => {
   <AlertDialog :open="!!userToDeactivate" @update:open="val => { if (!val) userToDeactivate = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد إيقاف الحساب</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('users_page.alert_deactivate_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="space-y-2">
           <p>
-            هل أنت متأكد من إيقاف حساب المستخدم
-            <span class="font-semibold text-foreground">{{ userToDeactivate?.name }}</span>؟
+            {{ t('users_page.alert_deactivate_p1', { name: userToDeactivate?.name ?? '' }) }}
           </p>
           <p>
-            بعد التأكيد لن يتمكن من تسجيل الدخول إلى النظام. يمكنك تفعيل الحساب لاحقاً من نفس القائمة.
+            {{ t('users_page.alert_deactivate_p2') }}
           </p>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-amber-600 hover:bg-amber-700 text-white"
           :disabled="!!togglingActiveId"
           @click="confirmDeactivate"
         >
           <LoaderCircle v-if="togglingActiveId" class="size-4 animate-spin" />
-          نعم، أوقف الحساب
+          {{ t('users_page.alert_deactivate_confirm') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

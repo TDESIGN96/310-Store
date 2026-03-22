@@ -23,10 +23,7 @@ export default defineNuxtConfig({
           href: 'https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap',
         },
       ],
-      htmlAttrs: {
-        lang: 'ar',
-        dir: 'rtl',
-      }
+      // lang/dir are set dynamically in app.vue from i18n locale (avoid SSR/client mismatch).
     }
   },
   
@@ -34,7 +31,21 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4, // ← enables Nuxt 4 app/ structure
   },
-  modules: ['@pinia/nuxt', 'shadcn-nuxt'],
+  modules: ['@pinia/nuxt', 'shadcn-nuxt', '@nuxtjs/i18n'],
+  i18n: {
+    locales: [
+      { code: 'ar', language: 'ar-SA', file: 'ar.ts', name: 'العربية', dir: 'rtl' },
+      { code: 'en', language: 'en-US', file: 'en.ts', name: 'English', dir: 'ltr' },
+    ],
+    defaultLocale: 'ar',
+    strategy: 'no_prefix',
+    langDir: 'locales',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_locale',
+      redirectOn: 'no prefix',
+    },
+  },
   shadcn: {
     /**
      * Prefix for all the imported component.

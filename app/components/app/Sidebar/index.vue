@@ -9,10 +9,11 @@ import {
 import SidebarNav from './SidebarNav.vue';
 import Logo from '../Logo.vue';
 
+const { locale } = useI18n()
 </script>
 
 <template>
-  <Sidebar side="right" collapsible="icon">
+  <Sidebar :side="locale === 'ar' ? 'right' : 'left'" collapsible="icon">
     <!-- Header -->
     <SidebarHeader>
       <div class="flex items-center gap-2 px-2 py-1">

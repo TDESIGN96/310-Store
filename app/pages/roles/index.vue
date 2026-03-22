@@ -24,6 +24,8 @@ import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
+const { t } = useI18n()
+
 interface RoleItem {
   id: string
   name_en: string
@@ -70,7 +72,7 @@ const loadRoles = async (page = currentPage.value, query = search.value.trim()) 
     pagination.value = data.data.pagination ?? null
     currentPage.value = data.data.pagination?.current_page ?? page
   } catch (error: any) {
-    errorMessage.value = error?.data?.message ?? 'تعذر تحميل قائمة الصلاحيات حالياً'
+    errorMessage.value = error?.data?.message ?? t('roles_page.load_error')
   } finally {
     loading.value = false
   }
@@ -113,7 +115,7 @@ const handleClone = async (role: RoleItem) => {
       res?.id ??
       null
 
-    toast.success(`تم نسخ "${role.name_ar}" بنجاح`)
+    toast.success(t('roles_page.copy_success', { name: role.name_ar }))
 
     if (newId) {
       await navigateTo(`/roles/edit/${newId}`)
@@ -124,7 +126,7 @@ const handleClone = async (role: RoleItem) => {
     const msg =
       error?.data?.message?.ar ||
       error?.data?.message ||
-      'تعذر نسخ الصلاحية حالياً'
+      t('roles_page.copy_error')
     toast.error(msg)
   } finally {
     cloningId.value = null
@@ -143,13 +145,13 @@ const confirmDelete = async () => {
 
   try {
     await $api(`/roles/${role.id}`, { method: 'DELETE' })
-    toast.success(`تم حذف "${role.name_ar}" بنجاح`)
+    toast.success(t('roles_page.delete_success', { name: role.name_ar }))
     await loadRoles(currentPage.value)
   } catch (error: any) {
     const msg =
       error?.data?.message?.ar ||
       error?.data?.message ||
-      'تعذر حذف الصلاحية حالياً'
+      t('roles_page.delete_error')
     toast.error(msg)
   } finally {
     deletingId.value = null
@@ -163,9 +165,9 @@ onMounted(loadRoles)
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">إدارة الصلاحيات</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('roles_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          إدارة أدوار المستخدمين والصلاحيات المرتبطة بها
+          {{ t('roles_page.subtitle') }}
         </p>
       </div>
 
@@ -177,7 +179,7 @@ onMounted(loadRoles)
         <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
         <Input
           v-model="search"
-          placeholder="ابحث باسم الصلاحية بالعربي أو الإنجليزي..."
+          :placeholder="t('roles_page.search_placeholder')"
           class="pr-9 w-80 h-9"
         />
         <Loader2
@@ -189,7 +191,7 @@ onMounted(loadRoles)
       <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
         <NuxtLink to="/roles/create">
           <Plus class="size-4" />
-          إنشاء صلاحية
+          {{ t('roles_page.create') }}
         </NuxtLink>
       </Button>
      
@@ -199,9 +201,9 @@ onMounted(loadRoles)
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="text-right font-medium">اسم الصلاحية (EN)</TableHead>
-            <TableHead class="text-right font-medium">اسم الصلاحية (AR)</TableHead>
-            <TableHead class="text-right font-medium">الإجراءات</TableHead>
+            <TableHead class="text-right font-medium">{{ t('roles_page.col_name_en') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('roles_page.col_name_ar') }}</TableHead>
+            <TableHead class="text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -210,7 +212,7 @@ onMounted(loadRoles)
             <TableCell :colspan="3" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
-                جاري تحميل الصلاحيات...
+                {{ t('roles_page.loading') }}
               </div>
             </TableCell>
           </TableRow>
@@ -220,14 +222,14 @@ onMounted(loadRoles)
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
-                <Button variant="outline" size="sm" @click="loadRoles">إعادة المحاولة</Button>
+                <Button variant="outline" size="sm" @click="loadRoles">{{ t('common.retry') }}</Button>
               </div>
             </TableCell>
           </TableRow>
 
           <TableRow v-else-if="roles.length === 0">
             <TableCell :colspan="3" class="py-14 text-center text-sm text-muted-foreground">
-              {{ search ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد صلاحيات' }}
+              {{ search ? t('roles_page.no_results_search') : t('roles_page.no_roles') }}
             </TableCell>
           </TableRow>
 
@@ -243,7 +245,7 @@ onMounted(loadRoles)
               <div class="flex items-center gap-3 text-sm">
                 <button class="inline-flex items-center gap-1 text-[#2563eb] hover:underline" @click="handleEdit(role)">
                   <Pencil class="size-3.5" />
-                  تعديل
+                  {{ t('common.edit') }}
                 </button>
                 <button
                   class="inline-flex items-center gap-1 text-muted-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
@@ -252,7 +254,7 @@ onMounted(loadRoles)
                 >
                   <LoaderCircle v-if="cloningId === String(role.id)" class="size-3.5 animate-spin" />
                   <Copy v-else class="size-3.5" />
-                  نسخ
+                  {{ t('common.copy') }}
                 </button>
                 <button
                   class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
@@ -261,7 +263,7 @@ onMounted(loadRoles)
                 >
                   <LoaderCircle v-if="deletingId === String(role.id)" class="size-3.5 animate-spin" />
                   <Trash2 v-else class="size-3.5" />
-                  حذف
+                  {{ t('common.delete') }}
                 </button>
               </div>
             </TableCell>
@@ -271,7 +273,13 @@ onMounted(loadRoles)
 
       <div v-if="pagination && pagination.last_page > 1" class="flex items-center justify-between gap-3 border-t px-4 py-3">
         <p class="text-xs text-muted-foreground">
-          عرض {{ (currentPage - 1) * pagination.per_page + 1 }}–{{ Math.min(currentPage * pagination.per_page, pagination.total) }} من إجمالي {{ pagination.total }} صلاحية
+          {{
+            t('roles_page.pagination', {
+              from: (currentPage - 1) * pagination.per_page + 1,
+              to: Math.min(currentPage * pagination.per_page, pagination.total),
+              total: pagination.total,
+            })
+          }}
         </p>
 
         <div class="flex items-center gap-1">
@@ -319,7 +327,7 @@ onMounted(loadRoles)
       </div>
 
       <div v-else-if="pagination" class="border-t px-4 py-3">
-        <p class="text-xs text-muted-foreground">إجمالي {{ pagination.total }} صلاحية</p>
+        <p class="text-xs text-muted-foreground">{{ t('roles_page.total', { total: pagination.total }) }}</p>
       </div>
     </div>
   </div>
@@ -327,22 +335,20 @@ onMounted(loadRoles)
   <AlertDialog :open="!!roleToDelete" @update:open="val => { if (!val) roleToDelete = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('roles_page.delete_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          هل أنت متأكد من حذف دور
-          <span class="font-semibold text-foreground">{{ roleToDelete?.name_ar }}</span>؟
-          لا يمكن التراجع عن هذا الإجراء.
+          {{ t('roles_page.delete_body', { name: roleToDelete?.name_ar ?? '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button
           class="bg-red-600 hover:bg-red-700 text-white"
           :disabled="!!deletingId"
           @click="confirmDelete"
         >
           <LoaderCircle v-if="deletingId" class="size-4 animate-spin" />
-          نعم، احذف
+          {{ t('roles_page.delete_confirm') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

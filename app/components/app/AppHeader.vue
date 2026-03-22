@@ -10,7 +10,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { getBreadcrumbForPath } from '@/config/navigation'
-import { Languages } from 'lucide-vue-next'
+import { Check, Languages } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -27,15 +27,26 @@ import { toast } from 'vue-sonner'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const { locale, setLocale, t } = useI18n()
 
-const roleLabel: Record<string, string> = {
-  admin: 'مدير النظام',
-  manager: 'المدير',
-  accountant: 'المحاسب',
-  sales: 'موظف المبيعات',
-  agent: 'المندوب',
-  warehouse: 'أمين المخزن',
-  driver: 'السائق',
+const localeOptions = computed(() =>
+  [
+    { code: 'ar' as const, label: t('locale.ar') },
+    { code: 'en' as const, label: t('locale.en') },
+  ] as const,
+)
+
+const setLanguage = async (code: 'ar' | 'en') => {
+  if (locale.value === code) return
+  // Nuxt i18n: use setLocale() — assigning locale.value skips loading non-default locale messages.
+  await setLocale(code)
+}
+
+const roleLabelKey = (role: string | undefined) => {
+  if (!role) return ''
+  const key = `header.roles.${role}` as const
+  const translated = t(key)
+  return translated !== key ? translated : role
 }
 
 const currentUser = computed(() => authStore.user)
@@ -43,14 +54,14 @@ const currentUser = computed(() => authStore.user)
 const handleLogout = async () => {
   const name = authStore.user?.name ?? ''
   toast.promise(authStore.logout(), {
-    loading: 'جارٍ تسجيل الخروج...',
+    loading: t('header.logout_loading'),
     success: () => {
       navigateTo('/')
-      return name ? `إلى اللقاء، ${name}` : 'تم تسجيل الخروج بنجاح'
+      return name ? t('header.logout_success_named', { name }) : t('header.logout_success')
     },
     error: () => {
       navigateTo('/')
-      return 'تم تسجيل الخروج'
+      return t('header.logout_error')
     },
   })
 }
@@ -71,17 +82,17 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
             <BreadcrumbItem class="hidden md:block">
               <BreadcrumbLink as-child>
                 <NuxtLink :to="breadcrumb.groupPath">
-                  {{ breadcrumb.group }}
+                  {{ t(breadcrumb.groupKey) }}
                 </NuxtLink>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator class="hidden md:block rotate-180" />
             <BreadcrumbItem>
-              <BreadcrumbPage>{{ breadcrumb.item.label }}</BreadcrumbPage>
+              <BreadcrumbPage>{{ t(breadcrumb.item.labelKey) }}</BreadcrumbPage>
             </BreadcrumbItem>
           </template>
           <BreadcrumbItem v-else>
-            <BreadcrumbPage>{{ route.path || 'الرئيسية' }}</BreadcrumbPage>
+            <BreadcrumbPage>{{ route.path || t('header.breadcrumb_fallback') }}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -98,11 +109,17 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="bottom">
-          <DropdownMenuItem >
-            <span>العربية</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <span>English</span>
+          <DropdownMenuItem
+            v-for="opt in localeOptions"
+            :key="opt.code"
+            class="gap-2 cursor-pointer"
+            @click="setLanguage(opt.code)"
+          >
+            <Check
+              class="size-4 shrink-0"
+              :class="locale === opt.code ? 'opacity-100' : 'opacity-0'"
+            />
+            <span>{{ opt.label }}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -126,24 +143,24 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
                       {{ currentUser?.name ?? '—' }}
                     </span>
                     <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 w-fit">
-                      {{ roleLabel[currentUser?.role ?? ''] ?? currentUser?.role }}
+                      {{ roleLabelKey(currentUser?.role) || currentUser?.role }}
                     </Badge>
                   </div>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
 
               <DropdownMenuContent side="top" class="w-[--reka-popper-anchor-width]" align="end">
-                <DropdownMenuLabel class="text-start">حسابي</DropdownMenuLabel>
+                <DropdownMenuLabel class="text-start">{{ t('header.account') }}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem>
                   <User class="ms-2 size-4" />
-                  <span>الملف الشخصي</span>
+                  <span>{{ t('header.profile') }}</span>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem>
                   <Settings class="ms-2 size-4" />
-                  <span>الإعدادات</span>
+                  <span>{{ t('header.settings') }}</span>
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
@@ -153,7 +170,7 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
                   @click="handleLogout"
                 >
                   <LogOut class="ms-2 size-4" />
-                  <span>تسجيل الخروج</span>
+                  <span>{{ t('header.logout') }}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
