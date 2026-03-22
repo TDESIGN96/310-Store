@@ -38,6 +38,11 @@ interface UserRole {
   name_ar: string
 }
 
+interface UserSummary {
+  id: number
+  name: string
+}
+
 interface UserItem {
   id: number
   name: string
@@ -49,6 +54,7 @@ interface UserItem {
   is_active: boolean
   is_admin: boolean
   phone: string
+  created_by?: UserSummary | number | null
   permissions: string[]
 }
 
@@ -115,7 +121,11 @@ const loadUsers = async (page = currentPage.value, query = search.value.trim()) 
 
   try {
     const params: Record<string, string | number> = { page }
-    if (query) params.search = query
+    if (query) {
+      // Username-only search: keep both keys for backend compatibility.
+      params.name = query
+      params.search = query
+    }
     const role = filterRoleId.value
     if (role && role !== 'all') {
       const id = Number(role)
@@ -314,6 +324,12 @@ const rolesDisplay = (roles: UserRole[], maxWords = 8) => {
   return words.slice(0, maxWords).join(' ') + '...'
 }
 
+const createdByDisplay = (value?: UserItem['created_by']) => {
+  if (!value) return '—'
+  if (typeof value === 'number') return `#${value}`
+  return value.name || `#${value.id}`
+}
+
 onMounted(() => {
   loadRolesForFilter()
   loadUsers()
@@ -332,12 +348,12 @@ onMounted(() => {
     </div>
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-col sm:flex-row">
         <div class="relative">
           <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
           <Input
             v-model="search"
-            placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+            placeholder="ابحث باسم المستخدم..."
             class="pr-9 w-80 h-9"
           />
           <Loader2
@@ -347,7 +363,7 @@ onMounted(() => {
         </div>
 
         <Select :model-value="filterRoleId" @update:model-value="onRoleFilterChange">
-          <SelectTrigger class="w-[min(100%,14rem)] h-9 gap-2" :disabled="loadingRolesFilter">
+          <SelectTrigger class="w-full sm:w-[min(100%,14rem)] h-9 gap-2" :disabled="loadingRolesFilter">
             <Filter class="size-3.5 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="الدور" />
           </SelectTrigger>
@@ -364,7 +380,7 @@ onMounted(() => {
         </Select>
 
         <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
-          <SelectTrigger class="w-[min(100%,11rem)] h-9">
+          <SelectTrigger class="w-full sm:w-[min(100%,11rem)] h-9">
             <SelectValue placeholder="الحالة" />
           </SelectTrigger>
           <SelectContent>
@@ -391,6 +407,7 @@ onMounted(() => {
             <TableHead class="text-right font-medium">الهاتف</TableHead>
             <TableHead class="text-right font-medium">الأدوار</TableHead>
             <TableHead class="text-right font-medium">نشط</TableHead>
+            <TableHead class="text-right font-medium">أُضيف بواسطة</TableHead>
             <TableHead class="text-right font-medium">تاريخ الإنشاء</TableHead>
             <TableHead class="text-right font-medium">الإجراءات</TableHead>
           </TableRow>
@@ -398,7 +415,7 @@ onMounted(() => {
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="8" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 جاري تحميل المستخدمين...
@@ -407,7 +424,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="errorMessage">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
@@ -417,7 +434,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="users.length === 0">
-            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
                   ? 'لا توجد نتائج مطابقة للبحث أو الفلاتر'
@@ -451,6 +468,7 @@ onMounted(() => {
                 {{ user.is_active ? 'نعم' : 'لا' }}
               </span>
             </TableCell>
+            <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(user.created_by) }}</TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ formatDate(user.created_at) }}</TableCell>
             <TableCell>
               <div class="flex flex-wrap items-center gap-3 text-sm">

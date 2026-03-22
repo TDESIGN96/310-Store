@@ -10,6 +10,8 @@ import {
   Warehouse,
   ArrowLeftRight,
   AlertTriangle,
+  Ruler,
+  Layers,
 } from 'lucide-vue-next'
 
 export interface NavItem {
@@ -41,6 +43,8 @@ export const navItems: NavGroup[] = [
     group: 'المخزون',
     items: [
       { label: 'المنتجات', icon: Package, path: '/products', requiredPermission: 'view_products' },
+      { label: 'الوحدات', icon: Ruler, path: '/units', requiredPermission: 'units.index' },
+      { label: 'التصنيفات', icon: Layers, path: '/categories', requiredPermission: 'categories.index' },
       { label: 'الصلاحيات', icon: ShieldCheck, path: '/roles' },
       { label: 'المستخدمون', icon: Users, path: '/users' },
       // { label: 'المستودعات', icon: Warehouse, path: '/inventory/warehouses' },

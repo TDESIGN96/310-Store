@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'vue-sonner'
+import { permissionGroups, permissionIdSet, type PermissionGroup } from '@/config/permissions'
 
 definePageMeta({ layout: 'default' })
 
@@ -55,32 +56,6 @@ interface ApiErrorPayload {
   errors?: Record<string, string[] | undefined>
 }
 
-interface PermissionItem {
-  id: string
-  label: string
-}
-
-interface PermissionGroup {
-  id: string
-  label: string
-  permissions: PermissionItem[]
-}
-
-const permissionGroups: PermissionGroup[] = [
-  {
-    id: 'users',
-    label: 'إدارة المستخدمين',
-    permissions: [
-      { id: 'users.view', label: 'عرض المستخدمين' },
-      { id: 'users.create', label: 'إنشاء مستخدمين' },
- 
-    ],
-  },
- 
-  
-  
-]
-
 const route = useRoute()
 const roleId = route.params.id as string
 const { $api } = useApi()
@@ -114,7 +89,7 @@ const isGroupSelected = (group: PermissionGroup) => {
 
 const setGroup = (group: PermissionGroup, checked: boolean) => {
   if (!checked) {
-    const ids = new Set(group.permissions.map(p => p.id))
+    const ids = new Set<string>(group.permissions.map(p => p.id))
     selectedPermissions.value = selectedPermissions.value.filter(p => !ids.has(p))
   } else {
     const next = new Set(selectedPermissions.value)
@@ -159,9 +134,7 @@ const extractErrorMessage = (error: unknown) => {
   )
 }
 
-const knownPermissionIds = new Set(
-  permissionGroups.flatMap(g => g.permissions.map(p => p.id)),
-)
+const knownPermissionIds = permissionIdSet
 
 const loadRole = async () => {
   loadingRole.value = true

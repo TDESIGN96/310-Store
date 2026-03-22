@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { ArrowRight, Loader2, ShieldAlert, User, Mail, Phone, ShieldCheck, Calendar, CheckCircle, XCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { permissionGroups } from '@/config/permissions'
 
 definePageMeta({ layout: 'default' })
 
@@ -10,6 +11,17 @@ interface UserRole {
   name: string
   name_en: string
   name_ar: string
+}
+
+interface RoleItem {
+  id: number | string
+  name_en: string
+  name_ar: string
+}
+
+interface RolesResponse {
+  roles?: RoleItem[]
+  data?: { roles?: RoleItem[] }
 }
 
 interface UserData {
@@ -36,8 +48,13 @@ const userId = route.params.id as string
 const { $api } = useApi()
 
 const user = ref<UserData | null>(null)
+const roles = ref<RoleItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
+
+const permissionLabelMap = Object.fromEntries(
+  permissionGroups.flatMap(group => group.permissions.map(permission => [permission.id, permission.label])),
+) as Record<string, string>
 
 const loadUser = async () => {
   loading.value = true
@@ -74,7 +91,28 @@ const formatDate = (dateStr: string | null) => {
   }
 }
 
-onMounted(loadUser)
+const loadRoles = async () => {
+  try {
+    const data = await $api<RolesResponse>('/roles', { params: { per_page: 100 } })
+    roles.value = data.roles ?? data.data?.roles ?? []
+  } catch {
+    roles.value = []
+  }
+}
+
+const roleLabel = (role: UserRole) => {
+  const match = roles.value.find(r => Number(r.id) === Number(role.id))
+  if (match) return match.name_ar || match.name_en
+  return role.name_ar || role.name_en || role.name
+}
+
+const permissionLabel = (permission: string) => {
+  return permissionLabelMap[permission] || permission
+}
+onMounted(() => {
+  loadUser()
+  loadRoles()
+})
 </script>
 
 <template>
@@ -201,7 +239,7 @@ onMounted(loadUser)
               :key="role.id"
               class="inline-flex items-center rounded-md bg-primary/10 px-3 py-1 text-sm font-medium text-primary"
             >
-              {{ role.name_ar || role.name_en || role.name }}
+              {{ roleLabel(role) }}
             </span>
           </div>
           <p v-else class="text-sm text-muted-foreground">لا توجد أدوار مخصصة</p>
@@ -223,7 +261,7 @@ onMounted(loadUser)
               :key="idx"
               class="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
             >
-              {{ perm }}
+              {{ permissionLabel(perm) }}
             </span>
           </div>
           <p v-else class="text-sm text-muted-foreground">لا توجد صلاحيات إضافية</p>
