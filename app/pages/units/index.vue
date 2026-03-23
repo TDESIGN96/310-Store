@@ -86,6 +86,12 @@ type SortField = 'name_ar' | 'name_en' | 'symbol' | 'created_at' | 'status'
 
 const { $api } = useApi()
 
+const { canCreate: cCreate, canEdit: cEdit, canDelete: cDelete, can } = usePermissions()
+const canCreateUnit = computed(() => cCreate('units'))
+const canEditUnit = computed(() => cEdit('units'))
+const canDeleteUnit = computed(() => cDelete('units'))
+const canShowUnit = computed(() => can('units.show'))
+
 const units = ref<UnitItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
@@ -522,7 +528,11 @@ onMounted(() => loadUnits())
           CSV
         </Button>
         <div class="flex-1" />
-        <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+        <Button
+          v-if="canCreateUnit"
+          class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+          as-child
+        >
         <NuxtLink to="/units/create">
           <Plus class="size-4" />
           {{ t('units_page.create') }}
@@ -540,6 +550,7 @@ onMounted(() => loadUnits())
         </span>
         <div class="flex items-center gap-2 mr-auto">
           <Button
+            v-if="canEditUnit"
             variant="outline"
             size="sm"
             class="h-8 gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
@@ -551,6 +562,7 @@ onMounted(() => loadUnits())
             {{ t('units_page.bulk_activate') }}
           </Button>
           <Button
+            v-if="canEditUnit"
             variant="outline"
             size="sm"
             class="h-8 gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
@@ -562,6 +574,7 @@ onMounted(() => loadUnits())
             {{ t('units_page.bulk_deactivate') }}
           </Button>
           <Button
+            v-if="canDeleteUnit"
             variant="outline"
             size="sm"
             class="h-8 gap-1.5 text-red-600 border-red-300 hover:bg-red-50"
@@ -722,12 +735,14 @@ onMounted(() => loadUnits())
             <!-- Arabic Name (clickable → view) -->
             <TableCell class="font-medium">
               <button
+                v-if="canShowUnit"
                 type="button"
                 class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-right"
                 @click="handleView(unit)"
               >
                 {{ unit.name_ar }}
               </button>
+              <span v-else>{{ unit.name_ar }}</span>
             </TableCell>
 
             <!-- English Name -->
@@ -778,6 +793,7 @@ onMounted(() => loadUnits())
                
                 <!-- Edit -->
                 <button
+                  v-if="canEditUnit"
                   type="button"
                   class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
                   @click="handleEdit(unit)"
@@ -788,7 +804,7 @@ onMounted(() => loadUnits())
 
                 <!-- Deactivate -->
                 <button
-                  v-if="unit.status === 'active'"
+                  v-if="canEditUnit && unit.status === 'active'"
                   type="button"
                   class="inline-flex items-center gap-1 text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="togglingId === unit.id || deletingId === unit.id"
@@ -801,7 +817,7 @@ onMounted(() => loadUnits())
 
                 <!-- Activate -->
                 <button
-                  v-else-if="unit.status === 'inactive'"
+                  v-else-if="canEditUnit && unit.status === 'inactive'"
                   type="button"
                   class="inline-flex items-center gap-1 text-green-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="togglingId === unit.id || deletingId === unit.id"
@@ -814,7 +830,7 @@ onMounted(() => loadUnits())
 
                 <!-- Delete -->
                 <button
-                  v-if="unit.status !== 'deleted'"
+                  v-if="canDeleteUnit && unit.status !== 'deleted'"
                   type="button"
                   class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="deletingId === unit.id || togglingId === unit.id"

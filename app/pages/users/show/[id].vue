@@ -1,13 +1,34 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { ArrowRight, Loader2, ShieldAlert, User, Mail, Phone, ShieldCheck, Calendar, CheckCircle, XCircle } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { ArrowRight, Loader2, ShieldAlert, User, Mail, Phone, ShieldCheck, Calendar, CheckCircle, XCircle, Pencil, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
 const { actionLabel } = usePermissionI18n()
 const { getErrorMessage } = useApiError()
+
+const { canAccess, canEdit: uEdit, canDelete: uDelete } = usePermissions()
+const canView = computed(() => canAccess('users'))
+const canEdit = computed(() => uEdit('users'))
+const canDeleteRow = computed(() => {
+  if (!uDelete('users') || !user.value) return false
+  return user.value.is_admin !== true
+})
+
+const showDeleteDialog = ref(false)
+const deleting = ref(false)
 
 interface UserRole {
   id: number
@@ -107,7 +128,26 @@ const roleLabel = (role: UserRole) => {
 }
 
 const permissionLabel = (permission: string) => actionLabel(permission)
+
+const confirmDeleteUser = async () => {
+  if (!user.value) return
+  deleting.value = true
+  try {
+    await $api(`/users/${user.value.id}`, { method: 'DELETE' })
+    toast.success(t('toasts.user_deleted_named', { name: user.value.name }))
+    showDeleteDialog.value = false
+    await navigateTo('/users')
+  }
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  }
+  finally {
+    deleting.value = false
+  }
+}
+
 onMounted(() => {
+  if (!canView.value) return
   loadUser()
   loadRoles()
 })
@@ -115,41 +155,74 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col gap-5">
-    <div class="flex items-center gap-3">
-      <Button variant="ghost" size="icon" class="size-8" as-child>
-        <NuxtLink to="/users">
-          <ArrowRight class="size-4" />
-        </NuxtLink>
-      </Button>
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">{{ t('users_show.title') }}</h1>
-        <p class="text-sm text-muted-foreground mt-1">
-          {{ t('users_show.subtitle') }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Loading state -->
+    <!-- No view permission -->
     <div
-      v-if="loading"
-      class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
-    >
-      <Loader2 class="size-5 animate-spin" />
-      {{ t('users_show.loading') }}
-    </div>
-
-    <!-- Error state -->
-    <div
-      v-else-if="errorMessage"
-      class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+      v-if="!canView"
+      class="flex flex-col items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-6 py-10 text-center text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
     >
       <ShieldAlert class="size-8" />
-      <span>{{ errorMessage }}</span>
-      <Button variant="outline" size="sm" @click="loadUser">{{ t('common.retry') }}</Button>
+      <p class="font-medium">{{ t('users_show.no_view_permission') }}</p>
+      <Button variant="outline" size="sm" as-child>
+        <NuxtLink to="/users">{{ t('users_show.back') }}</NuxtLink>
+      </Button>
     </div>
 
-    <!-- User details -->
-    <template v-else-if="user">
+    <template v-else>
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-3">
+          <Button variant="ghost" size="icon" class="size-8" as-child>
+            <NuxtLink to="/users">
+              <ArrowRight class="size-4" />
+            </NuxtLink>
+          </Button>
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight">{{ t('users_show.title') }}</h1>
+            <p class="text-sm text-muted-foreground mt-1">
+              {{ t('users_show.subtitle') }}
+            </p>
+          </div>
+        </div>
+        <div v-if="user && (canEdit || canDeleteRow)" class="flex flex-wrap gap-2">
+          <Button v-if="canEdit" variant="outline" size="sm" class="gap-2" as-child>
+            <NuxtLink :to="`/users/edit/${user.id}`">
+              <Pencil class="size-4" />
+              {{ t('common.edit') }}
+            </NuxtLink>
+          </Button>
+          <Button
+            v-if="canDeleteRow"
+            variant="outline"
+            size="sm"
+            class="gap-2 text-red-600 border-red-200 hover:bg-red-50"
+            @click="showDeleteDialog = true"
+          >
+            <Trash2 class="size-4" />
+            {{ t('common.delete') }}
+          </Button>
+        </div>
+      </div>
+
+      <!-- Loading state -->
+      <div
+        v-if="loading"
+        class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
+      >
+        <Loader2 class="size-5 animate-spin" />
+        {{ t('users_show.loading') }}
+      </div>
+
+      <!-- Error state -->
+      <div
+        v-else-if="errorMessage"
+        class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+      >
+        <ShieldAlert class="size-8" />
+        <span>{{ errorMessage }}</span>
+        <Button variant="outline" size="sm" @click="loadUser">{{ t('common.retry') }}</Button>
+      </div>
+
+      <!-- User details -->
+      <template v-else-if="user">
       <div class="rounded-lg border overflow-hidden">
         <div class="bg-muted/40 px-4 py-3 border-b">
           <h2 class="font-semibold flex items-center gap-2">
@@ -265,6 +338,30 @@ onMounted(() => {
           <p v-else class="text-sm text-muted-foreground">{{ t('users_show.no_permissions') }}</p>
         </div>
       </div>
+      </template>
     </template>
+
+    <AlertDialog :open="showDeleteDialog" @update:open="v => (showDeleteDialog = v)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('users_page.alert_delete_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('users_page.alert_delete_body', { name: user?.name ?? '' }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel as-child>
+            <Button variant="outline">{{ t('common.cancel') }}</Button>
+          </AlertDialogCancel>
+          <Button
+            variant="destructive"
+            :disabled="deleting"
+            @click="confirmDeleteUser"
+          >
+            {{ t('users_page.alert_delete_confirm') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

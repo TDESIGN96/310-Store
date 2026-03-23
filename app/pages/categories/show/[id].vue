@@ -1,7 +1,17 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { ArrowRight, Loader2, ShieldAlert, Calendar, Pencil, Tag } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { ArrowRight, Loader2, ShieldAlert, Calendar, Pencil, Tag, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
@@ -52,10 +62,14 @@ interface CategoryShowResponse {
 const route = useRoute()
 const categoryId = route.params.id as string
 const { $api } = useApi()
-const authStore = useAuthStore()
 
-const canView = authStore.hasPermission('categories.show')
-const canEdit = authStore.hasPermission('categories.update')
+const { canAccess, canEdit: cEdit, canDelete: cDelete } = usePermissions()
+const canView = computed(() => canAccess('categories'))
+const canEdit = computed(() => cEdit('categories'))
+const canDelete = computed(() => cDelete('categories'))
+
+const showDeleteDialog = ref(false)
+const deleting = ref(false)
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
@@ -136,8 +150,31 @@ const loadCategory = async () => {
   }
 }
 
+const confirmDeleteCategory = async () => {
+  if (!category.value) return
+  deleting.value = true
+  try {
+    await $api(`/categories/${category.value.id}`, { method: 'DELETE' })
+    toast.success(t('categories_page.delete_success', { name: category.value.name_ar }))
+    showDeleteDialog.value = false
+    await navigateTo('/categories')
+  }
+  catch (error: unknown) {
+    const msg = (error as { data?: { message?: string | { ar?: string } } })?.data?.message
+    const text =
+      typeof msg === 'string'
+        ? msg
+        : (msg as { ar?: string } | undefined)?.ar
+        ?? t('categories_page.delete_error')
+    toast.error(text)
+  }
+  finally {
+    deleting.value = false
+  }
+}
+
 onMounted(() => {
-  if (canView) loadCategory()
+  if (canView.value) loadCategory()
 })
 </script>
 
@@ -158,12 +195,22 @@ onMounted(() => {
           </p>
         </div>
       </div>
-      <div v-if="category && canEdit">
-        <Button variant="outline" size="sm" class="gap-2" as-child>
+      <div v-if="category && (canEdit || canDelete)" class="flex flex-wrap gap-2">
+        <Button v-if="canEdit" variant="outline" size="sm" class="gap-2" as-child>
           <NuxtLink :to="`/categories/edit/${category.id}`">
             <Pencil class="size-4" />
             {{ t('categories_show.edit_category') }}
           </NuxtLink>
+        </Button>
+        <Button
+          v-if="canDelete && category.status !== 'deleted'"
+          variant="outline"
+          size="sm"
+          class="gap-2 text-red-600 border-red-200 hover:bg-red-50"
+          @click="showDeleteDialog = true"
+        >
+          <Trash2 class="size-4" />
+          {{ t('common.delete') }}
         </Button>
       </div>
     </div>
@@ -289,5 +336,28 @@ onMounted(() => {
         </div>
       </template>
     </template>
+
+    <AlertDialog :open="showDeleteDialog" @update:open="v => (showDeleteDialog = v)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('categories_page.delete_dialog_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('categories_page.delete_dialog_body', { name: category?.name_ar ?? '' }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel as-child>
+            <Button variant="outline">{{ t('common.cancel') }}</Button>
+          </AlertDialogCancel>
+          <Button
+            variant="destructive"
+            :disabled="deleting"
+            @click="confirmDeleteCategory"
+          >
+            {{ t('categories_page.confirm_yes_delete') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

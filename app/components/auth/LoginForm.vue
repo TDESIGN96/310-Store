@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { AccountSuspendedError, useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
 
 const authStore = useAuthStore()
@@ -30,7 +30,10 @@ const handleLogin = async () => {
     await navigateTo('/mainCards')
   }
   catch (e: unknown) {
-    if (isValidationError(e)) {
+    if (e instanceof AccountSuspendedError) {
+      formError.value = t('auth.account_suspended')
+    }
+    else if (isValidationError(e)) {
       const fe = getFieldErrors(e)
       fieldErrors.value.phone = fe.phone ?? ''
       fieldErrors.value.password = fe.password ?? ''

@@ -53,6 +53,10 @@ export default {
       roles: 'الصلاحيات',
       users: 'المستخدمون',
     },
+    submenu: {
+      list: 'القائمة',
+      create: 'إنشاء جديد',
+    },
   },
 
   permissions: {
@@ -183,6 +187,8 @@ export default {
     data_encrypted: 'بيانات مشفرة',
     footer_register: 'هل تحتاج الى التسجيل في النظام؟',
     contact_company: 'تواصل مع شركة كامو',
+    account_suspended:
+      'تم تعليق حسابك ولا يمكنك تسجيل الدخول. يرجى التواصل مع الدعم إذا كنت بحاجة إلى مساعدة.',
   },
 
   dashboard: {
@@ -357,6 +363,8 @@ export default {
   users_show: {
     title: 'عرض المستخدم',
     subtitle: 'عرض تفاصيل المستخدم',
+    no_view_permission: 'ليس لديك صلاحية لعرض هذا المستخدم',
+    back: 'العودة إلى المستخدمين',
     loading: 'جاري تحميل البيانات…',
     basic_info: 'المعلومات الأساسية',
     label_name: 'الاسم',
@@ -669,7 +677,9 @@ export default {
 
   validation_hints: {
     name_min: '3 أحرف على الأقل',
-    name_no_digits: 'بدون أرقام',
+    name_no_digits: 'لا يمكن أن يحتوي على أرقام (0–9)',
+    name_allowed_chars:
+      'استخدم الأحرف والمسافات والفاصلة العليا (\') فقط — دون شرطة (-) أو أرقام أو رموز أخرى',
     phone_format: '11 رقماً تبدأ بـ 07',
     password_min: '8 أحرف على الأقل',
     password_upper: 'حرف كبير واحد على الأقل (A–Z)',

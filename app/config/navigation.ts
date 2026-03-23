@@ -7,13 +7,26 @@ import {
   Ruler,
   Layers,
 } from 'lucide-vue-next'
+import type { PermissionModule } from '@/config/permissions'
 
 export interface NavItem {
   /** i18n key, e.g. nav.items.dashboard */
   labelKey: string
   icon: Component
+  /** List/index route */
   path: string
+  /**
+   * Legacy: single permission for simple items (e.g. products).
+   * If set without `module`, sidebar shows link only when this passes.
+   */
   requiredPermission?: string
+  /**
+   * When set, sidebar uses usePermissions().navVisibility(module):
+   * hidden | link | dropdown | dropdown-create-only
+   */
+  module?: PermissionModule
+  /** Create route — required for dropdown state */
+  createPath?: string
 }
 
 export interface NavGroup {
@@ -31,10 +44,34 @@ export const navItems: NavGroup[] = [
     groupKey: 'nav.groups.inventory',
     items: [
       { labelKey: 'nav.items.products', icon: Package, path: '/products', requiredPermission: 'view_products' },
-      { labelKey: 'nav.items.units', icon: Ruler, path: '/units', requiredPermission: 'units.index' },
-      { labelKey: 'nav.items.categories', icon: Layers, path: '/categories', requiredPermission: 'categories.index' },
-      { labelKey: 'nav.items.roles', icon: ShieldCheck, path: '/roles' },
-      { labelKey: 'nav.items.users', icon: Users, path: '/users' },
+      {
+        labelKey: 'nav.items.units',
+        icon: Ruler,
+        path: '/units',
+        module: 'units',
+        createPath: '/units/create',
+      },
+      {
+        labelKey: 'nav.items.categories',
+        icon: Layers,
+        path: '/categories',
+        module: 'categories',
+        createPath: '/categories/create',
+      },
+      {
+        labelKey: 'nav.items.roles',
+        icon: ShieldCheck,
+        path: '/roles',
+        module: 'roles',
+        createPath: '/roles/create',
+      },
+      {
+        labelKey: 'nav.items.users',
+        icon: Users,
+        path: '/users',
+        module: 'users',
+        createPath: '/users/create',
+      },
     ],
   },
 ]

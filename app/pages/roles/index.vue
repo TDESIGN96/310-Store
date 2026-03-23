@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Search, Plus, Pencil, Copy, Trash2, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,6 +49,11 @@ interface RolesResponse {
 }
 
 const { $api } = useApi()
+
+const { canCreate: rCreate, canEdit: rEdit, canDelete: rDestroy } = usePermissions()
+const canCreateRole = computed(() => rCreate('roles'))
+const canEditRole = computed(() => rEdit('roles'))
+const canDeleteRole = computed(() => rDestroy('roles'))
 
 const roles = ref<RoleItem[]>([])
 const search = ref('')
@@ -188,7 +193,11 @@ onMounted(loadRoles)
         />
       </div>
      
-      <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+      <Button
+        v-if="canCreateRole"
+        class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+        as-child
+      >
         <NuxtLink to="/roles/create">
           <Plus class="size-4" />
           {{ t('roles_page.create') }}
@@ -243,11 +252,16 @@ onMounted(loadRoles)
             <TableCell class="font-medium">{{ role.name_ar }}</TableCell>
             <TableCell>
               <div class="flex items-center gap-3 text-sm">
-                <button class="inline-flex items-center gap-1 text-[#2563eb] hover:underline" @click="handleEdit(role)">
+                <button
+                  v-if="canEditRole"
+                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
+                  @click="handleEdit(role)"
+                >
                   <Pencil class="size-3.5" />
                   {{ t('common.edit') }}
                 </button>
                 <button
+                  v-if="canCreateRole"
                   class="inline-flex items-center gap-1 text-muted-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="cloningId === String(role.id)"
                   @click="handleClone(role)"
@@ -257,6 +271,7 @@ onMounted(loadRoles)
                   {{ t('common.copy') }}
                 </button>
                 <button
+                  v-if="canDeleteRole"
                   class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="deletingId === String(role.id)"
                   @click="roleToDelete = role"

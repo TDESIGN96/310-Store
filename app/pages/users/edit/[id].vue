@@ -193,9 +193,19 @@ const selectedRolesLabel = computed(() => {
   return selected.map(r => r.name_ar || r.name_en).join(sep)
 })
 
+/** Display name: min length, no digits, letters/spaces/apostrophe only (Unicode letters). */
 const nameRules = computed(() => [
   { id: 'length', label: t('validation_hints.name_min'), test: (n: string) => n.trim().length >= 3 },
-  { id: 'nonumbers', label: t('validation_hints.name_no_digits'), test: (n: string) => !/[0-9]/.test(n) },
+  { id: 'nodigits', label: t('validation_hints.name_no_digits'), test: (n: string) => !/\d/.test(n.trim()) },
+  {
+    id: 'allowed_chars',
+    label: t('validation_hints.name_allowed_chars'),
+    test: (n: string) => {
+      const s = n.trim()
+      if (!s.length) return true
+      return /^[\p{L}\s']+$/u.test(s)
+    },
+  },
 ])
 const nameRuleStatus = computed(() =>
   nameRules.value.map(rule => ({ ...rule, pass: rule.test(username.value) })),

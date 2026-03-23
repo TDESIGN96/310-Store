@@ -99,7 +99,11 @@ type SortField = 'name_ar' | 'name_en' | 'created_at' | 'status'
 // ── State ──────────────────────────────────────────────────────────────────────
 
 const { $api } = useApi()
-const authStore = useAuthStore()
+const { canCreate: canCreateCat, canEdit: canEditCat, canDelete: canDeleteCat, can: canPerm } = usePermissions()
+const canCreate = computed(() => canCreateCat('categories'))
+const canUpdate = computed(() => canEditCat('categories'))
+const canDestroy = computed(() => canDeleteCat('categories'))
+const canShow = computed(() => canPerm('categories.show'))
 
 const categories = ref<CategoryItem[]>([])
 const loading = ref(false)
@@ -512,13 +516,6 @@ const exportCSV = () => {
   URL.revokeObjectURL(link.href)
   toast.success(t('common.export_success'))
 }
-
-// ── Permissions ────────────────────────────────────────────────────────────────
-
-const canCreate = authStore.hasPermission('categories.store')
-const canUpdate = authStore.hasPermission('categories.update')
-const canDestroy = authStore.hasPermission('categories.destroy')
-const canShow = authStore.hasPermission('categories.show')
 
 onMounted(() => {
   loadCategories()

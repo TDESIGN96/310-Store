@@ -90,6 +90,11 @@ interface RolesListResponse {
 
 const { $api } = useApi()
 const authStore = useAuthStore()
+const { canCreate: uCreate, canEdit: uEdit, canDelete: uDestroy, can } = usePermissions()
+const canCreateUser = computed(() => uCreate('users'))
+const canEditUser = computed(() => uEdit('users'))
+const canDestroyUserPerm = computed(() => uDestroy('users'))
+const canShowUser = computed(() => can('users.show'))
 
 const users = ref<UserItem[]>([])
 const search = ref('')
@@ -219,7 +224,7 @@ const cannotToggleUserActivation = (user: UserItem) =>
   (isLoggedInAdminSession.value || user.is_admin === true)
 
 /** Endpoint marks admin accounts — delete is not offered for them */
-const canDeleteUser = (user: UserItem) => user.is_admin !== true
+const canDeleteUserRow = (user: UserItem) => user.is_admin !== true
 
 function buildUserStatusBody(user: UserItem, is_active: boolean) {
   const email = user.email?.trim() ?? ''
@@ -394,7 +399,11 @@ onMounted(() => {
           </SelectContent>
         </Select>
       </div>
-      <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+      <Button
+        v-if="canCreateUser"
+        class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+        as-child
+      >
         <NuxtLink to="/users/create">
           <Plus class="size-4" />
           {{ t('users_page.create_user') }}
@@ -455,11 +464,13 @@ onMounted(() => {
           >
             <TableCell class="font-medium">
               <NuxtLink
+                v-if="canShowUser"
                 :to="`/users/show/${user.id}`"
                 class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
               >
                 {{ user.name }}
               </NuxtLink>
+              <span v-else>{{ user.name }}</span>
             </TableCell>
             <TableCell>{{ user.email }}</TableCell>
             <TableCell>{{ user.phone || '—' }}</TableCell>
@@ -477,7 +488,7 @@ onMounted(() => {
             <TableCell>
               <div class="flex flex-wrap items-center gap-3 text-sm">
                 <button
-                  v-if="user.is_active && !cannotToggleUserActivation(user)"
+                  v-if="canEditUser && user.is_active && !cannotToggleUserActivation(user)"
                   type="button"
                   class="inline-flex items-center gap-1 text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="togglingActiveId === user.id || deletingId === user.id"
@@ -488,7 +499,7 @@ onMounted(() => {
                   {{ t('common.deactivate') }}
                 </button>
                 <button
-                  v-else-if="!user.is_active && !cannotToggleUserActivation(user)"
+                  v-else-if="canEditUser && !user.is_active && !cannotToggleUserActivation(user)"
                   type="button"
                   class="inline-flex items-center gap-1 text-green-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="togglingActiveId === user.id || deletingId === user.id"
@@ -499,6 +510,7 @@ onMounted(() => {
                   {{ t('common.activate') }}
                 </button>
                 <button
+                  v-if="canEditUser"
                   class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
                   @click="handleEdit(user)"
                 >
@@ -506,6 +518,7 @@ onMounted(() => {
                   {{ t('common.edit') }}
                 </button>
                 <button
+                  v-if="canCreateUser"
                   type="button"
                   class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="deletingId === user.id || togglingActiveId === user.id"
@@ -515,7 +528,7 @@ onMounted(() => {
                   {{ t('users_page.clone') }}
                 </button>
                 <button
-                  v-if="canDeleteUser(user)"
+                  v-if="canDestroyUserPerm && canDeleteUserRow(user)"
                   class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                   :disabled="deletingId === user.id"
                   @click="userToDelete = user"

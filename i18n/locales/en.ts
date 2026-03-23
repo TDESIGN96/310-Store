@@ -53,6 +53,10 @@ export default {
       roles: 'Roles',
       users: 'Users',
     },
+    submenu: {
+      list: 'List',
+      create: 'Create new',
+    },
   },
 
   permissions: {
@@ -183,6 +187,8 @@ export default {
     data_encrypted: 'Encrypted data',
     footer_register: 'Need to register in the system?',
     contact_company: 'Contact KAMU',
+    account_suspended:
+      'Your account has been suspended. You cannot sign in. Please contact support if you need help.',
   },
 
   dashboard: {
@@ -358,6 +364,8 @@ export default {
   users_show: {
     title: 'User details',
     subtitle: 'View user information',
+    no_view_permission: 'You do not have permission to view this user',
+    back: 'Back to users',
     loading: 'Loading data…',
     basic_info: 'Basic information',
     label_name: 'Name',
@@ -671,7 +679,9 @@ export default {
 
   validation_hints: {
     name_min: 'At least 3 characters',
-    name_no_digits: 'No digits',
+    name_no_digits: 'Cannot contain numbers (0–9)',
+    name_allowed_chars:
+      'Use only letters, spaces and apostrophes (\') — no hyphens, numbers or other symbols',
     phone_format: '11 digits starting with 07',
     password_min: 'At least 8 characters',
     password_upper: 'At least one uppercase letter (A–Z)',
