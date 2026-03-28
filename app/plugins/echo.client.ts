@@ -1,6 +1,7 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import { useAuthStore } from '@/stores/auth'
+import { normalizeApiLocale } from '@/utils/apiLocale'
 
 declare global {
   interface Window {
@@ -27,9 +28,17 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   window.Pusher = Pusher
 
-  const getAuthorizationHeader = (): Record<string, string> => {
-    if (!authStore.token) return {}
-    return { Authorization: `Bearer ${authStore.token}` }
+  const i18nLocaleCookie = useCookie<string | null>('i18n_locale')
+
+  const broadcastingAuthHeaders = (): Record<string, string> => {
+    const lang = normalizeApiLocale(i18nLocaleCookie.value)
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Accept-Language': lang,
+    }
+    if (authStore.token)
+      headers.Authorization = `Bearer ${authStore.token}`
+    return headers
   }
 
   const echo = new Echo({
@@ -42,20 +51,20 @@ export default defineNuxtPlugin((nuxtApp) => {
     enabledTransports: ['ws', 'wss'],
     authEndpoint: `${echoConfig.authBaseUrl}${echoConfig.authEndpoint}`,
     auth: {
-      headers: getAuthorizationHeader(),
+      headers: broadcastingAuthHeaders(),
     },
   })
 
-  // Keep auth headers fresh for future private/presence auth handshakes.
+  // Keep auth + locale headers fresh for private/presence auth handshakes.
   watch(
-    () => authStore.token,
+    () => [authStore.token, i18nLocaleCookie.value] as const,
     () => {
       const connector = (echo as any).connector
       if (!connector?.options) return
 
       connector.options.auth = {
         ...(connector.options.auth || {}),
-        headers: getAuthorizationHeader(),
+        headers: broadcastingAuthHeaders(),
       }
     },
     { immediate: true },

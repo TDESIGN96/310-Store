@@ -6,6 +6,8 @@ import {
   Users,
   Ruler,
   Layers,
+  Warehouse,
+  History,
 } from 'lucide-vue-next'
 import type { PermissionModule } from '@/config/permissions'
 
@@ -38,7 +40,15 @@ export interface NavGroup {
 export const navItems: NavGroup[] = [
   {
     groupKey: 'nav.groups.main',
-    items: [{ labelKey: 'nav.items.dashboard', icon: LayoutDashboard, path: '/mainCards' }],
+    items: [
+      { labelKey: 'nav.items.dashboard', icon: LayoutDashboard, path: '/mainCards' },
+      {
+        labelKey: 'nav.items.activity_log',
+        icon: History,
+        path: '/activities',
+        module: 'activities',
+      },
+    ],
   },
   {
     groupKey: 'nav.groups.inventory',
@@ -57,6 +67,13 @@ export const navItems: NavGroup[] = [
         path: '/categories',
         module: 'categories',
         createPath: '/categories/create',
+      },
+      {
+        labelKey: 'nav.items.warehouses',
+        icon: Warehouse,
+        path: '/warehouses',
+        module: 'warehouses',
+        createPath: '/warehouses/create',
       },
       {
         labelKey: 'nav.items.roles',

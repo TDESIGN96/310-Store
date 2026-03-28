@@ -104,38 +104,9 @@ const handleEdit = (role: RoleItem) => {
   navigateTo(`/roles/edit/${role.id}`)
 }
 
-const cloningId = ref<string | null>(null)
-
-const handleClone = async (role: RoleItem) => {
-  cloningId.value = String(role.id)
-
-  try {
-    const res = await $api<Record<string, any>>(`/roles/${role.id}/clone`, { method: 'POST' })
-
-    // Extract the new role ID from whatever response shape the backend returns
-    const newId =
-      res?.data?.role?.id ??
-      res?.data?.id ??
-      res?.role?.id ??
-      res?.id ??
-      null
-
-    toast.success(t('roles_page.copy_success', { name: role.name_ar }))
-
-    if (newId) {
-      await navigateTo(`/roles/edit/${newId}`)
-    } else {
-      await loadRoles(currentPage.value)
-    }
-  } catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      t('roles_page.copy_error')
-    toast.error(msg)
-  } finally {
-    cloningId.value = null
-  }
+/** Prefill create form from source role (names + permissions) — same pattern as users create clone */
+const handleClone = (role: RoleItem) => {
+  navigateTo({ path: '/roles/create', query: { from: String(role.id) } })
 }
 
 const deletingId = ref<string | null>(null)
@@ -262,12 +233,12 @@ onMounted(loadRoles)
                 </button>
                 <button
                   v-if="canCreateRole"
-                  class="inline-flex items-center gap-1 text-muted-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="cloningId === String(role.id)"
+                  type="button"
+                  class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+                  :disabled="deletingId === String(role.id)"
                   @click="handleClone(role)"
                 >
-                  <LoaderCircle v-if="cloningId === String(role.id)" class="size-3.5 animate-spin" />
-                  <Copy v-else class="size-3.5" />
+                  <Copy class="size-3.5" />
                   {{ t('common.copy') }}
                 </button>
                 <button

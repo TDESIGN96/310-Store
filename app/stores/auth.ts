@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { normalizeApiLocale } from '@/utils/apiLocale'
 
 /** Thrown when login succeeds but the account is inactive; UI should show localized message. */
 export class AccountSuspendedError extends Error {
@@ -53,6 +54,10 @@ const COOKIE_OPTS = {
   path: '/',
 }
 
+/** Same source as @nuxtjs/i18n `detectBrowserLanguage.cookieKey` — keeps login/logout aligned with UI language. */
+const localeHeaderForApi = () =>
+  normalizeApiLocale(useCookie<string | null>('i18n_locale').value)
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null)
   const user = ref<User | null>(null)
@@ -69,7 +74,11 @@ export const useAuthStore = defineStore('auth', () => {
       {
         method: 'POST',
         body: credentials,
-        headers: { Accept: 'application/json' },
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'Accept-Language': localeHeaderForApi(),
+        },
       }
     )
 
@@ -96,6 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
         headers: {
           Authorization: `Bearer ${token.value}`,
           Accept: 'application/json',
+          'Accept-Language': localeHeaderForApi(),
         },
       })
     } catch {}

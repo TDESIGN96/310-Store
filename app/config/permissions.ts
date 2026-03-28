@@ -1,5 +1,12 @@
 export type PermissionAction = 'index' | 'show' | 'store' | 'update' | 'destroy'
-export type PermissionModule = 'users' | 'roles' | 'units' | 'categories' | 'reports'
+export type PermissionModule =
+  | 'users'
+  | 'roles'
+  | 'units'
+  | 'categories'
+  | 'reports'
+  | 'warehouses'
+  | 'activities'
 export type PermissionKey = `${PermissionModule}.${PermissionAction}`
 
 export interface PermissionItem {
@@ -60,6 +67,26 @@ export const permissionGroups: PermissionGroup[] = [
       { id: 'reports.store' },
       { id: 'reports.update' },
       { id: 'reports.destroy' },
+    ],
+  },
+  {
+    id: 'warehouses',
+    permissions: [
+      { id: 'warehouses.index' },
+      { id: 'warehouses.show' },
+      { id: 'warehouses.store' },
+      { id: 'warehouses.update' },
+      { id: 'warehouses.destroy' },
+    ],
+  },
+  {
+    id: 'activities',
+    permissions: [
+      { id: 'activities.index' },
+      { id: 'activities.show' },
+      { id: 'activities.store' },
+      { id: 'activities.update' },
+      { id: 'activities.destroy' },
     ],
   },
 ]

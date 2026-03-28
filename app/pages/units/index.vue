@@ -434,9 +434,7 @@ const buildExportRows = (source: UnitItem[]) =>
     symbol: u.symbol,
     status: statusConfig(u.status).label,
     created_by: authorDisplay(u.created_by),
-    updated_by: authorDisplay(u.updated_by),
     created_at: formatDate(u.created_at),
-    updated_at: formatDate(u.updated_at),
   }))
 
 const exportCSV = () => {
@@ -448,7 +446,7 @@ const exportCSV = () => {
   const headers = tm('units_page.export_headers') as unknown as string[]
   const rows = buildExportRows(selectedUnits).map(r => [
     r.id, r.name_ar, r.name_en, r.symbol, r.status,
-    r.created_by, r.updated_by, r.created_at, r.updated_at,
+    r.created_by, r.created_at,
   ])
   const csv = [headers, ...rows]
     .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
@@ -502,7 +500,7 @@ onMounted(() => loadUnits())
             <SelectValue :placeholder="t('common.status')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{{ t('users_page.all_statuses') }}</SelectItem>
+            <SelectItem value="all">{{ t('common.all_statuses') }}</SelectItem>
             <SelectItem value="active">{{ t('common.active') }}</SelectItem>
             <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
           </SelectContent>
@@ -517,7 +515,7 @@ onMounted(() => loadUnits())
           @click="clearAllFilters"
         >
           <X class="size-3.5" />
-          {{ t('users_page.clear_filters') }}
+          {{ t('common.clear_filters') }}
         </Button>
 
      
@@ -661,7 +659,6 @@ onMounted(() => loadUnits())
             </TableHead>
 
             <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
 
             <TableHead
               class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
@@ -675,7 +672,6 @@ onMounted(() => loadUnits())
               </div>
             </TableHead>
 
-            <TableHead class="rtl:text-right font-medium">{{ t('common.updated_at') }}</TableHead>
             <TableHead class="rtl:text-right font-medium">{{ t('units_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
@@ -683,7 +679,7 @@ onMounted(() => loadUnits())
         <TableBody>
           <!-- Loading -->
           <TableRow v-if="loading" >
-            <TableCell :colspan="10" class="py-14 text-center ">
+            <TableCell :colspan="8" class="py-14 text-center ">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground ">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('units_page.loading') }}
@@ -693,7 +689,7 @@ onMounted(() => loadUnits())
 
           <!-- Error -->
           <TableRow v-else-if="errorMessage">
-            <TableCell :colspan="10" class="py-14 text-center">
+            <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
@@ -706,7 +702,7 @@ onMounted(() => loadUnits())
 
           <!-- Empty -->
           <TableRow v-else-if="units.length === 0">
-            <TableCell :colspan="10" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
                   ? t('units_page.no_results')
@@ -772,19 +768,9 @@ onMounted(() => loadUnits())
               {{ authorDisplay(unit.created_by) }}
             </TableCell>
 
-            <!-- Updated By -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ authorDisplay(unit.updated_by) }}
-            </TableCell>
-
             <!-- Created At -->
             <TableCell class="text-sm text-muted-foreground">
               {{ formatDate(unit.created_at) }}
-            </TableCell>
-
-            <!-- Updated At -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ formatDate(unit.updated_at) }}
             </TableCell>
 
             <!-- Actions -->

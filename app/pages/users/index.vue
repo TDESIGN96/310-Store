@@ -393,7 +393,7 @@ onMounted(() => {
             <SelectValue :placeholder="t('users_page.filter_status')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{{ t('users_page.all_statuses') }}</SelectItem>
+            <SelectItem value="all">{{ t('common.all_statuses') }}</SelectItem>
             <SelectItem value="active">{{ t('common.active') }}</SelectItem>
             <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
           </SelectContent>

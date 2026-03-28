@@ -30,6 +30,15 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   // Products (legacy key from navigation)
   { pattern: /^\/products\/create\/?$/, permission: 'view_products' },
   { pattern: /^\/products\/?$/, permission: 'view_products' },
+
+  // Warehouses
+  { pattern: /^\/warehouses\/create\/?$/, permission: 'warehouses.store' },
+  { pattern: /^\/warehouses\/edit\/[^/]+\/?$/, permission: 'warehouses.update' },
+  { pattern: /^\/warehouses\/show\/[^/]+\/?$/, permission: 'warehouses.show' },
+  { pattern: /^\/warehouses\/?$/, permission: ['warehouses.index', 'warehouses.show'] },
+
+  // Activity log
+  { pattern: /^\/activities\/?$/, permission: ['activities.index', 'activities.show'] },
 ]
 
 /**

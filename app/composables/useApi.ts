@@ -1,23 +1,27 @@
 import { useAuthStore } from '@/stores/auth'
+import { normalizeApiLocale } from '@/utils/apiLocale'
 
 export const useApi = () => {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
   // Must run at setup time — not inside onResponseError (useI18n rules)
   const { getErrorMessage } = useApiError()
+  const { locale } = useI18n()
 
   const $api = $fetch.create({
     baseURL: config.public.apiBase,
 
     onRequest({ options }) {
-      // Auto-attach token on every request
+      const headers = new Headers(options.headers as HeadersInit | undefined)
+      headers.set('Accept', 'application/json')
+      headers.set('Accept-Language', normalizeApiLocale(locale.value))
+
       if (authStore.token) {
-        const headers = new Headers(options.headers as HeadersInit | undefined)
         headers.set('Authorization', `Bearer ${authStore.token}`)
-        headers.set('Accept', 'application/json')
         headers.set('Content-Type', 'application/json')
-        options.headers = headers
       }
+
+      options.headers = headers
     },
 
     onResponseError({ response }) {

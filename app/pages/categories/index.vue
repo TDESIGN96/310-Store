@@ -489,14 +489,12 @@ const buildExportRows = (source: CategoryItem[]) =>
     description: c.description || '—',
     status: statusConfig(c.status).label,
     created_by: authorDisplay(c.created_by),
-    updated_by: authorDisplay(c.updated_by),
     created_at: formatDate(c.created_at),
-    updated_at: formatDate(c.updated_at),
   }))
 
 const getExportRows = () =>
   buildExportRows(categories.value.filter(c => selectedIds.value.has(c.id)))
-    .map(r => [r.id, r.name_ar, r.name_en, r.parent, r.description, r.status, r.created_by, r.updated_by, r.created_at, r.updated_at])
+    .map(r => [r.id, r.name_ar, r.name_en, r.parent, r.description, r.status, r.created_by, r.created_at])
 
 const exportCSV = () => {
   const rows = getExportRows()
@@ -559,7 +557,7 @@ onMounted(() => {
             <SelectValue :placeholder="t('common.status')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{{ t('users_page.all_statuses') }}</SelectItem>
+            <SelectItem value="all">{{ t('common.all_statuses') }}</SelectItem>
             <SelectItem value="active">{{ t('common.active') }}</SelectItem>
             <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
           </SelectContent>
@@ -592,7 +590,7 @@ onMounted(() => {
           @click="clearAllFilters"
         >
           <X class="size-3.5" />
-          {{ t('users_page.clear_filters') }}
+          {{ t('common.clear_filters') }}
         </Button>
 
         <!-- Export Buttons -->
@@ -725,7 +723,6 @@ onMounted(() => {
             </TableHead>
 
             <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('common.last_modified_by') }}</TableHead>
 
             <!-- Sortable: Created At -->
             <TableHead
@@ -740,7 +737,6 @@ onMounted(() => {
               </div>
             </TableHead>
 
-            <TableHead class="rtl:text-right font-medium">{{ t('common.updated_at') }}</TableHead>
             <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
@@ -748,7 +744,7 @@ onMounted(() => {
         <TableBody>
           <!-- Loading -->
           <TableRow v-if="loading">
-            <TableCell :colspan="11" class="py-14 text-center">
+            <TableCell :colspan="9" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('categories_page.loading') }}
@@ -758,7 +754,7 @@ onMounted(() => {
 
           <!-- Error -->
           <TableRow v-else-if="errorMessage">
-            <TableCell :colspan="11" class="py-14 text-center">
+            <TableCell :colspan="9" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
@@ -771,7 +767,7 @@ onMounted(() => {
 
           <!-- Empty -->
           <TableRow v-else-if="categories.length === 0">
-            <TableCell :colspan="11" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
                   ? t('categories_page.no_results')
@@ -840,19 +836,9 @@ onMounted(() => {
               {{ authorDisplay(cat.created_by) }}
             </TableCell>
 
-            <!-- Updated By -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ authorDisplay(cat.updated_by) }}
-            </TableCell>
-
             <!-- Created At -->
             <TableCell class="text-sm text-muted-foreground">
               {{ formatDate(cat.created_at) }}
-            </TableCell>
-
-            <!-- Updated At -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ formatDate(cat.updated_at) }}
             </TableCell>
 
             <!-- Actions -->

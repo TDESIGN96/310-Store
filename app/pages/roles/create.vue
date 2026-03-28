@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { ArrowRight, ShieldCheck } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { ArrowRight, ShieldCheck, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'vue-sonner'
-import { permissionGroups, type PermissionGroup } from '@/config/permissions'
+import { permissionGroups, permissionIdSet, type PermissionGroup } from '@/config/permissions'
+import { normalizeLoadedPermissions, type RolePermissionModule } from '@/utils/rolePermissions'
 
 definePageMeta({ layout: 'default' })
+
+const route = useRoute()
+const router = useRouter()
 
 const { t } = useI18n()
 const { groupLabel, actionLabel } = usePermissionI18n()
@@ -27,8 +31,65 @@ const nameEn = ref('')
 const nameAr = ref('')
 const selectedPermissions = ref<string[]>([])
 const submitting = ref(false)
+const loadingPrefill = ref(false)
+const isClonePrefill = ref(false)
+const cloneSourceNameEn = ref('')
+const cloneSourceNameAr = ref('')
 const errorMessage = ref('')
 const fieldErrors = ref({ name_en: '', name_ar: '' })
+
+const knownPermissionIds = permissionIdSet
+
+interface RoleData {
+  id: string | number
+  name_en: string
+  name_ar: string
+  permissions?: Array<string | RolePermissionModule>
+}
+
+interface RoleFetchResponse {
+  status?: string
+  data?: RoleData
+}
+
+const applyClonePrefill = async () => {
+  const raw = route.query.from
+  const fromId = Array.isArray(raw) ? raw[0] : raw
+  if (!fromId || !String(fromId).trim()) return
+
+  loadingPrefill.value = true
+  try {
+    const res = await $api<RoleFetchResponse>(`/roles/${fromId}`)
+    const role = res?.data
+
+    if (!role?.name_en) {
+      toast.error(t('roles_form.fetch_error_unexpected'))
+      return
+    }
+
+    nameEn.value = `${role.name_en.trim()}${t('roles_page.clone_name_suffix_en')}`
+    nameAr.value = `${(role.name_ar ?? '').trim()}${t('roles_page.clone_name_suffix_ar')}`
+
+    const rawPerm = Array.isArray(role.permissions) ? role.permissions : []
+    const normalized = normalizeLoadedPermissions(rawPerm)
+    selectedPermissions.value = normalized.filter(p => knownPermissionIds.has(p))
+
+    cloneSourceNameEn.value = role.name_en
+    cloneSourceNameAr.value = role.name_ar ?? ''
+    isClonePrefill.value = true
+    await router.replace({ query: {} })
+  }
+  catch (err: unknown) {
+    toast.error(getErrorMessage(err))
+  }
+  finally {
+    loadingPrefill.value = false
+  }
+}
+
+onMounted(() => {
+  applyClonePrefill()
+})
 
 const setPermission = (permissionKey: string, checked: boolean) => {
   if (checked) {
@@ -144,6 +205,27 @@ const saveRole = async () => {
       </div>
     </div>
 
+    <div
+      v-if="loadingPrefill"
+      class="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"
+    >
+      <Loader2 class="size-5 animate-spin" />
+      {{ t('roles_form.loading_prefill') }}
+    </div>
+
+    <template v-else>
+    <div
+      v-if="isClonePrefill"
+      class="rounded-lg border border-[#215260]/30 bg-[#215260]/5 px-4 py-3 text-sm text-foreground"
+    >
+      {{
+        t('roles_form.clone_prefill_banner', {
+          name_en: cloneSourceNameEn,
+          name_ar: cloneSourceNameAr,
+        })
+      }}
+    </div>
+
     <div class="rounded-lg border p-5 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
@@ -234,5 +316,6 @@ const saveRole = async () => {
         {{ submitting ? t('common.saving') : t('roles_form.submit_create') }}
       </Button>
     </div>
+    </template>
   </div>
 </template>

@@ -153,9 +153,11 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
                 <DropdownMenuLabel class="text-start">{{ t('header.account') }}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem>
-                  <User class="ms-2 size-4" />
-                  <span>{{ t('header.profile') }}</span>
+                <DropdownMenuItem as-child>
+                  <NuxtLink to="/profile" class="flex w-full cursor-pointer items-center gap-2">
+                    <User class="ms-2 size-4 shrink-0" />
+                    <span>{{ t('header.profile') }}</span>
+                  </NuxtLink>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem>
