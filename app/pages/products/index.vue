@@ -1,348 +1,658 @@
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
-import type { ColumnDef, SortingState, ColumnFiltersState, VisibilityState, RowSelectionState } from '@tanstack/vue-table'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
-  FlexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-} from '@tanstack/vue-table'
-
-import {
-  Table, TableBody, TableCell, TableHead,
-  TableHeader, TableRow,
-} from '@/components/ui/table'
-import { Input } from '@/components/ui/input'
+  Search,
+  Plus,
+  Loader2,
+  ShieldAlert,
+  ChevronRight,
+  ChevronLeft,
+  Package,
+  Eye,
+  Pencil,
+  Trash2,
+  Filter,
+  X,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
-  Plus, Search, Filter, Download,
-  MoreHorizontal, Pencil, Trash2,
-  Eye, ArrowUpDown, ArrowUp, ArrowDown,
-  PackageX, ChevronLeft, ChevronRight,
-} from 'lucide-vue-next'
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryList'
 
-definePageMeta({
-  layout: 'default',
-  middleware: [
-    () => {
-      const authStore = useAuthStore()
-      if (!authStore.hasPermission('view_products')) {
-        return navigateTo('/mainCards')
-      }
-    },
-  ],
-})
+definePageMeta({ layout: 'default' })
 
-const { t, tm, locale } = useI18n()
+/**
+ * Demo mode: no `/products` or filter API calls. Set to `false` when the backend is wired.
+ */
+const USE_PRODUCTS_DEMO_DATA = true
 
-// ── Types ──
-interface Product {
+const DEMO_PER_PAGE = 8
+
+const { t, locale } = useI18n()
+const { $api } = useApi()
+const { getErrorMessage } = useApiError()
+
+interface Pagination {
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+}
+
+interface CategoryFilterItem {
   id: number
-  image: string
-  name: string
+  name_ar: string
+  name_en: string
+}
+
+interface WarehouseFilterItem {
+  id: number
+  name_ar: string
+  name_en: string
+  status: string
+}
+
+interface WarehousesListResponse {
+  data?: { warehouses?: WarehouseFilterItem[]; pagination?: Pagination }
+  warehouses?: WarehouseFilterItem[]
+  pagination?: Pagination
+}
+
+interface ProductRow {
+  id: number
   sku: string
-  category: string
-  price: number
-  stock: number
-  status: 'active' | 'inactive'
+  name: string
+  categoryLabel: string
+  warehouseLabel: string
+  qty: number
 }
 
-// ── Dummy Data (replace with useQuery later) — neutral English labels; UI strings are localized ──
-const products = ref<Product[]>([
-  { id: 1,  image: '', name: 'A4 packaging carton', sku: 'PKG-001', category: 'Packaging', price: 2500, stock: 5, status: 'active' },
-  { id: 2,  image: '', name: 'Thermal printer XP-80', sku: 'PRT-002', category: 'Devices', price: 85000, stock: 12, status: 'active' },
-  { id: 3,  image: '', name: 'A4 paper ream', sku: 'PPR-003', category: 'Stationery', price: 4500, stock: 0, status: 'inactive' },
-  { id: 4,  image: '', name: 'USB barcode pen', sku: 'SCN-004', category: 'Devices', price: 35000, stock: 8, status: 'active' },
-  { id: 5,  image: '', name: 'Large clear tape', sku: 'PKG-005', category: 'Packaging', price: 1200, stock: 45, status: 'active' },
-  { id: 6,  image: '', name: '3-copy invoice book', sku: 'STN-006', category: 'Stationery', price: 3500, stock: 22, status: 'active' },
-  { id: 7,  image: '', name: 'Medium delivery bag', sku: 'DEL-007', category: 'Shipping', price: 7500, stock: 3, status: 'active' },
-  { id: 8,  image: '', name: 'Digital scale 30 kg', sku: 'WGH-008', category: 'Devices', price: 45000, stock: 6, status: 'inactive' },
-  { id: 9,  image: '', name: 'Printed adhesive tape', sku: 'PKG-009', category: 'Packaging', price: 2000, stock: 60, status: 'active' },
-  { id: 10, image: '', name: 'Metal cash drawer', sku: 'POS-010', category: 'Devices', price: 120000, stock: 2, status: 'active' },
-  { id: 11, image: '', name: 'Printed plastic bag', sku: 'PKG-011', category: 'Packaging', price: 800, stock: 200, status: 'active' },
-  { id: 12, image: '', name: 'A5 receipt printer', sku: 'PRT-012', category: 'Devices', price: 95000, stock: 4, status: 'active' },
-])
+interface ProductsResponse {
+  status?: string
+  status_code?: number
+  data?: unknown
+  products?: unknown[]
+  pagination?: Pagination
+  message?: string | null
+}
 
-// Replace ref([...]) with:
-// const { data: products, isLoading } = useQuery({
-//   queryKey: queryKeys.products.list,
-//   queryFn: () => $api('/products'),
-// })
+function extractList(payload: unknown): unknown[] {
+  if (!payload || typeof payload !== 'object') return []
+  const d = payload as Record<string, unknown>
+  if (Array.isArray(d.products)) return d.products
+  if (Array.isArray(d.data)) return d.data
+  const inner = d.data
+  if (inner && typeof inner === 'object') {
+    const o = inner as Record<string, unknown>
+    if (Array.isArray(o.products)) return o.products
+    if (Array.isArray(o.data)) return o.data
+  }
+  return []
+}
 
+function isPagination(p: unknown): p is Pagination {
+  if (!p || typeof p !== 'object') return false
+  const o = p as Record<string, unknown>
+  return typeof o.current_page === 'number' && typeof o.last_page === 'number'
+}
 
-// ── Categories for filter ──
-const categories = computed(() => {
-  const cats = [...new Set(products.value.map(p => p.category))]
-  return cats
-})
+function extractPagination(payload: unknown): Pagination | null {
+  if (!payload || typeof payload !== 'object') return null
+  const d = payload as Record<string, unknown>
+  const inner = d.data
+  const nested =
+    (inner && typeof inner === 'object' ? (inner as { pagination?: unknown }).pagination : undefined)
+    ?? d.pagination
+  if (isPagination(nested)) return nested
+  return null
+}
 
-// ── State ──
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
-const rowSelection = ref<RowSelectionState>({})
-const globalFilter = ref('')
-const categoryFilter = ref('all')
-const statusFilter = ref('all')
+function isWarehouseActive(warehouse: Record<string, unknown> | null | undefined): boolean {
+  if (!warehouse || typeof warehouse !== 'object') return true
+  const s = String(warehouse.status ?? 'active').toLowerCase()
+  return s === 'active'
+}
+
+function warehouseDisplayName(warehouse: Record<string, unknown>, loc: string): string {
+  if (typeof warehouse.name === 'string' && warehouse.name.trim()) return warehouse.name.trim()
+  if (loc === 'ar' && typeof warehouse.name_ar === 'string' && warehouse.name_ar.trim())
+    return warehouse.name_ar.trim()
+  if (typeof warehouse.name_en === 'string' && warehouse.name_en.trim())
+    return warehouse.name_en.trim()
+  return '—'
+}
+
+function extractWarehousePivotList(raw: Record<string, unknown>): Array<{ warehouse: Record<string, unknown>; qty: number }> {
+  const candidates = [raw.warehouses, raw.product_warehouses, raw.stocks, raw.inventories, raw.inventory]
+  let arr: unknown[] | null = null
+  for (const c of candidates) {
+    if (Array.isArray(c)) {
+      arr = c
+      break
+    }
+  }
+  if (!arr?.length) return []
+
+  const out: Array<{ warehouse: Record<string, unknown>; qty: number }> = []
+  for (const item of arr) {
+    if (!item || typeof item !== 'object') continue
+    const row = item as Record<string, unknown>
+    const wh = (row.warehouse && typeof row.warehouse === 'object'
+      ? row.warehouse
+      : row) as Record<string, unknown>
+    if (!isWarehouseActive(wh)) continue
+    const pivot = row.pivot && typeof row.pivot === 'object' ? (row.pivot as Record<string, unknown>) : row
+    const qty = Number(pivot.quantity ?? pivot.qty ?? row.quantity ?? row.qty ?? row.stock ?? 0)
+    out.push({ warehouse: wh, qty: Number.isFinite(qty) ? qty : 0 })
+  }
+  return out
+}
+
+function deriveWarehouseAndQty(
+  rows: Array<{ warehouse: Record<string, unknown>; qty: number }>,
+  loc: string,
+  multipleLabel: string,
+): { warehouseLabel: string; qty: number } {
+  if (rows.length === 0) return { warehouseLabel: '—', qty: 0 }
+  if (rows.length === 1) {
+    const only = rows[0]!
+    return { warehouseLabel: warehouseDisplayName(only.warehouse, loc), qty: only.qty }
+  }
+  const total = rows.reduce((s, r) => s + r.qty, 0)
+  return { warehouseLabel: multipleLabel, qty: total }
+}
+
+function categoryLabelFromProduct(raw: Record<string, unknown>, loc: string): string {
+  const cat = raw.category
+  if (typeof cat === 'string') return cat
+  if (cat && typeof cat === 'object') {
+    const c = cat as Record<string, unknown>
+    if (loc === 'ar' && typeof c.name_ar === 'string' && c.name_ar.trim()) return c.name_ar
+    if (typeof c.name_en === 'string' && c.name_en.trim()) return c.name_en
+    if (typeof c.name === 'string' && c.name.trim()) return c.name
+  }
+  const fallback = raw.category_name ?? raw.categoryName
+  return typeof fallback === 'string' ? fallback : '—'
+}
+
+/** Stored/display name exactly as from API `name` when present. */
+function productDisplayName(raw: Record<string, unknown>): string {
+  if (typeof raw.name === 'string') return raw.name
+  if (typeof raw.title === 'string') return raw.title
+  return String(raw.name_en ?? raw.name_ar ?? '—')
+}
+
+function productSku(raw: Record<string, unknown>): string {
+  const v = raw.sku ?? raw.code ?? raw.SKU
+  return typeof v === 'string' ? v : v != null ? String(v) : '—'
+}
+
+/** API-shaped records for demo; same fields the normalizer expects from Laravel. */
+function getDemoProductsSeed(): Record<string, unknown>[] {
+  return [
+    {
+      id: 1,
+      sku: 'PKG-001',
+      name: 'A4 packaging carton',
+      category: { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
+      warehouses: [
+        {
+          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+          pivot: { quantity: 48 },
+        },
+      ],
+    },
+    {
+      id: 2,
+      sku: 'PRT-002',
+      name: 'Thermal printer XP-80',
+      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
+      warehouses: [
+        {
+          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+          pivot: { quantity: 5 },
+        },
+        {
+          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
+          pivot: { quantity: 7 },
+        },
+      ],
+    },
+    {
+      id: 3,
+      sku: 'PPR-003',
+      name: 'A4 paper ream',
+      category: { id: 3, name_en: 'Stationery', name_ar: 'قرطاسية' },
+      warehouses: [
+        {
+          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+          pivot: { quantity: 120 },
+        },
+        {
+          warehouse: { id: 3, name_en: 'Decommissioned', name_ar: 'مخزن متوقف', status: 'inactive' },
+          pivot: { quantity: 999 },
+        },
+      ],
+    },
+    {
+      id: 4,
+      sku: 'SCN-004',
+      name: 'USB barcode scanner',
+      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
+      warehouses: [
+        {
+          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
+          pivot: { quantity: 14 },
+        },
+      ],
+    },
+    {
+      id: 5,
+      sku: 'PKG-005',
+      name: 'Large clear tape roll',
+      category: { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
+      warehouses: [
+        {
+          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+          pivot: { quantity: 200 },
+        },
+        {
+          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
+          pivot: { quantity: 45 },
+        },
+      ],
+    },
+    {
+      id: 6,
+      sku: 'STN-006',
+      name: '3-copy invoice book',
+      category: { id: 3, name_en: 'Stationery', name_ar: 'قرطاسية' },
+      warehouses: [
+        {
+          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+          pivot: { quantity: 33 },
+        },
+      ],
+    },
+    {
+      id: 7,
+      sku: 'DEL-007',
+      name: 'Medium delivery bag',
+      category: { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
+      warehouses: [
+        {
+          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
+          pivot: { quantity: 88 },
+        },
+      ],
+    },
+    {
+      id: 8,
+      sku: 'WGH-008',
+      name: 'Digital scale 30kg',
+      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
+      warehouses: [
+        {
+          warehouse: { id: 3, name_en: 'Decommissioned', name_ar: 'مخزن متوقف', status: 'inactive' },
+          pivot: { quantity: 4 },
+        },
+      ],
+    },
+    {
+      id: 9,
+      sku: 'POS-009',
+      name: 'Metal cash drawer',
+      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
+      warehouses: [
+        {
+          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+          pivot: { quantity: 2 },
+        },
+      ],
+    },
+    {
+      id: 10,
+      sku: 'PRT-010',
+      name: 'Receipt printer RP-100',
+      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
+      warehouses: [
+        {
+          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+          pivot: { quantity: 1 },
+        },
+        {
+          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
+          pivot: { quantity: 3 },
+        },
+      ],
+    },
+  ]
+}
+
+const DEMO_CATEGORY_OPTIONS: CategoryFilterItem[] = [
+  { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
+  { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
+  { id: 3, name_en: 'Stationery', name_ar: 'قرطاسية' },
+]
+
+const DEMO_WAREHOUSE_OPTIONS: WarehouseFilterItem[] = [
+  { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
+  { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
+  { id: 3, name_en: 'Decommissioned', name_ar: 'مخزن متوقف', status: 'inactive' },
+]
+
+const demoProductsSource = ref<Record<string, unknown>[]>(
+  USE_PRODUCTS_DEMO_DATA ? getDemoProductsSeed() : [],
+)
+
+function demoCategoryId(raw: Record<string, unknown>): number | null {
+  const cat = raw.category
+  if (cat && typeof cat === 'object' && 'id' in cat) {
+    const id = (cat as { id?: unknown }).id
+    const n = typeof id === 'number' ? id : typeof id === 'string' ? Number(id) : Number.NaN
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
+function productHasActiveWarehouseId(raw: Record<string, unknown>, warehouseId: number): boolean {
+  const pivots = extractWarehousePivotList(raw)
+  return pivots.some((p) => {
+    const wid = p.warehouse.id
+    const n = typeof wid === 'number' ? wid : typeof wid === 'string' ? Number(wid) : Number.NaN
+    return n === warehouseId
+  })
+}
+
+function normalizeProductRow(raw: Record<string, unknown>, loc: string, multipleWh: string): ProductRow | null {
+  const id = raw.id
+  const numId = typeof id === 'number' ? id : typeof id === 'string' ? Number(id) : Number.NaN
+  if (!Number.isFinite(numId)) return null
+
+  const pivots = extractWarehousePivotList(raw)
+  const { warehouseLabel, qty } = deriveWarehouseAndQty(pivots, loc, multipleWh)
+
+  return {
+    id: numId,
+    sku: productSku(raw),
+    name: productDisplayName(raw),
+    categoryLabel: categoryLabelFromProduct(raw, loc),
+    warehouseLabel,
+    qty,
+  }
+}
+
+const rows = ref<ProductRow[]>([])
+const loading = ref(false)
+const errorMessage = ref('')
+const pagination = ref<Pagination | null>(null)
+const currentPage = ref(1)
+
+const search = ref('')
+const filterCategoryId = ref<string>('all')
+const filterWarehouseId = ref<string>('all')
+const categoryOptions = ref<CategoryFilterItem[]>([])
+const warehouseOptions = ref<WarehouseFilterItem[]>([])
+const loadingFilters = ref(false)
+
 const deleteDialogOpen = ref(false)
-const deleteTarget = ref<Product | null>(null)
-const bulkDeleteOpen = ref(false)
+const deleteTarget = ref<ProductRow | null>(null)
+const deleting = ref(false)
 
-// ── Format price ──
-const formatPrice = (price: number) => {
-  const loc = locale.value === 'ar' ? 'ar-IQ' : 'en-US'
-  return price.toLocaleString(loc) + t('products_page.currency_suffix')
-}
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
-// ── Stock badge ──
-const stockBadge = (stock: number) => {
-  if (stock === 0) return { label: t('products_page.stock_out'), class: 'bg-red-500/10 text-red-600 border-red-200' }
-  if (stock <= 5) return { label: t('products_page.stock_low'), class: 'bg-amber-500/10 text-amber-600 border-amber-200' }
-  return { label: String(stock), class: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' }
-}
+const hasActiveFilters = computed(
+  () => filterCategoryId.value !== 'all' || filterWarehouseId.value !== 'all' || search.value.trim().length > 0,
+)
 
-// ── Columns ──
-const columns = computed<ColumnDef<Product>[]>(() => [
-  // Checkbox
-  {
-    id: 'select',
-    header: ({ table }) => h(Checkbox, {
-      checked: table.getIsAllPageRowsSelected(),
-      'onUpdate:checked': (val: boolean) => table.toggleAllPageRowsSelected(val),
-    }),
-    cell: ({ row }) => h(Checkbox, {
-      checked: row.getIsSelected(),
-      'onUpdate:checked': (val: boolean) => row.toggleSelected(val),
-    }),
-    enableSorting: false,
-  },
-  // Image + Name
-  {
-    id: 'product',
-    header: t('products_page.col_product'),
-    cell: ({ row }) => {
-      const product = row.original
-      return h('div', { class: 'flex items-center gap-3' }, [
-        h('div', {
-          class: 'size-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground border'
-        }, product.sku.slice(0, 3)),
-        h('div', { class: 'flex flex-col' }, [
-          h('span', { class: 'text-sm font-medium leading-tight' }, product.name),
-          h('span', { class: 'text-xs text-muted-foreground mt-0.5' }, product.sku),
-        ])
-      ])
-    },
-  },
-  // Category
-  {
-    accessorKey: 'category',
-    header: t('products_page.col_category'),
-    cell: ({ row }) => h(Badge, { variant: 'secondary', class: 'text-xs' }, () => row.original.category),
-  },
-  // Price
-  {
-    accessorKey: 'price',
-    header: ({ column }) => h(Button, {
-      variant: 'ghost',
-      class: 'h-auto p-0 font-medium hover:bg-transparent gap-1',
-      onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-    }, () => [
-      t('products_page.col_price'),
-      column.getIsSorted() === 'asc'
-        ? h(ArrowUp, { class: 'size-3' })
-        : column.getIsSorted() === 'desc'
-          ? h(ArrowDown, { class: 'size-3' })
-          : h(ArrowUpDown, { class: 'size-3 opacity-40' })
-    ]),
-    cell: ({ row }) => h('span', { class: 'font-medium tabular-nums' }, formatPrice(row.original.price)),
-  },
-  // Stock
-  {
-    accessorKey: 'stock',
-    header: ({ column }) => h(Button, {
-      variant: 'ghost',
-      class: 'h-auto p-0 font-medium hover:bg-transparent gap-1',
-      onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-    }, () => [
-      t('products_page.col_stock'),
-      column.getIsSorted() === 'asc'
-        ? h(ArrowUp, { class: 'size-3' })
-        : column.getIsSorted() === 'desc'
-          ? h(ArrowDown, { class: 'size-3' })
-          : h(ArrowUpDown, { class: 'size-3 opacity-40' })
-    ]),
-    cell: ({ row }) => {
-      const badge = stockBadge(row.original.stock)
-      return h('span', {
-        class: `text-xs px-2 py-0.5 rounded-full border font-medium ${badge.class}`
-      }, badge.label)
-    },
-  },
-  // Status
-  {
-    accessorKey: 'status',
-    header: t('products_page.col_status'),
-    cell: ({ row }) => {
-      const active = row.original.status === 'active'
-      return h('span', {
-        class: `text-xs px-2 py-0.5 rounded-full border font-medium ${
-          active
-            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
-            : 'bg-muted text-muted-foreground border-border'
-        }`
-      }, active ? t('common.active') : t('common.inactive'))
-    },
-  },
-  // Actions
-  {
-    id: 'actions',
-    header: '',
-    cell: ({ row }) => {
-      const product = row.original
-      return h(DropdownMenu, {}, {
-        default: () => [
-          h(DropdownMenuTrigger, { asChild: true }, () =>
-            h(Button, { variant: 'ghost', size: 'icon', class: 'size-8' }, () =>
-              h(MoreHorizontal, { class: 'size-4' })
-            )
-          ),
-          h(DropdownMenuContent, { align: 'end' }, () => [
-            h(DropdownMenuItem, {
-              class: 'gap-2 cursor-pointer',
-              onClick: () => navigateTo(`/products/${product.id}`)
-            }, () => [h(Eye, { class: 'size-4' }), t('common.view')]),
-            h(DropdownMenuItem, {
-              class: 'gap-2 cursor-pointer',
-              onClick: () => navigateTo(`/products/${product.id}/edit`)
-            }, () => [h(Pencil, { class: 'size-4' }), t('common.edit')]),
-            h(DropdownMenuSeparator),
-            h(DropdownMenuItem, {
-              class: 'gap-2 cursor-pointer text-red-500 focus:text-red-500',
-              onClick: () => { deleteTarget.value = product; deleteDialogOpen.value = true }
-            }, () => [h(Trash2, { class: 'size-4' }), t('common.delete')]),
-          ])
-        ]
-      })
-    },
-  },
-])
+const categoryLabel = (c: CategoryFilterItem) =>
+  locale.value === 'ar' ? c.name_ar || c.name_en : c.name_en || c.name_ar
 
-// ── Filtered data ──
-const filteredData = computed(() => {
-  let data = products.value
-  if (categoryFilter.value !== 'all')
-    data = data.filter(p => p.category === categoryFilter.value)
-  if (statusFilter.value !== 'all')
-    data = data.filter(p => p.status === statusFilter.value)
-  if (globalFilter.value)
-    data = data.filter(p =>
-      p.name.includes(globalFilter.value) ||
-      p.sku.includes(globalFilter.value)
+const warehouseLabel = (w: WarehouseFilterItem) =>
+  locale.value === 'ar' ? w.name_ar || w.name_en : w.name_en || w.name_ar
+
+async function loadFilterOptions() {
+  loadingFilters.value = true
+  try {
+    if (USE_PRODUCTS_DEMO_DATA) {
+      categoryOptions.value = [...DEMO_CATEGORY_OPTIONS]
+      warehouseOptions.value = DEMO_WAREHOUSE_OPTIONS.filter(
+        w => String(w.status ?? 'active').toLowerCase() === 'active',
+      )
+      return
+    }
+    const [cats, whRes] = await Promise.all([
+      fetchAllCategoriesPages<CategoryFilterItem>($api as CategoriesApi, { status: 'active' }).catch(() => []),
+      $api<WarehousesListResponse>('/warehouses', { params: { page: 1, per_page: 100, status: 'active' } }).catch(
+        (): WarehousesListResponse => ({}),
+      ),
+    ])
+    categoryOptions.value = cats
+    const whList = whRes.data?.warehouses ?? whRes.warehouses ?? []
+    warehouseOptions.value = whList.filter((w: WarehouseFilterItem) =>
+      String(w.status ?? 'active').toLowerCase() === 'active',
     )
-  return data
+  }
+  catch {
+    categoryOptions.value = []
+    warehouseOptions.value = []
+  }
+  finally {
+    loadingFilters.value = false
+  }
+}
+
+const loadProducts = async (page = currentPage.value) => {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const multipleWh = t('products_page.multiple_warehouses')
+    const loc = locale.value === 'ar' ? 'ar' : 'en'
+
+    if (USE_PRODUCTS_DEMO_DATA) {
+      const q = search.value.trim().toLowerCase()
+      let list = [...demoProductsSource.value]
+      if (q) {
+        list = list.filter((raw) => {
+          const name = productDisplayName(raw).toLowerCase()
+          const sku = productSku(raw).toLowerCase()
+          return name.includes(q) || sku.includes(q)
+        })
+      }
+      if (filterCategoryId.value !== 'all') {
+        const cid = Number(filterCategoryId.value)
+        if (!Number.isNaN(cid))
+          list = list.filter(raw => demoCategoryId(raw) === cid)
+      }
+      if (filterWarehouseId.value !== 'all') {
+        const wid = Number(filterWarehouseId.value)
+        if (!Number.isNaN(wid))
+          list = list.filter(raw => productHasActiveWarehouseId(raw, wid))
+      }
+      const total = list.length
+      const lastPage = Math.max(1, Math.ceil(total / DEMO_PER_PAGE) || 1)
+      const pageSafe = Math.min(Math.max(1, page), lastPage)
+      const start = (pageSafe - 1) * DEMO_PER_PAGE
+      const pageSlice = list.slice(start, start + DEMO_PER_PAGE)
+      const parsed: ProductRow[] = []
+      for (const item of pageSlice) {
+        const row = normalizeProductRow(item, loc, multipleWh)
+        if (row) parsed.push(row)
+      }
+      rows.value = parsed
+      pagination.value = {
+        current_page: pageSafe,
+        last_page: lastPage,
+        per_page: DEMO_PER_PAGE,
+        total,
+      }
+      currentPage.value = pageSafe
+      return
+    }
+
+    const q = search.value.trim()
+    const params: Record<string, string | number> = { page }
+    if (q) {
+      params.search = q
+      params.name = q
+    }
+    if (filterCategoryId.value !== 'all') {
+      const id = Number(filterCategoryId.value)
+      if (!Number.isNaN(id)) params.category_id = id
+    }
+    if (filterWarehouseId.value !== 'all') {
+      const id = Number(filterWarehouseId.value)
+      if (!Number.isNaN(id)) params.warehouse_id = id
+    }
+
+    const data = await $api<ProductsResponse>('/products', { params })
+    const list = extractList(data)
+    const parsed: ProductRow[] = []
+    for (const item of list) {
+      if (item && typeof item === 'object') {
+        const row = normalizeProductRow(item as Record<string, unknown>, loc, multipleWh)
+        if (row) parsed.push(row)
+      }
+    }
+    rows.value = parsed
+    pagination.value = extractPagination(data)
+    currentPage.value = pagination.value?.current_page ?? page
+  }
+  catch (error: any) {
+    errorMessage.value
+      = error?.data?.message?.ar
+      ?? error?.data?.message
+      ?? t('products_page.load_error')
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+function resetPageAndLoad() {
+  currentPage.value = 1
+  loadProducts(1)
+}
+
+const goToPage = (page: number) => {
+  if (page < 1 || (pagination.value && page > pagination.value.last_page)) return
+  loadProducts(page)
+}
+
+watch(search, () => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadProducts(1)
+  }, 450)
 })
 
-// ── Table instance ──
-const table = useVueTable({
-  get data() { return filteredData.value },
-  get columns() { return columns.value },
-  getCoreRowModel: getCoreRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
-  onSortingChange: updater => {
-    sorting.value = typeof updater === 'function' ? updater(sorting.value) : updater
-  },
-  onRowSelectionChange: updater => {
-    rowSelection.value = typeof updater === 'function' ? updater(rowSelection.value) : updater
-  },
-  state: {
-    get sorting() { return sorting.value },
-    get rowSelection() { return rowSelection.value },
-  },
-  initialState: { pagination: { pageSize: 8 } },
+watch([filterCategoryId, filterWarehouseId], () => {
+  resetPageAndLoad()
 })
 
-// ── Selected rows ──
-const selectedCount = computed(() => Object.keys(rowSelection.value).length)
+function clearFilters() {
+  search.value = ''
+  filterCategoryId.value = 'all'
+  filterWarehouseId.value = 'all'
+  resetPageAndLoad()
+}
 
-// ── Delete actions ──
-const confirmDelete = () => {
-  if (deleteTarget.value) {
-    products.value = products.value.filter(p => p.id !== deleteTarget.value!.id)
-    deleteTarget.value = null
+function onCategoryFilterChange(value: unknown) {
+  filterCategoryId.value = value != null && value !== '' ? String(value) : 'all'
+}
+
+function onWarehouseFilterChange(value: unknown) {
+  filterWarehouseId.value = value != null && value !== '' ? String(value) : 'all'
+}
+
+function openDelete(row: ProductRow) {
+  deleteTarget.value = row
+  deleteDialogOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  deleting.value = true
+  try {
+    const id = deleteTarget.value.id
+    if (USE_PRODUCTS_DEMO_DATA) {
+      demoProductsSource.value = demoProductsSource.value.filter((r) => {
+        const rid = r.id
+        const n = typeof rid === 'number' ? rid : typeof rid === 'string' ? Number(rid) : Number.NaN
+        return n !== id
+      })
+      toast.success(t('products_page.delete_success'))
+      deleteDialogOpen.value = false
+      deleteTarget.value = null
+      await loadProducts(currentPage.value)
+      return
+    }
+    await $api(`/products/${id}`, { method: 'DELETE' })
+    toast.success(t('products_page.delete_success'))
     deleteDialogOpen.value = false
+    deleteTarget.value = null
+    await loadProducts(currentPage.value)
+  }
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  }
+  finally {
+    deleting.value = false
   }
 }
 
-const confirmBulkDelete = () => {
-  const selectedIds = table.getSelectedRowModel().rows.map(r => r.original.id)
-  products.value = products.value.filter(p => !selectedIds.includes(p.id))
-  rowSelection.value = {}
-  bulkDeleteOpen.value = false
-}
-
-// ── Export (CSV — current filtered rows) ──
-const exportToCSV = () => {
-  const rows = filteredData.value
-  if (rows.length === 0) {
-    toast.error(t('products_page.export_no_data'))
-    return
-  }
-  const headers = tm('products_page.export_headers') as unknown as string[]
-  const dataRows = rows.map(p => [
-    p.id,
-    p.name,
-    p.sku,
-    p.category,
-    formatPrice(p.price),
-    p.stock,
-    p.status === 'active' ? t('common.active') : t('common.inactive'),
-  ])
-  const csv = [headers, ...dataRows]
-    .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
-    .join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `products-${new Date().toISOString().slice(0, 10)}.csv`
-  link.click()
-  URL.revokeObjectURL(link.href)
-  toast.success(t('products_page.export_success'))
-}
+onMounted(async () => {
+  await loadFilterOptions()
+  await loadProducts()
+})
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-
-    <!-- ── Page Header ── -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">{{ t('products_page.title') }}</h1>
-        <p class="text-sm text-muted-foreground mt-1">
-          {{ t('products_page.subtitle_total', { count: products.length }) }}
-        </p>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-center gap-3">
+        <div
+          class="flex size-10 items-center justify-center rounded-lg bg-[#215260]/10 text-[#215260]"
+        >
+          <Package class="size-5" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">{{ t('products_page.title') }}</h1>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{
+              t('products_page.subtitle_total', {
+                count: pagination?.total ?? rows.length,
+              })
+            }}
+          </p>
+        </div>
       </div>
-      <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+      <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] shrink-0" as-child>
         <NuxtLink to="/products/create">
           <Plus class="size-4" />
           {{ t('products_page.new_product') }}
@@ -350,203 +660,217 @@ const exportToCSV = () => {
       </Button>
     </div>
 
-    <!-- ── Toolbar ── -->
-    <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div class="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+      <div class="relative w-full min-w-[200px] max-w-sm lg:flex-1">
+        <Search class="pointer-events-none absolute top-1/2 right-3 z-[1] size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          v-model="search"
+          :placeholder="t('products_page.search_placeholder')"
+          class="h-9 pr-9"
+        />
+        <Loader2
+          v-if="loading && search.trim()"
+          class="absolute top-1/2 left-3 z-[1] size-3.5 -translate-y-1/2 animate-spin text-muted-foreground"
+        />
+      </div>
 
-      <!-- Left: Search + Filters -->
-      <div class="flex items-center gap-2 flex-wrap">
-
-        <!-- Search -->
-        <div class="relative">
-          <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
-          <Input
-            v-model="globalFilter"
-            :placeholder="t('products_page.search_placeholder')"
-            class="pr-9 w-56 h-9"
-          />
-        </div>
-
-        <!-- Category Filter -->
-        <Select v-model="categoryFilter">
-          <SelectTrigger class="w-36 h-9 gap-2">
-            <Filter class="size-3.5 text-muted-foreground" />
+      <div class="flex flex-wrap items-center gap-2">
+        <Select :model-value="filterCategoryId" @update:model-value="onCategoryFilterChange">
+          <SelectTrigger class="h-9 w-[min(100%,200px)] gap-2">
+            <Filter class="size-3.5 shrink-0 text-muted-foreground" />
             <SelectValue :placeholder="t('products_page.filter_category')" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{{ t('products_page.all_categories') }}</SelectItem>
             <SelectItem
-              v-for="cat in categories"
-              :key="cat"
-              :value="cat"
+              v-for="c in categoryOptions"
+              :key="c.id"
+              :value="String(c.id)"
             >
-              {{ cat }}
+              {{ categoryLabel(c) }}
             </SelectItem>
           </SelectContent>
         </Select>
 
-        <!-- Status Filter -->
-        <Select v-model="statusFilter">
-          <SelectTrigger class="w-36 h-9">
-            <SelectValue :placeholder="t('products_page.filter_status')" />
+        <Select :model-value="filterWarehouseId" @update:model-value="onWarehouseFilterChange">
+          <SelectTrigger class="h-9 w-[min(100%,200px)] gap-2">
+            <Filter class="size-3.5 shrink-0 text-muted-foreground" />
+            <SelectValue :placeholder="t('products_page.filter_warehouse')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{{ t('products_page.all_statuses') }}</SelectItem>
-            <SelectItem value="active">{{ t('common.active') }}</SelectItem>
-            <SelectItem value="inactive">{{ t('common.inactive') }}</SelectItem>
+            <SelectItem value="all">{{ t('products_page.all_warehouses') }}</SelectItem>
+            <SelectItem
+              v-for="w in warehouseOptions"
+              :key="w.id"
+              :value="String(w.id)"
+            >
+              {{ warehouseLabel(w) }}
+            </SelectItem>
           </SelectContent>
         </Select>
 
-      </div>
-
-      <!-- Right: Bulk Delete + Export -->
-      <div class="flex items-center gap-2">
-
-        <!-- Bulk Delete (shows only when rows selected) -->
         <Button
-          v-if="selectedCount > 0"
-          variant="destructive"
+          v-if="hasActiveFilters"
+          variant="ghost"
           size="sm"
-          class="gap-2 h-9"
-          @click="bulkDeleteOpen = true"
+          class="h-9 gap-1.5 text-muted-foreground"
+          :disabled="loading"
+          @click="clearFilters"
         >
-          <Trash2 class="size-4" />
-          {{ t('products_page.delete_selected', { count: selectedCount }) }}
+          <X class="size-3.5" />
+          {{ t('products_page.clear_filters') }}
         </Button>
-
-        <!-- Export -->
-        <Button
-          variant="outline"
-          size="sm"
-          class="gap-2 h-9"
-          @click="exportToCSV"
-        >
-          <Download class="size-4" />
-          CSV
-        </Button>
-
       </div>
     </div>
 
-    <!-- ── Table ── -->
+    <div v-if="loadingFilters" class="text-xs text-muted-foreground">
+      {{ t('common.loading') }}…
+    </div>
+
     <div class="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow
-            v-for="headerGroup in table.getHeaderGroups()"
-            :key="headerGroup.id"
-            class="bg-muted/40 hover:bg-muted/40"
-          >
-            <TableHead
-              v-for="header in headerGroup.headers"
-              :key="header.id"
-              class="text-right font-medium"
-            >
-              <FlexRender
-                v-if="!header.isPlaceholder"
-                :render="header.column.columnDef.header"
-                :props="header.getContext()"
-              />
+          <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+              {{ t('products_page.col_sku') }}
+            </TableHead>
+            <TableHead class="rtl:text-right font-medium min-w-[140px]">
+              {{ t('products_page.col_name') }}
+            </TableHead>
+            <TableHead class="rtl:text-right font-medium">
+              {{ t('products_page.col_warehouse') }}
+            </TableHead>
+            <TableHead class="rtl:text-right font-medium">
+              {{ t('products_page.col_category') }}
+            </TableHead>
+            <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+              {{ t('products_page.col_qty') }}
+            </TableHead>
+            <TableHead class="rtl:text-right font-medium w-[1%]">
+              {{ t('products_page.col_actions') }}
             </TableHead>
           </TableRow>
         </TableHeader>
-
         <TableBody>
-          <!-- Rows -->
-          <template v-if="table.getRowModel().rows.length">
-            <TableRow
-              v-for="row in table.getRowModel().rows"
-              :key="row.id"
-              :data-state="row.getIsSelected() ? 'selected' : ''"
-              class="hover:bg-muted/30 transition-colors"
-              :class="{ 'bg-muted/20': row.getIsSelected() }"
-            >
-              <TableCell
-                v-for="cell in row.getVisibleCells()"
-                :key="cell.id"
-              >
-                <FlexRender
-                  :render="cell.column.columnDef.cell"
-                  :props="cell.getContext()"
-                />
-              </TableCell>
-            </TableRow>
-          </template>
-
-          <!-- Empty State -->
-          <TableRow v-else>
-            <TableCell :colspan="columns.length" class="py-16 text-center">
-              <div class="flex flex-col items-center gap-3 text-muted-foreground">
-                <PackageX class="size-10 opacity-20" />
-                <p class="text-sm font-medium">{{ t('products_page.no_products') }}</p>
-                <p class="text-xs opacity-60">{{ t('products_page.no_products_hint') }}</p>
-                <Button size="sm" class="gap-2 mt-1 bg-[#215260] text-[#CFE030]" as-child>
-                  <NuxtLink to="/products/create">
-                    <Plus class="size-3.5" />
-                    {{ t('products_page.new_product') }}
-                  </NuxtLink>
+          <TableRow v-if="loading">
+            <TableCell :colspan="6" class="py-14 text-center">
+              <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 class="size-4 animate-spin" />
+                {{ t('common.loading') }}…
+              </div>
+            </TableCell>
+          </TableRow>
+          <TableRow v-else-if="errorMessage">
+            <TableCell :colspan="6" class="py-14 text-center">
+              <div class="flex flex-col items-center gap-2 text-sm text-red-500">
+                <ShieldAlert class="size-6" />
+                <span>{{ errorMessage }}</span>
+                <Button variant="outline" size="sm" @click="loadProducts()">
+                  {{ t('common.retry') }}
                 </Button>
               </div>
             </TableCell>
           </TableRow>
+          <TableRow v-else-if="rows.length === 0">
+            <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
+              {{ t('products_page.no_products') }}
+            </TableCell>
+          </TableRow>
+          <template v-else>
+            <TableRow
+              v-for="row in rows"
+              :key="row.id"
+              class="hover:bg-muted/30 transition-colors"
+            >
+            <TableCell class="font-mono text-sm whitespace-nowrap">
+              {{ row.sku }}
+            </TableCell>
+            <TableCell class="text-sm font-medium">
+              {{ row.name }}
+            </TableCell>
+            <TableCell class="text-sm text-muted-foreground">
+              {{ row.warehouseLabel }}
+            </TableCell>
+            <TableCell class="text-sm">
+              {{ row.categoryLabel }}
+            </TableCell>
+            <TableCell class="text-sm tabular-nums">
+              {{ row.qty }}
+            </TableCell>
+            <TableCell>
+              <div class="flex flex-wrap items-center gap-1 justify-end">
+                <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
+                  <NuxtLink :to="`/products/show/${row.id}`">
+                    <Eye class="size-3.5" />
+                    {{ t('common.view') }}
+                  </NuxtLink>
+                </Button>
+                <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
+                  <NuxtLink :to="`/products/edit/${row.id}`">
+                    <Pencil class="size-3.5" />
+                    {{ t('common.edit') }}
+                  </NuxtLink>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="h-8 gap-1 px-2 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  @click="openDelete(row)"
+                >
+                  <Trash2 class="size-3.5" />
+                  {{ t('common.delete') }}
+                </Button>
+              </div>
+            </TableCell>
+            </TableRow>
+          </template>
         </TableBody>
       </Table>
     </div>
 
-    <!-- ── Pagination ── -->
-    <div class="flex items-center justify-between px-1">
-
-      <!-- Info -->
-      <p class="text-sm text-muted-foreground">
+    <div
+      v-if="pagination && pagination.last_page > 1"
+      class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border rounded-lg px-4 py-3"
+    >
+      <p class="text-xs text-muted-foreground">
         {{
           t('common.showing_range', {
-            from: table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1,
-            to: Math.min(
-              (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-              filteredData.length,
-            ),
-            total: filteredData.length,
+            from: (currentPage - 1) * pagination.per_page + 1,
+            to: Math.min(currentPage * pagination.per_page, pagination.total),
+            total: pagination.total,
           })
         }}
-        <span v-if="selectedCount > 0" class="mr-2 text-[#215260] font-medium">
-          {{ t('products_page.selected_suffix', { count: selectedCount }) }}
-        </span>
       </p>
-
-      <!-- Controls -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1">
         <Button
           variant="outline"
           size="icon"
           class="size-8"
-          :disabled="!table.getCanPreviousPage()"
-          @click="table.previousPage()"
+          :disabled="currentPage <= 1 || loading"
+          @click="goToPage(currentPage - 1)"
         >
           <ChevronRight class="size-4" />
         </Button>
-
-        <span class="text-sm text-muted-foreground px-2">
+        <span class="text-sm text-muted-foreground px-2 tabular-nums">
           {{
             t('common.page_of', {
-              current: table.getState().pagination.pageIndex + 1,
-              total: table.getPageCount(),
+              current: currentPage,
+              total: pagination.last_page,
             })
           }}
         </span>
-
         <Button
           variant="outline"
           size="icon"
           class="size-8"
-          :disabled="!table.getCanNextPage()"
-          @click="table.nextPage()"
+          :disabled="currentPage >= pagination.last_page || loading"
+          @click="goToPage(currentPage + 1)"
         >
           <ChevronLeft class="size-4" />
         </Button>
       </div>
-
     </div>
 
-    <!-- ── Delete Single Dialog ── -->
     <AlertDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event">
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -556,37 +880,17 @@ const exportToCSV = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
-          <AlertDialogAction
-            class="bg-red-500 hover:bg-red-600"
+          <AlertDialogCancel :disabled="deleting">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button
+            class="bg-red-600 hover:bg-red-700 text-white"
+            :disabled="deleting"
             @click="confirmDelete"
           >
-            {{ t('common.delete') }}
-          </AlertDialogAction>
+            <Loader2 v-if="deleting" class="size-4 animate-spin" />
+            {{ deleting ? t('common.loading') + '…' : t('common.delete') }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-
-    <!-- ── Bulk Delete Dialog ── -->
-    <AlertDialog :open="bulkDeleteOpen" @update:open="bulkDeleteOpen = $event">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{{ t('products_page.bulk_delete_title') }}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {{ t('products_page.bulk_delete_body', { count: selectedCount }) }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
-          <AlertDialogAction
-            class="bg-red-500 hover:bg-red-600"
-            @click="confirmBulkDelete"
-          >
-            {{ t('products_page.delete_all') }}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-
   </div>
 </template>

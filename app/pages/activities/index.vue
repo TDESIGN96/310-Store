@@ -64,8 +64,68 @@ interface ActivityRow {
   subjectLink: string | null
 }
 
-/** Must match GET /activities sort columns on the API (Laravel-style sortBy[column]). */
+/** Must match /activities index sort columns on the API (Laravel-style sortBy[column]). */
 type SortField = 'created_at' | 'user_name'
+
+/** Generic search filter (e.g. `between` uses `[from, to]` ISO 8601 strings). */
+interface SearchFilter {
+  column: string
+  value: string | [string, string]
+  condition: string
+  operator: 'and'
+}
+
+/** ISO 8601 UTC with fractional seconds like backend: `2026-03-30T05:21:18.000000Z` */
+function toIso8601UtcBackendFormat(d: Date): string {
+  const iso = d.toISOString()
+  return iso.replace(/\.\d{3}Z$/i, '.000000Z')
+}
+
+function todayLocalYmd(): string {
+  const t = new Date()
+  const y = t.getFullYear()
+  const m = String(t.getMonth() + 1).padStart(2, '0')
+  const day = String(t.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Start of local calendar day from `<input type="date">` value `YYYY-MM-DD`. */
+function localDayStart(dateYmd: string): Date {
+  const parts = dateYmd.split('-').map(Number)
+  const y = parts[0] ?? 0
+  const mo = (parts[1] ?? 1) - 1
+  const d = parts[2] ?? 1
+  return new Date(y, mo, d, 0, 0, 0, 0)
+}
+
+/** End of local calendar day (inclusive). */
+function localDayEnd(dateYmd: string): Date {
+  const parts = dateYmd.split('-').map(Number)
+  const y = parts[0] ?? 0
+  const mo = (parts[1] ?? 1) - 1
+  const d = parts[2] ?? 1
+  return new Date(y, mo, d, 23, 59, 59, 999)
+}
+
+/** `created_at` between bounds per backend rules (missing "to" → end of today local; missing "from" → start of today local). */
+function createdAtBetweenIsoRange(): [string, string] {
+  const from = dateFrom.value.trim()
+  const to = dateTo.value.trim()
+  const today = todayLocalYmd()
+
+  if (from && to) {
+    let a = from
+    let b = to
+    if (a > b)
+      [a, b] = [b, a]
+    return [toIso8601UtcBackendFormat(localDayStart(a)), toIso8601UtcBackendFormat(localDayEnd(b))]
+  }
+  if (from)
+    return [toIso8601UtcBackendFormat(localDayStart(from)), toIso8601UtcBackendFormat(localDayEnd(today))]
+  if (to)
+    return [toIso8601UtcBackendFormat(localDayStart(today)), toIso8601UtcBackendFormat(localDayEnd(to))]
+  return [toIso8601UtcBackendFormat(localDayStart(today)), toIso8601UtcBackendFormat(localDayEnd(today))]
+}
 
 function extractList(payload: unknown): unknown[] {
   if (!payload || typeof payload !== 'object') return []

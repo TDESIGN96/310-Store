@@ -53,7 +53,8 @@ export const navItems: NavGroup[] = [
   {
     groupKey: 'nav.groups.inventory',
     items: [
-      { labelKey: 'nav.items.products', icon: Package, path: '/products', requiredPermission: 'view_products' },
+      { labelKey: 'nav.items.products', icon: Package, path: '/products', 
+        /*requiredPermission: 'view_products' */ },
       {
         labelKey: 'nav.items.units',
         icon: Ruler,

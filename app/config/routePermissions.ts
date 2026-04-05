@@ -28,8 +28,8 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/roles\/?$/, permission: ['roles.index', 'roles.show'] },
 
   // Products (legacy key from navigation)
-  { pattern: /^\/products\/create\/?$/, permission: 'view_products' },
-  { pattern: /^\/products\/?$/, permission: 'view_products' },
+  // { pattern: /^\/products\/create\/?$/, permission: 'view_products' },
+  // { pattern: /^\/products\/?$/, permission: 'view_products' },
 
   // Warehouses
   { pattern: /^\/warehouses\/create\/?$/, permission: 'warehouses.store' },

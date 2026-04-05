@@ -88,8 +88,8 @@ const normalizeNotification = (payload: EchoNotificationPayload): Notification =
   return {
     id: String(payload.id ?? crypto.randomUUID()),
     type: resolvedType,
-    title: data.title || payload.title || 'إشعار جديد',
-    message: data.message || payload.message || 'تم استلام إشعار جديد',
+    title: data.title || payload.title || t('notifications.default_title'),
+    message: data.message || payload.message || t('notifications.default_message'),
     createdAt: payload.created_at,
     read: Boolean(payload.read_at),
     link: data.link || payload.link,

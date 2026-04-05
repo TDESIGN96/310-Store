@@ -129,17 +129,6 @@ const applyClonePrefill = async () => {
   }
 }
 
-function extractNewUserIdFromCreateResponse(res: Record<string, unknown>): number | null {
-  const raw = res as Record<string, unknown> & {
-    data?: { user?: { id?: unknown }; id?: unknown }
-    user?: { id?: unknown }
-  }
-  const id = raw.data?.user?.id ?? raw.data?.id ?? raw.user?.id ?? raw.id
-  if (typeof id === 'number' && Number.isFinite(id)) return id
-  if (typeof id === 'string' && /^\d+$/.test(id)) return parseInt(id, 10)
-  return null
-}
-
 interface RoleDetailResponse {
   data?: { permissions?: Array<string | RolePermissionModule> }
 }
@@ -321,7 +310,7 @@ const createUser = async () => {
   submitting.value = true
 
   try {
-    const res = await $api<Record<string, unknown>>('/users', {
+    await $api<Record<string, unknown>>('/users', {
       method: 'POST',
       body: {
         name: name.value.trim(),
@@ -335,12 +324,7 @@ const createUser = async () => {
     })
 
     toast.success(t('toasts.save_success'))
-    const newId = extractNewUserIdFromCreateResponse(res)
-    if (isClonePrefill.value && newId != null) {
-      await navigateTo(`/users/edit/${newId}`)
-    } else {
-      await navigateTo('/users')
-    }
+    await navigateTo('/users')
   } catch (error: unknown) {
     if (isValidationError(error)) {
       const fe = getFieldErrors(error)

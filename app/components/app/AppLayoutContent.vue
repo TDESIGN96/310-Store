@@ -46,6 +46,5 @@ const cards = computed(() => [
       <KpiCard v-for="card in cards" :key="card.id" v-bind="card" class="col-span-1" />
     </div>
 
-    <div class="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
   </div>
 </template>
