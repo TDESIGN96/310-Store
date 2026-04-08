@@ -182,8 +182,18 @@ const loadCategories = async (page = currentPage.value, query = search.value.tri
       params.search = query
       params.name = query
     }
-    if (filterStatus.value !== 'all') params.status = filterStatus.value
-    if (filterParentId.value !== 'all') params.parent_id = filterParentId.value
+    if (filterStatus.value !== 'all') {
+      params['filters[0][column]'] = 'status'
+      params['filters[0][value]'] = filterStatus.value
+      params['filters[0][condition]'] = '='
+      params['filters[0][operator]'] = 'and'
+    }
+    if (filterParentId.value !== 'all') {
+      params['filters[1][column]'] = 'parent_id'
+      params['filters[1][value]'] = filterParentId.value
+      params['filters[1][condition]'] = '='
+      params['filters[1][operator]'] = 'and'
+    }
     if (sortBy.value) {
       params['sortBy[column]'] = sortBy.value
       params['sortBy[direction]'] = sortOrder.value

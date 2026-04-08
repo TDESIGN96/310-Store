@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import formatDateToIso from '@/hooks/useFormatDateHook'
 import { computed, onMounted, ref, watch } from 'vue'
+import { watchDebounced } from '@vueuse/core'
 import {
   Search,
   Loader2,
@@ -21,7 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { subjectPathFromMorph } from '@/utils/activitySubjectLink'
+import {
+  type ActivitiesPagination,
+  type ActivityTableRow,
+  extractActivitiesList,
+  extractActivitiesPagination,
+  parseActivityTableRow,
+} from '@/utils/activitiesResponse'
 
 definePageMeta({ layout: 'default' })
 
@@ -29,201 +37,41 @@ const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const { $api } = useApi()
 const { canAccess } = usePermissions()
+const { getErrorMessage } = useApiError()
 
-const canViewLog = computed(() => canAccess('activities'))
-const canOpenUserProfile = (userId: number) => {
-  if (authStore.user?.id === userId) return true
-  return canAccess('users')
-}
-
-const userProfileHref = (userId: number) =>
-  authStore.user?.id === userId ? '/profile' : `/users/show/${userId}`
-
-interface Pagination {
-  current_page: number
-  last_page: number
-  per_page: number
-  total: number
-}
-
+/** API envelope for GET `/activities` (supports several Laravel response shapes). */
 interface ActivitiesResponse {
   status?: string
   status_code?: number
   data?: unknown
   activities?: unknown[]
-  pagination?: Pagination
+  pagination?: ActivitiesPagination
   message?: string | null
 }
 
-interface ActivityRow {
-  id: number
-  userId: number | null
-  userName: string
-  activityLabel: string
-  createdAt: string
-  subjectLink: string | null
-}
-
-/** Must match /activities index sort columns on the API (Laravel-style sortBy[column]). */
+/** Sortable columns for `sortBy[column]` / `sortBy[direction]`. */
 type SortField = 'created_at' | 'user_name'
 
-/** Generic search filter (e.g. `between` uses `[from, to]` ISO 8601 strings). */
-interface SearchFilter {
-  column: string
-  value: string | [string, string]
-  condition: string
-  operator: 'and'
+const canViewLog = computed(() => canAccess('activities'))
+
+/**
+ * Whether the current user may open the profile for this activity’s user (self or `users` permission).
+ */
+function canOpenUserProfile(userId: number): boolean {
+  if (authStore.user?.id === userId)
+    return true
+  return canAccess('users')
 }
 
-/** ISO 8601 UTC with fractional seconds like backend: `2026-03-30T05:21:18.000000Z` */
-function toIso8601UtcBackendFormat(d: Date): string {
-  const iso = d.toISOString()
-  return iso.replace(/\.\d{3}Z$/i, '.000000Z')
+/** In-app route for the user linked to an activity row. */
+function userProfileHref(userId: number): string {
+  return authStore.user?.id === userId ? '/profile' : `/users/show/${userId}`
 }
 
-function todayLocalYmd(): string {
-  const t = new Date()
-  const y = t.getFullYear()
-  const m = String(t.getMonth() + 1).padStart(2, '0')
-  const day = String(t.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-/** Start of local calendar day from `<input type="date">` value `YYYY-MM-DD`. */
-function localDayStart(dateYmd: string): Date {
-  const parts = dateYmd.split('-').map(Number)
-  const y = parts[0] ?? 0
-  const mo = (parts[1] ?? 1) - 1
-  const d = parts[2] ?? 1
-  return new Date(y, mo, d, 0, 0, 0, 0)
-}
-
-/** End of local calendar day (inclusive). */
-function localDayEnd(dateYmd: string): Date {
-  const parts = dateYmd.split('-').map(Number)
-  const y = parts[0] ?? 0
-  const mo = (parts[1] ?? 1) - 1
-  const d = parts[2] ?? 1
-  return new Date(y, mo, d, 23, 59, 59, 999)
-}
-
-/** `created_at` between bounds per backend rules (missing "to" → end of today local; missing "from" → start of today local). */
-function createdAtBetweenIsoRange(): [string, string] {
-  const from = dateFrom.value.trim()
-  const to = dateTo.value.trim()
-  const today = todayLocalYmd()
-
-  if (from && to) {
-    let a = from
-    let b = to
-    if (a > b)
-      [a, b] = [b, a]
-    return [toIso8601UtcBackendFormat(localDayStart(a)), toIso8601UtcBackendFormat(localDayEnd(b))]
-  }
-  if (from)
-    return [toIso8601UtcBackendFormat(localDayStart(from)), toIso8601UtcBackendFormat(localDayEnd(today))]
-  if (to)
-    return [toIso8601UtcBackendFormat(localDayStart(today)), toIso8601UtcBackendFormat(localDayEnd(to))]
-  return [toIso8601UtcBackendFormat(localDayStart(today)), toIso8601UtcBackendFormat(localDayEnd(today))]
-}
-
-function extractList(payload: unknown): unknown[] {
-  if (!payload || typeof payload !== 'object') return []
-  const d = payload as Record<string, unknown>
-  if (Array.isArray(d.data)) return d.data
-  const inner = d.data
-  if (inner && typeof inner === 'object') {
-    const o = inner as Record<string, unknown>
-    if (Array.isArray(o.activities)) return o.activities
-    if (Array.isArray(o.data)) return o.data
-    if (Array.isArray(o.items)) return o.items
-  }
-  if (Array.isArray(d.activities)) return d.activities
-  return []
-}
-
-function isPagination(p: unknown): p is Pagination {
-  if (!p || typeof p !== 'object') return false
-  const o = p as Record<string, unknown>
-  return typeof o.current_page === 'number' && typeof o.last_page === 'number'
-}
-
-function extractPagination(payload: unknown): Pagination | null {
-  if (!payload || typeof payload !== 'object') return null
-  const d = payload as Record<string, unknown>
-  const inner = d.data
-  const nested =
-    (inner && typeof inner === 'object' ? (inner as { pagination?: unknown }).pagination : undefined)
-    ?? d.pagination
-  if (isPagination(nested)) return nested
-  if (typeof d.current_page === 'number' && typeof d.last_page === 'number') {
-    return {
-      current_page: d.current_page,
-      last_page: d.last_page,
-      per_page: typeof d.per_page === 'number' ? d.per_page : 15,
-      total: typeof d.total === 'number' ? d.total : 0,
-    }
-  }
-  return null
-}
-
-function isSubjectDeleted(raw: Record<string, unknown>): boolean {
-  if (raw.deleted === true || raw.subject_deleted === true) return true
-  if (raw.subject_exists === false || raw.related_exists === false) return true
-  return false
-}
-
-function normalizeActivity(raw: Record<string, unknown>): ActivityRow | null {
-  const id = raw.id
-  if (typeof id !== 'number' && typeof id !== 'string') return null
-
-  const userObj = raw.user ?? raw.causer ?? raw.actor
-  let userId: number | null = null
-  let userName = '—'
-  if (userObj && typeof userObj === 'object') {
-    const u = userObj as Record<string, unknown>
-    if (typeof u.id === 'number') userId = u.id
-    else if (typeof u.id === 'string') userId = Number(u.id)
-    if (Number.isNaN(userId)) userId = null
-    if (typeof u.name === 'string') userName = u.name
-  }
-
-  const desc = raw.description ?? raw.activity ?? raw.event ?? raw.log_name
-  const activityLabel = typeof desc === 'string' ? desc : String(desc ?? '—')
-
-  const createdRaw = raw.created_at ?? raw.createdAt
-  const createdAt = typeof createdRaw === 'string' ? createdRaw : ''
-
-  const deleted = isSubjectDeleted(raw)
-  let subjectLink: string | null = null
-
-  if (!deleted) {
-    if (typeof raw.url === 'string' && raw.url.startsWith('/'))
-      subjectLink = raw.url
-    else {
-      const st = raw.subject_type != null ? String(raw.subject_type) : ''
-      const sid = raw.subject_id
-      const subjectId =
-        typeof sid === 'number' ? sid : typeof sid === 'string' ? Number(sid) : Number.NaN
-      if (st && Number.isFinite(subjectId))
-        subjectLink = subjectPathFromMorph(st, subjectId)
-    }
-  }
-
-  return {
-    id: Number(id),
-    userId,
-    userName,
-    activityLabel,
-    createdAt,
-    subjectLink,
-  }
-}
-
-const rows = ref<ActivityRow[]>([])
+const rows = ref<ActivityTableRow[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
-const pagination = ref<Pagination | null>(null)
+const pagination = ref<ActivitiesPagination | null>(null)
 const currentPage = ref(1)
 
 const search = ref('')
@@ -231,9 +79,144 @@ const dateFrom = ref('')
 const dateTo = ref('')
 const sortBy = ref<SortField | ''>('')
 const sortOrder = ref<'asc' | 'desc'>('asc')
-let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
-const toggleSort = (field: SortField) => {
+/** Today as `YYYY-MM-DD` in UTC (matches interpreting filter dates as UTC calendar days). */
+function utcYmd(d: Date): string {
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * `YYYY-MM-DD` from the date inputs: start or end of that **UTC** calendar day, as ISO Zulu
+ * (e.g. `2026-04-08` → `2026-04-08T00:00:00.000Z` / `2026-04-08T23:59:59.999Z`), no local offset shift.
+ */
+function civilYmdToIsoBoundary(ymd: string, endOfDay: boolean): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim())
+  if (!m) {
+    return formatDateToIso(new Date()) ?? ''
+  }
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  const d = Number(m[3])
+  const ms = Date.UTC(
+    y,
+    mo - 1,
+    d,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  )
+  return formatDateToIso(new Date(ms)) ?? formatDateToIso(new Date()) ?? ''
+}
+
+/** Values allowed on GET `/activities` query (includes bracket keys and array filter `value`). */
+type ActivitiesQueryParams = Record<string, string | number | (string | null)[]>
+
+/**
+ * Builds query params for GET `/activities`: pagination, optional search, date range, and sort.
+ */
+function buildActivitiesQueryParams(page: number): { params: ActivitiesQueryParams } {
+  const params: ActivitiesQueryParams = { page }
+  const q = search.value.trim()
+  if (q) {
+    params.search = q
+    params.name = q
+  }
+  if (dateFrom.value || dateTo.value) {
+    params['filters[0][column]'] = 'created_at'
+    const fromYmd = dateFrom.value.trim() || utcYmd(new Date())
+    const toYmd = dateTo.value.trim() || utcYmd(new Date())
+    params['filters[0][value][0]'] = civilYmdToIsoBoundary(fromYmd, false)
+    params['filters[0][value][1]'] = civilYmdToIsoBoundary(toYmd, true)
+    params['filters[0][condition]'] = 'between'
+    params['filters[0][operator]'] = 'and'
+  }
+
+  if (sortBy.value) {
+    params['sortBy[column]'] = sortBy.value
+    params['sortBy[direction]'] = sortOrder.value
+  }
+  return { params }
+}
+
+/**
+ * Parses the activities API response into table rows and pagination state.
+ * @param requestedPage Page number sent in the request (fallback if the API omits `current_page`).
+ */
+function mapActivitiesResponse(
+  data: ActivitiesResponse,
+  requestedPage: number,
+): {
+  rows: ActivityTableRow[]
+  pagination: ActivitiesPagination | null
+  resolvedPage: number
+} {
+  const list = extractActivitiesList(data)
+  const parsed: ActivityTableRow[] = []
+  for (const item of list) {
+    if (item && typeof item === 'object') {
+      const row = parseActivityTableRow(item as Record<string, unknown>)
+      if (row)
+        parsed.push(row)
+    }
+  }
+  const pag = extractActivitiesPagination(data)
+  return {
+    rows: parsed,
+    pagination: pag,
+    resolvedPage: pag?.current_page ?? requestedPage,
+  }
+}
+
+/**
+ * Fetches one page of activities; no-ops when the user lacks `activities` access.
+ */
+async function loadActivities(page = currentPage.value): Promise<void> {
+  if (!canViewLog.value)
+    return
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const { params } = buildActivitiesQueryParams(page)
+    const data = await $api<ActivitiesResponse>('/activities', {
+      method: 'GET',
+      params,
+    })
+    const { rows: nextRows, pagination: nextPag, resolvedPage } = mapActivitiesResponse(data, page)
+    rows.value = nextRows
+    pagination.value = nextPag
+    currentPage.value = resolvedPage
+  }
+  catch (error: unknown) {
+    errorMessage.value = getErrorMessage(error) || t('activities_page.load_error')
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+/** Resets to page 1 and reloads (used after filters/sort change). */
+function resetPageAndLoad(): void {
+  currentPage.value = 1
+  void loadActivities(1)
+}
+
+/**
+ * Changes the current page if it is in range; otherwise does nothing.
+ */
+function goToPage(page: number): void {
+  if (page < 1 || (pagination.value && page > pagination.value.last_page))
+    return
+  void loadActivities(page)
+}
+
+/**
+ * Toggles sort direction for the active column, or sets a new column with ascending order.
+ */
+function toggleSort(field: SortField): void {
   if (sortBy.value === field)
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   else {
@@ -243,103 +226,40 @@ const toggleSort = (field: SortField) => {
   resetPageAndLoad()
 }
 
-const loadActivities = async (page = currentPage.value) => {
-  if (!canViewLog.value) return
-  loading.value = true
-  errorMessage.value = ''
-  try {
-    const params: Record<string, string | number> = { page }
-    const q = search.value.trim()
-    if (q) {
-      params.search = q
-      params.name = q
-    }
-    if (dateFrom.value)
-      params.date_from = dateFrom.value
-    if (dateTo.value)
-      params.date_to = dateTo.value
-
-    if (sortBy.value) {
-      params['sortBy[column]'] = sortBy.value
-      params['sortBy[direction]'] = sortOrder.value
-    }
-
-    const data = await $api<ActivitiesResponse>('/activities', { params })
-    const list = extractList(data)
-    const parsed: ActivityRow[] = []
-    for (const item of list) {
-      if (item && typeof item === 'object') {
-        const row = normalizeActivity(item as Record<string, unknown>)
-        if (row) parsed.push(row)
-      }
-    }
-    rows.value = parsed
-    pagination.value = extractPagination(data)
-    currentPage.value = pagination.value?.current_page ?? page
-  }
-  catch (error: any) {
-    errorMessage.value
-      = error?.data?.message?.ar
-      ?? error?.data?.message
-      ?? t('activities_page.load_error')
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-function resetPageAndLoad() {
-  currentPage.value = 1
-  loadActivities(1)
-}
-
-const goToPage = (page: number) => {
-  if (page < 1 || (pagination.value && page > pagination.value.last_page)) return
-  loadActivities(page)
-}
-
-watch(search, () => {
-  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
-  searchDebounceTimer = setTimeout(() => {
+watchDebounced(
+  search,
+  () => {
     currentPage.value = 1
-    loadActivities(1)
-  }, 500)
-})
+    void loadActivities(1)
+  },
+  { debounce: 500 },
+)
 
 watch([dateFrom, dateTo], () => {
   resetPageAndLoad()
 })
 
-const clearDateRange = () => {
+/** Clears date inputs and reloads from page 1. */
+function clearDateRange(): void {
   dateFrom.value = ''
   dateTo.value = ''
   resetPageAndLoad()
 }
 
-const formatDate = (d: string) => {
-  if (!d) return '—'
-  try {
-    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
-    return new Date(d).toLocaleString(loc, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-  catch {
-    return d
-  }
+/** Formats an ISO-ish datetime string for the current UI locale. */
+function formatActivityDate(iso: string): string {
+  return iso.replace('T', ' ').replace(/\.\d+Z$/, '');
 }
 
 const emptyMessage = computed(() => {
-  if (rows.value.length > 0 || loading.value || errorMessage.value) return ''
+  if (rows.value.length > 0 || loading.value || errorMessage.value)
+    return ''
   return t('activities_page.empty')
 })
 
 onMounted(() => {
-  if (canViewLog.value) loadActivities()
+  if (canViewLog.value)
+    void loadActivities()
 })
 </script>
 
@@ -501,7 +421,7 @@ onMounted(() => {
                   <span v-else class="text-muted-foreground">{{ row.activityLabel }}</span>
                 </TableCell>
                 <TableCell class="text-sm text-muted-foreground whitespace-nowrap">
-                  {{ formatDate(row.createdAt) }}
+                  {{ formatActivityDate(row.createdAt) }}
                 </TableCell>
               </TableRow>
             </template>

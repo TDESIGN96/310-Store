@@ -99,8 +99,12 @@ const loadWarehouses = async (page = currentPage.value, query = search.value.tri
       params.search = query
       params.name = query
     }
-    if (filterStatus.value !== 'all')
-      params.status = filterStatus.value
+    if (filterStatus.value !== 'all'){
+      params['filters[0][column]'] = 'status'
+      params['filters[0][value]'] = filterStatus.value
+      params['filters[0][condition]'] = '='
+      params['filters[0][operator]'] = 'and'
+    }
 
     if (sortBy.value) {
       params['sortBy[column]'] = sortBy.value
