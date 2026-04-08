@@ -137,12 +137,23 @@ const loadUsers = async (page = currentPage.value, query = search.value.trim()) 
     const role = filterRoleId.value
     if (role && role !== 'all') {
       const id = Number(role)
-      if (!Number.isNaN(id)) params.role_id = id
+      if (!Number.isNaN(id)) {
+        params['filters[0][column]'] = 'role_id'
+        params['filters[0][value]'] = id
+        params['filters[0][condition]'] = '='
+        params['filters[0][operator]'] = 'and'
+      }
     }
     if (filterStatus.value === 'active') {
-      params.is_active = 1
+      params['filters[0][column]'] = 'is_active'
+      params['filters[0][value]'] = 1
+      params['filters[0][condition]'] = '='
+      params['filters[0][operator]'] = 'and'
     } else if (filterStatus.value === 'inactive') {
-      params.is_active = 0
+      params['filters[0][column]'] = 'is_active'
+      params['filters[0][value]'] = 0
+      params['filters[0][condition]'] = '='
+      params['filters[0][operator]'] = 'and'
     }
 
     const data = await $api<UsersResponse>('/users', { params })
