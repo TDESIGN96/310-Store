@@ -44,6 +44,7 @@ export default {
     groups: {
       main: 'الرئيسية',
       inventory: 'المخزون',
+      administration: 'الإدارة',
     },
     items: {
       dashboard: 'لوحة التحكم',

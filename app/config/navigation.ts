@@ -42,12 +42,6 @@ export const navItems: NavGroup[] = [
     groupKey: 'nav.groups.main',
     items: [
       { labelKey: 'nav.items.dashboard', icon: LayoutDashboard, path: '/mainCards' },
-      {
-        labelKey: 'nav.items.activity_log',
-        icon: History,
-        path: '/activities',
-        module: 'activities',
-      },
     ],
   },
   {
@@ -81,6 +75,18 @@ export const navItems: NavGroup[] = [
         module: 'warehouses',
         createPath: '/warehouses/create',
       },
+    ],
+  },
+  {
+    groupKey: 'nav.groups.administration',
+    items: [
+      {
+        labelKey: 'nav.items.users',
+        icon: Users,
+        path: '/users',
+        module: 'users',
+        createPath: '/users/create',
+      },
       {
         labelKey: 'nav.items.roles',
         icon: ShieldCheck,
@@ -89,11 +95,10 @@ export const navItems: NavGroup[] = [
         createPath: '/roles/create',
       },
       {
-        labelKey: 'nav.items.users',
-        icon: Users,
-        path: '/users',
-        module: 'users',
-        createPath: '/users/create',
+        labelKey: 'nav.items.activity_log',
+        icon: History,
+        path: '/activities',
+        module: 'activities',
       },
     ],
   },

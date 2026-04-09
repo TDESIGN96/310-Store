@@ -44,6 +44,7 @@ export default {
     groups: {
       main: 'Home',
       inventory: 'Inventory',
+      administration: 'Administration',
     },
     items: {
       dashboard: 'Dashboard',
