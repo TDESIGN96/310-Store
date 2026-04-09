@@ -24,7 +24,7 @@ import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 interface RoleItem {
   id: string
@@ -112,6 +112,11 @@ const handleClone = (role: RoleItem) => {
 const deletingId = ref<string | null>(null)
 const roleToDelete = ref<RoleItem | null>(null)
 
+const rolePrimaryName = (role: RoleItem) =>
+  locale.value === 'ar'
+    ? (role.name_ar || role.name_en || '—')
+    : (role.name_en || role.name_ar || '—')
+
 const confirmDelete = async () => {
   if (!roleToDelete.value) return
 
@@ -121,7 +126,7 @@ const confirmDelete = async () => {
 
   try {
     await $api(`/roles/${role.id}`, { method: 'DELETE' })
-    toast.success(t('roles_page.delete_success', { name: role.name_ar }))
+    toast.success(t('roles_page.delete_success', { name: rolePrimaryName(role) }))
     await loadRoles(currentPage.value)
   } catch (error: any) {
     const msg =
@@ -181,15 +186,16 @@ onMounted(loadRoles)
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="rtl:text-right font-medium">{{ t('roles_page.col_name_en') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('roles_page.col_name_ar') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">
+              {{ locale === 'ar' ? t('roles_page.col_name_ar') : t('roles_page.col_name_en') }}
+            </TableHead>
             <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="3" class="py-14 text-center">
+            <TableCell :colspan="2" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('roles_page.loading') }}
@@ -198,7 +204,7 @@ onMounted(loadRoles)
           </TableRow>
 
           <TableRow v-else-if="errorMessage">
-            <TableCell :colspan="3" class="py-14 text-center">
+            <TableCell :colspan="2" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
@@ -208,7 +214,7 @@ onMounted(loadRoles)
           </TableRow>
 
           <TableRow v-else-if="roles.length === 0">
-            <TableCell :colspan="3" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="2" class="py-14 text-center text-sm text-muted-foreground">
               {{ search ? t('roles_page.no_results_search') : t('roles_page.no_roles') }}
             </TableCell>
           </TableRow>
@@ -219,8 +225,7 @@ onMounted(loadRoles)
             :key="role.id"
             class="hover:bg-muted/30 transition-colors"
           >
-            <TableCell class="font-medium">{{ role.name_en }}</TableCell>
-            <TableCell class="font-medium">{{ role.name_ar }}</TableCell>
+            <TableCell class="font-medium">{{ rolePrimaryName(role) }}</TableCell>
             <TableCell>
               <div class="flex items-center gap-3 text-sm">
                 <button
@@ -323,7 +328,7 @@ onMounted(loadRoles)
       <AlertDialogHeader>
         <AlertDialogTitle class="rtl:text-right">{{ t('roles_page.delete_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="rtl:text-right">
-          {{ t('roles_page.delete_body', { name: roleToDelete?.name_ar ?? '' }) }}
+          {{ t('roles_page.delete_body', { name: roleToDelete ? rolePrimaryName(roleToDelete) : '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

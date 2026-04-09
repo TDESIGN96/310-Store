@@ -164,7 +164,11 @@ const loadParentsForFilter = async () => {
     parentsForFilter.value = all
       .filter(c => idsThatAreParents.has(c.id))
       .map(({ id, name_ar, name_en }) => ({ id, name_ar, name_en }))
-      .sort((a, b) => String(a.name_ar || a.name_en).localeCompare(String(b.name_ar || b.name_en), 'ar'))
+      .sort((a, b) => {
+        const aName = locale.value === 'ar' ? (a.name_ar || a.name_en) : (a.name_en || a.name_ar)
+        const bName = locale.value === 'ar' ? (b.name_ar || b.name_en) : (b.name_en || b.name_ar)
+        return String(aName).localeCompare(String(bName), locale.value === 'ar' ? 'ar' : 'en')
+      })
   }
   catch {
     parentsForFilter.value = []
@@ -276,6 +280,15 @@ const toggleSort = (field: SortField) => {
   resetPageAndLoad()
 }
 
+const toggleSortName = () => {
+  const field: SortField = locale.value === 'ar' ? 'name_ar' : 'name_en'
+  toggleSort(field)
+}
+
+const isNameSortActive = computed(
+  () => sortBy.value === 'name_ar' || sortBy.value === 'name_en',
+)
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const formatDate = (dateStr: string | null | undefined) => {
@@ -299,9 +312,23 @@ const authorDisplay = (value?: CategoryAuthor | number | null) => {
   return value.name || `#${value.id}`
 }
 
+const categoryPrimaryName = (category: Pick<CategoryItem, 'name_ar' | 'name_en'>) =>
+  locale.value === 'ar'
+    ? (category.name_ar || category.name_en || '—')
+    : (category.name_en || category.name_ar || '—')
+
+const parentFilterLabel = (parent: ParentFilterItem) =>
+  locale.value === 'ar'
+    ? (parent.name_ar || parent.name_en || `#${parent.id}`)
+    : (parent.name_en || parent.name_ar || `#${parent.id}`)
+
 const parentDisplay = (category: CategoryItem) => {
   if (!category.parent && !category.parent_id) return '—'
-  if (category.parent) return category.parent.name_ar || category.parent.name_en || `#${category.parent.id}`
+  if (category.parent) {
+    return locale.value === 'ar'
+      ? (category.parent.name_ar || category.parent.name_en || `#${category.parent.id}`)
+      : (category.parent.name_en || category.parent.name_ar || `#${category.parent.id}`)
+  }
   return `#${category.parent_id}`
 }
 
@@ -351,7 +378,7 @@ const confirmDelete = async () => {
   categoryToDelete.value = null
   try {
     await $api(`/categories/${cat.id}`, { method: 'DELETE' })
-    toast.success(t('categories_page.delete_success', { name: cat.name_ar }))
+    toast.success(t('categories_page.delete_success', { name: categoryPrimaryName(cat) }))
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
@@ -378,7 +405,7 @@ const confirmDeactivate = async () => {
       method: 'PUT',
       body: buildCategoryStatusBody(cat, 'inactive'),
     })
-    toast.success(t('categories_page.deactivate_success', { name: cat.name_ar }))
+    toast.success(t('categories_page.deactivate_success', { name: categoryPrimaryName(cat) }))
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
@@ -400,7 +427,7 @@ const confirmActivate = async () => {
       method: 'PUT',
       body: buildCategoryStatusBody(cat, 'active'),
     })
-    toast.success(t('categories_page.activate_success', { name: cat.name_ar }))
+    toast.success(t('categories_page.activate_success', { name: categoryPrimaryName(cat) }))
     await loadCategories(currentPage.value)
   }
   catch (error: any) {
@@ -586,7 +613,7 @@ onMounted(() => {
               :key="parent.id"
               :value="String(parent.id)"
             >
-              {{ parent.name_ar || parent.name_en }}
+              {{ parentFilterLabel(parent) }}
             </SelectItem>
           </SelectContent>
         </Select>
@@ -693,25 +720,12 @@ onMounted(() => {
             <!-- Sortable: Arabic Name -->
             <TableHead
               class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
-              @click="toggleSort('name_ar')"
+              @click="toggleSortName"
             >
               <div class="flex items-center gap-1.5">
-                {{ t('categories_page.col_name_ar') }}
-                <ArrowUp v-if="sortBy === 'name_ar' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'name_ar' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
-                <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
-              </div>
-            </TableHead>
-
-            <!-- Sortable: English Name -->
-            <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
-              @click="toggleSort('name_en')"
-            >
-              <div class="flex  gap-1.5">
-                {{ t('categories_page.col_name_en') }}
-                <ArrowUp v-if="sortBy === 'name_en' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'name_en' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                {{ locale === 'ar' ? t('categories_page.col_name_ar') : t('categories_page.col_name_en') }}
+                <ArrowUp v-if="isNameSortActive && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
+                <ArrowDown v-else-if="isNameSortActive && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
@@ -754,7 +768,7 @@ onMounted(() => {
         <TableBody>
           <!-- Loading -->
           <TableRow v-if="loading">
-            <TableCell :colspan="9" class="py-14 text-center">
+            <TableCell :colspan="8" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('categories_page.loading') }}
@@ -764,7 +778,7 @@ onMounted(() => {
 
           <!-- Error -->
           <TableRow v-else-if="errorMessage">
-            <TableCell :colspan="9" class="py-14 text-center">
+            <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
@@ -777,7 +791,7 @@ onMounted(() => {
 
           <!-- Empty -->
           <TableRow v-else-if="categories.length === 0">
-            <TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
                   ? t('categories_page.no_results')
@@ -811,14 +825,9 @@ onMounted(() => {
                 class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-right"
                 @click="handleView(cat)"
               >
-                {{ cat.name_ar }}
+                {{ categoryPrimaryName(cat) }}
               </button>
-              <span v-else>{{ cat.name_ar }}</span>
-            </TableCell>
-
-            <!-- English Name -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ cat.name_en || '—' }}
+              <span v-else>{{ categoryPrimaryName(cat) }}</span>
             </TableCell>
 
             <!-- Parent -->
@@ -975,7 +984,7 @@ onMounted(() => {
       <AlertDialogHeader>
         <AlertDialogTitle class="rtl:text-right">{{ t('categories_page.delete_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="rtl:text-right">
-          {{ t('categories_page.delete_dialog_body', { name: categoryToDelete?.name_ar ?? '' }) }}
+          {{ t('categories_page.delete_dialog_body', { name: categoryToDelete ? categoryPrimaryName(categoryToDelete) : '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
@@ -999,7 +1008,7 @@ onMounted(() => {
         <AlertDialogTitle>{{ t('categories_page.deactivate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="space-y-2">
           <p>
-            {{ t('categories_page.deactivate_dialog_body', { name: categoryToDeactivate?.name_ar ?? '' }) }}
+            {{ t('categories_page.deactivate_dialog_body', { name: categoryToDeactivate ? categoryPrimaryName(categoryToDeactivate) : '' }) }}
           </p>
           <p>{{ t('categories_page.deactivate_dialog_hint') }}</p>
         </AlertDialogDescription>
@@ -1024,7 +1033,7 @@ onMounted(() => {
       <AlertDialogHeader>
         <AlertDialogTitle>{{ t('categories_page.activate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('categories_page.activate_dialog_body', { name: categoryToActivate?.name_ar ?? '' }) }}
+          {{ t('categories_page.activate_dialog_body', { name: categoryToActivate ? categoryPrimaryName(categoryToActivate) : '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

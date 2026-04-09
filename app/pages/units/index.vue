@@ -107,6 +107,15 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const sortBy = ref<SortField | ''>('')
 const sortOrder = ref<'asc' | 'desc'>('asc')
 
+const toggleSortName = () => {
+  const field: SortField = locale.value === 'ar' ? 'name_ar' : 'name_en'
+  toggleSort(field)
+}
+
+const isNameSortActive = computed(
+  () => sortBy.value === 'name_ar' || sortBy.value === 'name_en',
+)
+
 // Bulk selection
 const selectedIds = ref<Set<number>>(new Set())
 
@@ -251,6 +260,12 @@ const authorDisplay = (value?: UnitAuthor | number | null) => {
   return value.name || `#${value.id}`
 }
 
+const unitDisplayName = (unit: UnitItem) => {
+  if (locale.value === 'ar')
+    return unit.name_ar?.trim() || unit.name_en?.trim() || '—'
+  return unit.name_en?.trim() || unit.name_ar?.trim() || '—'
+}
+
 const statusConfig = (status: string) => {
   switch (status) {
     case 'active':
@@ -288,7 +303,7 @@ const confirmDelete = async () => {
   unitToDelete.value = null
   try {
     await $api(`/units/${unit.id}`, { method: 'DELETE' })
-    toast.success(t('units_page.delete_success', { name: unit.name_ar }))
+    toast.success(t('units_page.delete_success', { name: unitDisplayName(unit) }))
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
@@ -314,7 +329,7 @@ const confirmDeactivate = async () => {
       method: 'PUT',
       body: buildUnitStatusBody(unit, 'inactive'),
     })
-    toast.success(t('units_page.deactivate_success', { name: unit.name_ar }))
+    toast.success(t('units_page.deactivate_success', { name: unitDisplayName(unit) }))
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
@@ -339,7 +354,7 @@ const confirmActivate = async () => {
       method: 'PUT',
       body: buildUnitStatusBody(unit, 'active'),
     })
-    toast.success(t('units_page.activate_success', { name: unit.name_ar }))
+    toast.success(t('units_page.activate_success', { name: unitDisplayName(unit) }))
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
@@ -617,24 +632,12 @@ onMounted(() => loadUnits())
             <!-- Sortable Columns -->
             <TableHead
               class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
-              @click="toggleSort('name_ar')"
+              @click="toggleSortName"
             >
               <div class="flex items-center gap-1.5">
-                {{ t('units_page.col_name_ar') }}
-                <ArrowUp v-if="sortBy === 'name_ar' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'name_ar' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
-                <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
-              </div>
-            </TableHead>
-
-            <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
-              @click="toggleSort('name_en')"
-            >
-              <div class="flex items-center gap-1.5">
-                {{ t('units_page.col_name_en') }}
-                <ArrowUp v-if="sortBy === 'name_en' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'name_en' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                {{ locale === 'ar' ? t('units_page.col_name_ar') : t('units_page.col_name_en') }}
+                <ArrowUp v-if="isNameSortActive && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
+                <ArrowDown v-else-if="isNameSortActive && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
@@ -684,7 +687,7 @@ onMounted(() => loadUnits())
         <TableBody>
           <!-- Loading -->
           <TableRow v-if="loading" >
-            <TableCell :colspan="8" class="py-14 text-center ">
+            <TableCell :colspan="7" class="py-14 text-center ">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground ">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('units_page.loading') }}
@@ -694,7 +697,7 @@ onMounted(() => loadUnits())
 
           <!-- Error -->
           <TableRow v-else-if="errorMessage">
-            <TableCell :colspan="8" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <span>{{ errorMessage }}</span>
@@ -707,7 +710,7 @@ onMounted(() => loadUnits())
 
           <!-- Empty -->
           <TableRow v-else-if="units.length === 0">
-            <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
                   ? t('units_page.no_results')
@@ -741,14 +744,9 @@ onMounted(() => loadUnits())
                 class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-right"
                 @click="handleView(unit)"
               >
-                {{ unit.name_ar }}
+                {{ unitDisplayName(unit) }}
               </button>
-              <span v-else>{{ unit.name_ar }}</span>
-            </TableCell>
-
-            <!-- English Name -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ unit.name_en || '—' }}
+              <span v-else>{{ unitDisplayName(unit) }}</span>
             </TableCell>
 
             <!-- Symbol -->
@@ -907,7 +905,7 @@ onMounted(() => loadUnits())
       <AlertDialogHeader>
         <AlertDialogTitle class="rtl:text-right">{{ t('units_page.delete_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="rtl:text-right">
-          {{ t('units_page.delete_dialog_body', { name: unitToDelete?.name_ar ?? '' }) }}
+          {{ t('units_page.delete_dialog_body', { name: unitToDelete ? unitDisplayName(unitToDelete) : '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
@@ -931,7 +929,7 @@ onMounted(() => loadUnits())
         <AlertDialogTitle>{{ t('units_page.deactivate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription class="space-y-2">
           <p>
-            {{ t('units_page.deactivate_dialog_body', { name: unitToDeactivate?.name_ar ?? '' }) }}
+            {{ t('units_page.deactivate_dialog_body', { name: unitToDeactivate ? unitDisplayName(unitToDeactivate) : '' }) }}
           </p>
           <p>{{ t('units_page.deactivate_dialog_hint') }}</p>
         </AlertDialogDescription>
@@ -956,7 +954,7 @@ onMounted(() => loadUnits())
       <AlertDialogHeader>
         <AlertDialogTitle>{{ t('units_page.activate_dialog_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('units_page.activate_dialog_body', { name: unitToActivate?.name_ar ?? '' }) }}
+          {{ t('units_page.activate_dialog_body', { name: unitToActivate ? unitDisplayName(unitToActivate) : '' }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
