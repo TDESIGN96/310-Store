@@ -22,6 +22,37 @@ const priceRef = ref<InstanceType<typeof PriceAssignmentSection> | null>(null)
 const submitting = ref(false)
 const errorMessage = ref('')
 
+interface UploadedFileResponse {
+  data?: {
+    file?: {
+      path?: string
+      url?: string
+    }
+  }
+}
+
+async function uploadFileAndGetUrl(file: File, token: string): Promise<string> {
+  const base = config.public.apiBase as string
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const uploadResult = await $fetch<UploadedFileResponse>(`${base.replace(/\/$/, '')}/files`, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      'Accept-Language': normalizeApiLocale(locale.value),
+    },
+  })
+
+  const fileUrl = uploadResult?.data?.file?.url || uploadResult?.data?.file?.path
+  if (!fileUrl)
+    throw new Error('File upload response did not include url/path')
+
+  return fileUrl
+}
+
 async function handleSave() {
   errorMessage.value = ''
 
@@ -37,32 +68,65 @@ async function handleSave() {
     return
   }
 
-  const formData = productDetailsRef.value!.buildFormData()
-
-  const warehouseAssignments = warehouseRef.value!.getAssignments()
-  warehouseAssignments.forEach((row, i) => {
-    formData.append(`warehouses[${i}][warehouse_id]`, String(row.warehouse_id))
-    formData.append(`warehouses[${i}][stock]`, String(row.stock))
-    formData.append(`warehouses[${i}][min_quantity]`, String(row.min_quantity))
-    formData.append(`warehouses[${i}][allow_notifications]`, row.allow_notifications ? '1' : '0')
-  })
-
-  const pricing = priceRef.value!.getPricing()
-  if (pricing) {
-    formData.append('pricing_type', pricing.type)
-    pricing.rows.forEach((row, i) => {
-      Object.entries(row).forEach(([key, value]) => {
-        formData.append(`pricing[${i}][${key}]`, String(value))
-      })
-    })
-  }
-
   submitting.value = true
   try {
+    const detailsPayload = productDetailsRef.value!.getPayload()
+
+    const payload: Record<string, unknown> = {
+      name_ar: detailsPayload.name_ar,
+      name_en: detailsPayload.name_en,
+      sku: detailsPayload.sku,
+      category_id: Number(detailsPayload.category_id),
+      unit_id: Number(detailsPayload.unit_id),
+      inventory: [] as Array<Record<string, unknown>>,
+      tiered_prices: [] as Array<Record<string, unknown>>,
+    }
+    if (detailsPayload.description)
+      payload.description = detailsPayload.description
+    if (detailsPayload.barcode)
+      payload.barcode = detailsPayload.barcode
+
+    if (detailsPayload.main_image_file) {
+      const mainImageUrl = await uploadFileAndGetUrl(detailsPayload.main_image_file, token)
+      payload.main_image_url = mainImageUrl
+    }
+
+    const additionalImages: string[] = []
+    for (const file of detailsPayload.additional_image_files) {
+      const imageUrl = await uploadFileAndGetUrl(file, token)
+      additionalImages.push(imageUrl)
+    }
+    if (additionalImages.length)
+      payload.images = additionalImages
+
+    const warehouseAssignments = warehouseRef.value!.getAssignments()
+    const inventory = payload.inventory as Array<Record<string, unknown>>
+    warehouseAssignments.forEach((row, i) => {
+      inventory.push({
+        warehouse_id: Number(row.warehouse_id),
+        quantity: Number(row.quantity),
+        min_quantity: Number(row.min_quantity),
+        allow_notification: Boolean(row.allow_notification),
+      })
+    })
+
+    const pricing = priceRef.value!.getPricing()
+    if (pricing) {
+      payload.price = Number(pricing.standard_price)
+      const tieredPrices = payload.tiered_prices as Array<Record<string, unknown>>
+      pricing.tiered_prices.forEach((row, i) => {
+        tieredPrices.push({
+          quantity_from: Number(row.quantity_from),
+          quantity_to: Number(row.quantity_to),
+          price: Number(row.price),
+        })
+      })
+    }
+
     const base = config.public.apiBase as string
     await $fetch<unknown>(`${base.replace(/\/$/, '')}/products`, {
       method: 'POST',
-      body: formData,
+      body: payload,
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',

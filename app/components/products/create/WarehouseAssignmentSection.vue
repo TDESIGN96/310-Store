@@ -183,13 +183,38 @@ function validate(): boolean {
 function getAssignments() {
   return rows.value.map(r => ({
     warehouse_id: Number(r.warehouseId),
-    stock: Number(r.stock || 0),
+    quantity: Number(r.stock || 0),
     min_quantity: Number(r.minQty || 0),
-    allow_notifications: r.allowNotifications,
+    allow_notification: r.allowNotifications,
   }))
 }
 
-defineExpose({ validate, getAssignments })
+function setAssignments(assignments: Array<{
+  warehouse_id?: number | string
+  quantity?: number | string
+  min_quantity?: number | string
+  allow_notification?: boolean | string | number
+}>) {
+  rows.value = (assignments ?? []).map((row) => {
+    const allowNotification
+      = row.allow_notification === true
+        || row.allow_notification === 'true'
+        || row.allow_notification === '1'
+        || row.allow_notification === 1
+
+    return {
+      _key: ++_keyCounter,
+      warehouseId: row.warehouse_id != null ? String(row.warehouse_id) : '',
+      stock: String(row.quantity ?? 0),
+      minQty: String(row.min_quantity ?? 0),
+      allowNotifications: allowNotification,
+    }
+  })
+  tableError.value = ''
+  validationError.value = ''
+}
+
+defineExpose({ validate, getAssignments, setAssignments })
 
 onMounted(() => loadWarehouses())
 </script>

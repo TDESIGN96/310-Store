@@ -12,6 +12,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { permissionIdSet } from '@/config/permissions'
+import { normalizeLoadedPermissions, type RolePermissionModule } from '@/utils/rolePermissions'
 
 definePageMeta({ layout: 'default' })
 
@@ -62,6 +64,10 @@ interface UserData {
   permissions: string[]
 }
 
+type UserDataApi = Omit<UserData, 'permissions'> & {
+  permissions?: Array<string | RolePermissionModule>
+}
+
 interface UserResponse {
   user?: UserData
   data?: UserData | { user?: UserData }
@@ -83,8 +89,14 @@ const loadUser = async () => {
   try {
     const data = await $api<UserResponse>(`/users/${userId}`)
     const raw = data.data
-    const userData = (data.user ?? (raw && 'user' in raw ? raw.user : raw) ?? null) as UserData | null
-    user.value = userData
+    const userData = (data.user ?? (raw && 'user' in raw ? raw.user : raw) ?? null) as UserDataApi | null
+    if (userData) {
+      const rawPerm = Array.isArray(userData.permissions) ? userData.permissions : []
+      const normalizedPermissions = normalizeLoadedPermissions(rawPerm).filter(p => permissionIdSet.has(p))
+      user.value = { ...userData, permissions: normalizedPermissions }
+    } else {
+      user.value = null
+    }
     if (!userData) {
       errorMessage.value = t('errors.not_found')
     }

@@ -16,6 +16,7 @@ import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryLis
 const { t, locale } = useI18n()
 
 const MAX_IMAGES = 5
+const MAX_ADDITIONAL_IMAGES = 4
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024 * 1024
 const SKU_RE = /^[A-Za-z0-9\-/]+$/
 
@@ -42,13 +43,15 @@ interface UnitsResponse {
 
 const { $api } = useApi()
 
-const productName = ref('')
+const productNameAr = ref('')
+const productNameEn = ref('')
 const sku = ref('')
 const categoryId = ref<string>('')
 const description = ref('')
 const unitId = ref<string>('')
 const barcode = ref('')
-const imageFiles = ref<File[]>([])
+const mainImageFile = ref<File | null>(null)
+const additionalImageFiles = ref<File[]>([])
 
 const categories = ref<CategoryItem[]>([])
 const units = ref<UnitItem[]>([])
@@ -56,15 +59,18 @@ const loadingCategories = ref(false)
 const loadingUnits = ref(false)
 const optionsError = ref('')
 
-const fileInputRef = ref<HTMLInputElement | null>(null)
+const mainImageInputRef = ref<HTMLInputElement | null>(null)
+const additionalImagesInputRef = ref<HTMLInputElement | null>(null)
 
 const fieldErrors = ref({
-  name: '',
+  name_ar: '',
+  name_en: '',
   sku: '',
   category_id: '',
   description: '',
   unit_id: '',
   barcode: '',
+  main_image: '',
   images: '',
 })
 
@@ -127,25 +133,28 @@ function clearField(key: keyof typeof fieldErrors.value) {
 
 function onBarcodeInput(e: Event) {
   const el = e.target as HTMLInputElement
-  const digits = el.value.replace(/\D/g, '')
-  barcode.value = digits
-  el.value = digits
+  barcode.value = el.value
   clearField('barcode')
 }
 
 function validateClient(): boolean {
   fieldErrors.value = {
-    name: '',
+    name_ar: '',
+    name_en: '',
     sku: '',
     category_id: '',
     description: '',
     unit_id: '',
     barcode: '',
+    main_image: '',
     images: '',
   }
 
-  if (!productName.value.trim())
-    fieldErrors.value.name = t('products_form.validation_name_required')
+  if (!productNameAr.value.trim())
+    fieldErrors.value.name_ar = t('products_form.validation_name_ar_required')
+
+  if (!productNameEn.value.trim())
+    fieldErrors.value.name_en = t('products_form.validation_name_en_required')
 
   const s = sku.value.trim()
   if (!s)
@@ -159,38 +168,71 @@ function validateClient(): boolean {
   if (!unitId.value)
     fieldErrors.value.unit_id = t('products_form.validation_unit_required')
 
-  if (barcode.value && !/^\d+$/.test(barcode.value))
-    fieldErrors.value.barcode = t('products_form.validation_barcode_digits')
-
-  for (const f of imageFiles.value) {
+  const allImages = [
+    ...(mainImageFile.value ? [mainImageFile.value] : []),
+    ...additionalImageFiles.value,
+  ]
+  for (const f of allImages) {
     if (f.size > MAX_IMAGE_BYTES) {
       fieldErrors.value.images = t('products_form.validation_image_max_size')
       break
     }
   }
 
-  if (imageFiles.value.length > MAX_IMAGES)
+  if (allImages.length > MAX_IMAGES)
     fieldErrors.value.images = t('products_form.validation_images_max_count')
+
+  if (additionalImageFiles.value.length > MAX_ADDITIONAL_IMAGES)
+    fieldErrors.value.images = t('products_form.validation_additional_images_max_count')
 
   return !Object.values(fieldErrors.value).some(Boolean)
 }
 
-const canAddMoreImages = computed(() => imageFiles.value.length < MAX_IMAGES)
+const totalImageCount = computed(() => (mainImageFile.value ? 1 : 0) + additionalImageFiles.value.length)
+const canAddMoreAdditionalImages = computed(
+  () => additionalImageFiles.value.length < MAX_ADDITIONAL_IMAGES && totalImageCount.value < MAX_IMAGES,
+)
 
-function openFilePicker() {
-  fileInputRef.value?.click()
+function openMainImagePicker() {
+  mainImageInputRef.value?.click()
 }
 
-function onFilesSelected(e: Event) {
+function openAdditionalImagesPicker() {
+  additionalImagesInputRef.value?.click()
+}
+
+function onMainImageSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const picked = Array.from(input.files ?? [])
+  input.value = ''
+
+  fieldErrors.value.main_image = ''
+  fieldErrors.value.images = ''
+  const file = picked[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) return
+  if (file.size > MAX_IMAGE_BYTES) {
+    fieldErrors.value.main_image = t('products_form.validation_image_max_size')
+    return
+  }
+  mainImageFile.value = file
+}
+
+function onAdditionalFilesSelected(e: Event) {
   const input = e.target as HTMLInputElement
   const picked = Array.from(input.files ?? [])
   input.value = ''
 
   fieldErrors.value.images = ''
-  let next = [...imageFiles.value]
+  let next = [...additionalImageFiles.value]
 
   for (const file of picked) {
-    if (next.length >= MAX_IMAGES) {
+    if (next.length >= MAX_ADDITIONAL_IMAGES) {
+      fieldErrors.value.images = t('products_form.validation_additional_images_max_count')
+      break
+    }
+    const total = (mainImageFile.value ? 1 : 0) + next.length
+    if (total >= MAX_IMAGES) {
       fieldErrors.value.images = t('products_form.validation_images_max_count')
       break
     }
@@ -202,46 +244,70 @@ function onFilesSelected(e: Event) {
       continue
     next.push(file)
   }
-  imageFiles.value = next
+  additionalImageFiles.value = next
 }
 
-function removeImage(index: number) {
-  imageFiles.value = imageFiles.value.filter((_, i) => i !== index)
+function removeMainImage() {
+  mainImageFile.value = null
+  clearField('main_image')
+  clearField('images')
+}
+
+function removeAdditionalImage(index: number) {
+  additionalImageFiles.value = additionalImageFiles.value.filter((_, i) => i !== index)
   clearField('images')
 }
 
 function applyServerFieldErrors(fe: Record<string, string>) {
   fieldErrors.value = {
-    name: fe.name ?? '',
+    name_ar: fe.name_ar ?? '',
+    name_en: fe.name_en ?? '',
     sku: fe.sku ?? '',
     category_id: fe.category_id ?? '',
     description: fe.description ?? '',
     unit_id: fe.unit_id ?? '',
     barcode: fe.barcode ?? '',
+    main_image: fe.main_image ?? fe.main_image_url ?? '',
     images: fe.images ?? fe.image ?? '',
   }
 }
 
-function buildFormData(): FormData {
-  const formData = new FormData()
-  formData.append('name', productName.value.trim())
-  formData.append('sku', sku.value.trim())
-  formData.append('category_id', categoryId.value)
-  formData.append('unit_id', unitId.value)
-  const desc = description.value.trim()
-  if (desc)
-    formData.append('description', desc)
-  const bc = barcode.value.trim()
-  if (bc)
-    formData.append('barcode', bc)
-  for (const file of imageFiles.value)
-    formData.append('images[]', file)
-  return formData
+function getPayload() {
+  return {
+    name_ar: productNameAr.value.trim(),
+    name_en: productNameEn.value.trim(),
+    sku: sku.value.trim(),
+    category_id: categoryId.value,
+    unit_id: unitId.value,
+    description: description.value.trim(),
+    barcode: barcode.value.trim(),
+    main_image_file: mainImageFile.value,
+    additional_image_files: [...additionalImageFiles.value],
+  }
+}
+
+function setInitialData(data: {
+  name_ar?: string
+  name_en?: string
+  sku?: string
+  category_id?: number | string | null
+  unit_id?: number | string | null
+  description?: string | null
+  barcode?: string | null
+}) {
+  productNameAr.value = data.name_ar ?? ''
+  productNameEn.value = data.name_en ?? ''
+  sku.value = data.sku ?? ''
+  categoryId.value = data.category_id != null ? String(data.category_id) : ''
+  unitId.value = data.unit_id != null ? String(data.unit_id) : ''
+  description.value = data.description ?? ''
+  barcode.value = data.barcode ?? ''
 }
 
 defineExpose({
   validate: validateClient,
-  buildFormData,
+  getPayload,
+  setInitialData,
   applyServerErrors: applyServerFieldErrors,
 })
 
@@ -276,17 +342,30 @@ onMounted(async () => {
     <Separator />
 
     <div class="grid gap-5 sm:grid-cols-2">
-      <div class="space-y-2 sm:col-span-2">
-        <label class="text-sm font-medium leading-none" for="product-name">{{ t('products_form.name') }}</label>
+      <div class="space-y-2">
+        <label class="text-sm font-medium leading-none" for="product-name-ar">{{ t('products_form.name_ar') }}</label>
         <Input
-          id="product-name"
-          v-model="productName"
-          :placeholder="t('products_form.placeholder_name')"
+          id="product-name-ar"
+          v-model="productNameAr"
+          :placeholder="t('products_form.placeholder_name_ar')"
           class="h-10"
           dir="auto"
-          @update:model-value="clearField('name')"
+          @update:model-value="clearField('name_ar')"
         />
-        <p v-if="fieldErrors.name" class="text-sm text-red-600">{{ fieldErrors.name }}</p>
+        <p v-if="fieldErrors.name_ar" class="text-sm text-red-600">{{ fieldErrors.name_ar }}</p>
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-sm font-medium leading-none" for="product-name-en">{{ t('products_form.name_en') }}</label>
+        <Input
+          id="product-name-en"
+          v-model="productNameEn"
+          :placeholder="t('products_form.placeholder_name_en')"
+          class="h-10"
+          dir="ltr"
+          @update:model-value="clearField('name_en')"
+        />
+        <p v-if="fieldErrors.name_en" class="text-sm text-red-600">{{ fieldErrors.name_en }}</p>
       </div>
 
       <div class="space-y-2">
@@ -303,6 +382,8 @@ onMounted(async () => {
         <p class="text-xs text-muted-foreground">{{ t('products_form.hint_sku') }}</p>
         <p v-if="fieldErrors.sku" class="text-sm text-red-600">{{ fieldErrors.sku }}</p>
       </div>
+
+
 
       <div class="space-y-2">
         <label class="text-sm font-medium leading-none">{{ t('products_form.category') }}</label>
@@ -326,21 +407,6 @@ onMounted(async () => {
         </Select>
         <p v-if="fieldErrors.category_id" class="text-sm text-red-600">{{ fieldErrors.category_id }}</p>
       </div>
-
-      <div class="space-y-2 sm:col-span-2">
-        <label class="text-sm font-medium leading-none" for="product-desc">{{ t('products_form.description') }}</label>
-        <textarea
-          id="product-desc"
-          v-model="description"
-          rows="4"
-          class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
-          :placeholder="t('products_form.placeholder_description')"
-          dir="auto"
-          @input="clearField('description')"
-        />
-        <p v-if="fieldErrors.description" class="text-sm text-red-600">{{ fieldErrors.description }}</p>
-      </div>
-
       <div class="space-y-2">
         <label class="text-sm font-medium leading-none">{{ t('products_form.unit') }}</label>
         <Select
@@ -370,8 +436,6 @@ onMounted(async () => {
           id="product-barcode"
           :model-value="barcode"
           type="text"
-          inputmode="numeric"
-          pattern="[0-9]*"
           class="h-10 font-mono"
           dir="ltr"
           :placeholder="t('products_form.placeholder_barcode')"
@@ -382,15 +446,38 @@ onMounted(async () => {
       </div>
 
       <div class="space-y-2 sm:col-span-2">
+        <label class="text-sm font-medium leading-none" for="product-desc">{{ t('products_form.description') }}</label>
+        <textarea
+          id="product-desc"
+          v-model="description"
+          rows="4"
+          class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+          :placeholder="t('products_form.placeholder_description')"
+          dir="auto"
+          @input="clearField('description')"
+        />
+        <p v-if="fieldErrors.description" class="text-sm text-red-600">{{ fieldErrors.description }}</p>
+      </div>
+
+      
+
+      <div class="space-y-2 sm:col-span-2">
         <label class="text-sm font-medium leading-none">{{ t('products_form.images') }}</label>
         <p class="text-xs text-muted-foreground">{{ t('products_form.hint_images') }}</p>
         <input
-          ref="fileInputRef"
+          ref="mainImageInputRef"
+          type="file"
+          accept="image/*"
+          class="sr-only"
+          @change="onMainImageSelected"
+        >
+        <input
+          ref="additionalImagesInputRef"
           type="file"
           accept="image/*"
           multiple
           class="sr-only"
-          @change="onFilesSelected"
+          @change="onAdditionalFilesSelected"
         >
         <div class="flex flex-wrap items-center gap-2">
           <Button
@@ -398,19 +485,47 @@ onMounted(async () => {
             variant="outline"
             size="sm"
             class="h-9 gap-2"
-            :disabled="!canAddMoreImages"
-            @click="openFilePicker"
+            @click="openMainImagePicker"
           >
             <ImagePlus class="size-4" />
-            {{ t('products_form.add_images') }}
+            {{ mainImageFile ? t('products_form.replace_main_image') : t('products_form.add_main_image') }}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            class="h-9 gap-2"
+            :disabled="!canAddMoreAdditionalImages"
+            @click="openAdditionalImagesPicker"
+          >
+            <ImagePlus class="size-4" />
+            {{ t('products_form.add_additional_images') }}
           </Button>
           <span class="text-xs text-muted-foreground">
-            {{ t('products_form.images_count', { current: imageFiles.length, max: MAX_IMAGES }) }}
+            {{ t('products_form.images_count', { current: totalImageCount, max: MAX_IMAGES }) }}
           </span>
         </div>
-        <ul v-if="imageFiles.length" class="flex flex-wrap gap-3 pt-2">
+        <p v-if="fieldErrors.main_image" class="text-sm text-red-600">{{ fieldErrors.main_image }}</p>
+        <ul v-if="mainImageFile" class="flex flex-wrap gap-3 pt-2">
+          <li class="relative group rounded-md border bg-muted/30 p-2 pe-8 max-w-[220px]">
+            <p class="text-[10px] uppercase tracking-wide text-muted-foreground">{{ t('products_form.main_image') }}</p>
+            <p class="text-xs truncate font-medium" :title="mainImageFile.name">{{ mainImageFile.name }}</p>
+            <p class="text-[10px] text-muted-foreground tabular-nums">
+              {{ (mainImageFile.size / 1024 / 1024).toFixed(1) }} MB
+            </p>
+            <button
+              type="button"
+              class="absolute top-1 end-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              :aria-label="t('products_form.remove_image')"
+              @click="removeMainImage"
+            >
+              <X class="size-3.5" />
+            </button>
+          </li>
+        </ul>
+        <ul v-if="additionalImageFiles.length" class="flex flex-wrap gap-3 pt-2">
           <li
-            v-for="(file, idx) in imageFiles"
+            v-for="(file, idx) in additionalImageFiles"
             :key="`${file.name}-${idx}`"
             class="relative group rounded-md border bg-muted/30 p-2 pe-8 max-w-[200px]"
           >
@@ -422,7 +537,7 @@ onMounted(async () => {
               type="button"
               class="absolute top-1 end-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
               :aria-label="t('products_form.remove_image')"
-              @click="removeImage(idx)"
+              @click="removeAdditionalImage(idx)"
             >
               <X class="size-3.5" />
             </button>

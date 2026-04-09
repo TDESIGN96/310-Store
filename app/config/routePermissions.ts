@@ -27,9 +27,13 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/roles\/edit\/[^/]+\/?$/, permission: 'roles.update' },
   { pattern: /^\/roles\/?$/, permission: ['roles.index', 'roles.show'] },
 
-  // Products (legacy key from navigation)
-  // { pattern: /^\/products\/create\/?$/, permission: 'view_products' },
-  // { pattern: /^\/products\/?$/, permission: 'view_products' },
+  // Products
+  // TEMP: backend product permissions are not ready yet, so product routes are ungated for now.
+  // TODO: re-enable products.* permissions once backend starts returning them reliably.
+  { pattern: /^\/products\/create\/?$/, permission: null },
+  { pattern: /^\/products\/edit\/[^/]+\/?$/, permission: null },
+  { pattern: /^\/products\/show\/[^/]+\/?$/, permission: null },
+  { pattern: /^\/products\/?$/, permission: null },
 
   // Warehouses
   { pattern: /^\/warehouses\/create\/?$/, permission: 'warehouses.store' },

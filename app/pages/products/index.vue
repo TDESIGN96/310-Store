@@ -42,19 +42,21 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
 import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryList'
+import { normalizeApiLocale } from '@/utils/apiLocale'
 
 definePageMeta({ layout: 'default' })
-
-/**
- * Demo mode: no `/products` or filter API calls. Set to `false` when the backend is wired.
- */
-const USE_PRODUCTS_DEMO_DATA = true
-
-const DEMO_PER_PAGE = 8
 
 const { t, locale } = useI18n()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
+const config = useRuntimeConfig()
+const authStore = useAuthStore()
+// TEMP: backend product permissions are not ready yet, so UI action gates are disabled.
+// TODO: switch these back to usePermissions() checks when products.* permissions are available.
+const canCreateProduct = true
+const canShowProduct = true
+const canEditProduct = true
+const canDeleteProduct = true
 
 interface Pagination {
   current_page: number
@@ -67,6 +69,7 @@ interface CategoryFilterItem {
   id: number
   name_ar: string
   name_en: string
+  status?: string
 }
 
 interface WarehouseFilterItem {
@@ -200,192 +203,17 @@ function categoryLabelFromProduct(raw: Record<string, unknown>, loc: string): st
 }
 
 /** Stored/display name exactly as from API `name` when present. */
-function productDisplayName(raw: Record<string, unknown>): string {
+function productDisplayName(raw: Record<string, unknown>, loc: string): string {
   if (typeof raw.name === 'string') return raw.name
   if (typeof raw.title === 'string') return raw.title
+  if (loc === 'ar')
+    return String(raw.name_ar ?? raw.name_en ?? '—')
   return String(raw.name_en ?? raw.name_ar ?? '—')
 }
 
 function productSku(raw: Record<string, unknown>): string {
   const v = raw.sku ?? raw.code ?? raw.SKU
   return typeof v === 'string' ? v : v != null ? String(v) : '—'
-}
-
-/** API-shaped records for demo; same fields the normalizer expects from Laravel. */
-function getDemoProductsSeed(): Record<string, unknown>[] {
-  return [
-    {
-      id: 1,
-      sku: 'PKG-001',
-      name: 'A4 packaging carton',
-      category: { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
-      warehouses: [
-        {
-          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-          pivot: { quantity: 48 },
-        },
-      ],
-    },
-    {
-      id: 2,
-      sku: 'PRT-002',
-      name: 'Thermal printer XP-80',
-      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
-      warehouses: [
-        {
-          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-          pivot: { quantity: 5 },
-        },
-        {
-          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
-          pivot: { quantity: 7 },
-        },
-      ],
-    },
-    {
-      id: 3,
-      sku: 'PPR-003',
-      name: 'A4 paper ream',
-      category: { id: 3, name_en: 'Stationery', name_ar: 'قرطاسية' },
-      warehouses: [
-        {
-          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-          pivot: { quantity: 120 },
-        },
-        {
-          warehouse: { id: 3, name_en: 'Decommissioned', name_ar: 'مخزن متوقف', status: 'inactive' },
-          pivot: { quantity: 999 },
-        },
-      ],
-    },
-    {
-      id: 4,
-      sku: 'SCN-004',
-      name: 'USB barcode scanner',
-      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
-      warehouses: [
-        {
-          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
-          pivot: { quantity: 14 },
-        },
-      ],
-    },
-    {
-      id: 5,
-      sku: 'PKG-005',
-      name: 'Large clear tape roll',
-      category: { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
-      warehouses: [
-        {
-          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-          pivot: { quantity: 200 },
-        },
-        {
-          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
-          pivot: { quantity: 45 },
-        },
-      ],
-    },
-    {
-      id: 6,
-      sku: 'STN-006',
-      name: '3-copy invoice book',
-      category: { id: 3, name_en: 'Stationery', name_ar: 'قرطاسية' },
-      warehouses: [
-        {
-          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-          pivot: { quantity: 33 },
-        },
-      ],
-    },
-    {
-      id: 7,
-      sku: 'DEL-007',
-      name: 'Medium delivery bag',
-      category: { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
-      warehouses: [
-        {
-          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
-          pivot: { quantity: 88 },
-        },
-      ],
-    },
-    {
-      id: 8,
-      sku: 'WGH-008',
-      name: 'Digital scale 30kg',
-      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
-      warehouses: [
-        {
-          warehouse: { id: 3, name_en: 'Decommissioned', name_ar: 'مخزن متوقف', status: 'inactive' },
-          pivot: { quantity: 4 },
-        },
-      ],
-    },
-    {
-      id: 9,
-      sku: 'POS-009',
-      name: 'Metal cash drawer',
-      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
-      warehouses: [
-        {
-          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-          pivot: { quantity: 2 },
-        },
-      ],
-    },
-    {
-      id: 10,
-      sku: 'PRT-010',
-      name: 'Receipt printer RP-100',
-      category: { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
-      warehouses: [
-        {
-          warehouse: { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-          pivot: { quantity: 1 },
-        },
-        {
-          warehouse: { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
-          pivot: { quantity: 3 },
-        },
-      ],
-    },
-  ]
-}
-
-const DEMO_CATEGORY_OPTIONS: CategoryFilterItem[] = [
-  { id: 1, name_en: 'Packaging', name_ar: 'تغليف' },
-  { id: 2, name_en: 'Devices', name_ar: 'أجهزة' },
-  { id: 3, name_en: 'Stationery', name_ar: 'قرطاسية' },
-]
-
-const DEMO_WAREHOUSE_OPTIONS: WarehouseFilterItem[] = [
-  { id: 1, name_en: 'Main warehouse', name_ar: 'المستودع الرئيسي', status: 'active' },
-  { id: 2, name_en: 'Branch store', name_ar: 'مستودع الفرع', status: 'active' },
-  { id: 3, name_en: 'Decommissioned', name_ar: 'مخزن متوقف', status: 'inactive' },
-]
-
-const demoProductsSource = ref<Record<string, unknown>[]>(
-  USE_PRODUCTS_DEMO_DATA ? getDemoProductsSeed() : [],
-)
-
-function demoCategoryId(raw: Record<string, unknown>): number | null {
-  const cat = raw.category
-  if (cat && typeof cat === 'object' && 'id' in cat) {
-    const id = (cat as { id?: unknown }).id
-    const n = typeof id === 'number' ? id : typeof id === 'string' ? Number(id) : Number.NaN
-    return Number.isFinite(n) ? n : null
-  }
-  return null
-}
-
-function productHasActiveWarehouseId(raw: Record<string, unknown>, warehouseId: number): boolean {
-  const pivots = extractWarehousePivotList(raw)
-  return pivots.some((p) => {
-    const wid = p.warehouse.id
-    const n = typeof wid === 'number' ? wid : typeof wid === 'string' ? Number(wid) : Number.NaN
-    return n === warehouseId
-  })
 }
 
 function normalizeProductRow(raw: Record<string, unknown>, loc: string, multipleWh: string): ProductRow | null {
@@ -399,7 +227,7 @@ function normalizeProductRow(raw: Record<string, unknown>, loc: string, multiple
   return {
     id: numId,
     sku: productSku(raw),
-    name: productDisplayName(raw),
+    name: productDisplayName(raw, loc),
     categoryLabel: categoryLabelFromProduct(raw, loc),
     warehouseLabel,
     qty,
@@ -438,20 +266,15 @@ const warehouseLabel = (w: WarehouseFilterItem) =>
 async function loadFilterOptions() {
   loadingFilters.value = true
   try {
-    if (USE_PRODUCTS_DEMO_DATA) {
-      categoryOptions.value = [...DEMO_CATEGORY_OPTIONS]
-      warehouseOptions.value = DEMO_WAREHOUSE_OPTIONS.filter(
-        w => String(w.status ?? 'active').toLowerCase() === 'active',
-      )
-      return
-    }
     const [cats, whRes] = await Promise.all([
       fetchAllCategoriesPages<CategoryFilterItem>($api as CategoriesApi, { status: 'active' }).catch(() => []),
       $api<WarehousesListResponse>('/warehouses', { params: { page: 1, per_page: 100, status: 'active' } }).catch(
         (): WarehousesListResponse => ({}),
       ),
     ])
-    categoryOptions.value = cats
+    categoryOptions.value = cats.filter((c: CategoryFilterItem) =>
+      String(c.status ?? 'active').toLowerCase() === 'active',
+    )
     const whList = whRes.data?.warehouses ?? whRes.warehouses ?? []
     warehouseOptions.value = whList.filter((w: WarehouseFilterItem) =>
       String(w.status ?? 'active').toLowerCase() === 'active',
@@ -466,67 +289,29 @@ async function loadFilterOptions() {
   }
 }
 
-const loadProducts = async (page = currentPage.value) => {
+const loadProducts = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
   errorMessage.value = ''
   try {
     const multipleWh = t('products_page.multiple_warehouses')
     const loc = locale.value === 'ar' ? 'ar' : 'en'
 
-    if (USE_PRODUCTS_DEMO_DATA) {
-      const q = search.value.trim().toLowerCase()
-      let list = [...demoProductsSource.value]
-      if (q) {
-        list = list.filter((raw) => {
-          const name = productDisplayName(raw).toLowerCase()
-          const sku = productSku(raw).toLowerCase()
-          return name.includes(q) || sku.includes(q)
-        })
-      }
-      if (filterCategoryId.value !== 'all') {
-        const cid = Number(filterCategoryId.value)
-        if (!Number.isNaN(cid))
-          list = list.filter(raw => demoCategoryId(raw) === cid)
-      }
-      if (filterWarehouseId.value !== 'all') {
-        const wid = Number(filterWarehouseId.value)
-        if (!Number.isNaN(wid))
-          list = list.filter(raw => productHasActiveWarehouseId(raw, wid))
-      }
-      const total = list.length
-      const lastPage = Math.max(1, Math.ceil(total / DEMO_PER_PAGE) || 1)
-      const pageSafe = Math.min(Math.max(1, page), lastPage)
-      const start = (pageSafe - 1) * DEMO_PER_PAGE
-      const pageSlice = list.slice(start, start + DEMO_PER_PAGE)
-      const parsed: ProductRow[] = []
-      for (const item of pageSlice) {
-        const row = normalizeProductRow(item, loc, multipleWh)
-        if (row) parsed.push(row)
-      }
-      rows.value = parsed
-      pagination.value = {
-        current_page: pageSafe,
-        last_page: lastPage,
-        per_page: DEMO_PER_PAGE,
-        total,
-      }
-      currentPage.value = pageSafe
-      return
-    }
-
-    const q = search.value.trim()
     const params: Record<string, string | number> = { page }
-    if (q) {
-      params.search = q
-      params.name = q
+    if (query) {
+      params.search = query
+      params.name = query
     }
     if (filterCategoryId.value !== 'all') {
-      const id = Number(filterCategoryId.value)
-      if (!Number.isNaN(id)) params.category_id = id
+      params['filters[0][column]'] = 'category_id'
+      params['filters[0][value]'] = filterCategoryId.value
+      params['filters[0][condition]'] = '='
+      params['filters[0][operator]'] = 'and'
     }
     if (filterWarehouseId.value !== 'all') {
-      const id = Number(filterWarehouseId.value)
-      if (!Number.isNaN(id)) params.warehouse_id = id
+      params['filters[1][column]'] = 'warehouse_id'
+      params['filters[1][value]'] = filterWarehouseId.value
+      params['filters[1][condition]'] = '='
+      params['filters[1][operator]'] = 'and'
     }
 
     const data = await $api<ProductsResponse>('/products', { params })
@@ -555,7 +340,7 @@ const loadProducts = async (page = currentPage.value) => {
 
 function resetPageAndLoad() {
   currentPage.value = 1
-  loadProducts(1)
+  loadProducts(1, search.value.trim())
 }
 
 const goToPage = (page: number) => {
@@ -567,27 +352,25 @@ watch(search, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
     currentPage.value = 1
-    loadProducts(1)
+    loadProducts(1, search.value.trim())
   }, 450)
-})
-
-watch([filterCategoryId, filterWarehouseId], () => {
-  resetPageAndLoad()
 })
 
 function clearFilters() {
   search.value = ''
   filterCategoryId.value = 'all'
   filterWarehouseId.value = 'all'
-  resetPageAndLoad()
+  loadProducts(1, '')
 }
 
 function onCategoryFilterChange(value: unknown) {
   filterCategoryId.value = value != null && value !== '' ? String(value) : 'all'
+  resetPageAndLoad()
 }
 
 function onWarehouseFilterChange(value: unknown) {
   filterWarehouseId.value = value != null && value !== '' ? String(value) : 'all'
+  resetPageAndLoad()
 }
 
 function openDelete(row: ProductRow) {
@@ -600,19 +383,15 @@ async function confirmDelete() {
   deleting.value = true
   try {
     const id = deleteTarget.value.id
-    if (USE_PRODUCTS_DEMO_DATA) {
-      demoProductsSource.value = demoProductsSource.value.filter((r) => {
-        const rid = r.id
-        const n = typeof rid === 'number' ? rid : typeof rid === 'string' ? Number(rid) : Number.NaN
-        return n !== id
-      })
-      toast.success(t('products_page.delete_success'))
-      deleteDialogOpen.value = false
-      deleteTarget.value = null
-      await loadProducts(currentPage.value)
-      return
-    }
-    await $api(`/products/${id}`, { method: 'DELETE' })
+    const base = config.public.apiBase as string
+    await $fetch(`${base.replace(/\/$/, '')}/products/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${authStore.token}`,
+        Accept: 'application/json',
+        'Accept-Language': normalizeApiLocale(locale.value),
+      },
+    })
     toast.success(t('products_page.delete_success'))
     deleteDialogOpen.value = false
     deleteTarget.value = null
@@ -652,76 +431,87 @@ onMounted(async () => {
           </p>
         </div>
       </div>
-      <Button class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] shrink-0" as-child>
-        <NuxtLink to="/products/create">
-          <Plus class="size-4" />
-          {{ t('products_page.new_product') }}
-        </NuxtLink>
-      </Button>
     </div>
 
-    <div class="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
-      <div class="relative w-full min-w-[200px] max-w-sm lg:flex-1">
-        <Search class="pointer-events-none absolute top-1/2 right-3 z-[1] size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          v-model="search"
-          :placeholder="t('products_page.search_placeholder')"
-          class="h-9 pr-9"
-        />
-        <Loader2
-          v-if="loading && search.trim()"
-          class="absolute top-1/2 left-3 z-[1] size-3.5 -translate-y-1/2 animate-spin text-muted-foreground"
-        />
-      </div>
+    <div class="flex items-center justify-between gap-4">
 
-      <div class="flex flex-wrap items-center gap-2">
-        <Select :model-value="filterCategoryId" @update:model-value="onCategoryFilterChange">
-          <SelectTrigger class="h-9 w-[min(100%,200px)] gap-2">
-            <Filter class="size-3.5 shrink-0 text-muted-foreground" />
-            <SelectValue :placeholder="t('products_page.filter_category')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{{ t('products_page.all_categories') }}</SelectItem>
-            <SelectItem
-              v-for="c in categoryOptions"
-              :key="c.id"
-              :value="String(c.id)"
-            >
-              {{ categoryLabel(c) }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+<!-- Left side — search + filters -->
+<div class="flex flex-wrap items-center gap-2 flex-1">
 
-        <Select :model-value="filterWarehouseId" @update:model-value="onWarehouseFilterChange">
-          <SelectTrigger class="h-9 w-[min(100%,200px)] gap-2">
-            <Filter class="size-3.5 shrink-0 text-muted-foreground" />
-            <SelectValue :placeholder="t('products_page.filter_warehouse')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{{ t('products_page.all_warehouses') }}</SelectItem>
-            <SelectItem
-              v-for="w in warehouseOptions"
-              :key="w.id"
-              :value="String(w.id)"
-            >
-              {{ warehouseLabel(w) }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+  <div class="relative min-w-[200px] max-w-sm">
+    <Search class="pointer-events-none absolute top-1/2 right-3 z-[1] size-4 -translate-y-1/2 text-muted-foreground" />
+    <Input
+      v-model="search"
+      :placeholder="t('products_page.search_placeholder')"
+      class="h-9 pr-9"
+    />
+    <Loader2
+      v-if="loading && search.trim()"
+      class="absolute top-1/2 left-3 z-[1] size-3.5 -translate-y-1/2 animate-spin text-muted-foreground"
+    />
+  </div>
 
-        <Button
-          v-if="hasActiveFilters"
-          variant="ghost"
-          size="sm"
-          class="h-9 gap-1.5 text-muted-foreground"
-          :disabled="loading"
-          @click="clearFilters"
-        >
-          <X class="size-3.5" />
-          {{ t('products_page.clear_filters') }}
-        </Button>
-      </div>
-    </div>
+  <Select :model-value="filterCategoryId" @update:model-value="onCategoryFilterChange">
+    <SelectTrigger class="h-9 w-[200px] gap-2">
+      <Filter class="size-3.5 shrink-0 text-muted-foreground" />
+      <SelectValue :placeholder="t('products_page.filter_category')" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">{{ t('products_page.all_categories') }}</SelectItem>
+      <SelectItem
+        v-for="c in categoryOptions"
+        :key="c.id"
+        :value="String(c.id)"
+      >
+        {{ categoryLabel(c) }}
+      </SelectItem>
+    </SelectContent>
+  </Select>
+
+  <Select :model-value="filterWarehouseId" @update:model-value="onWarehouseFilterChange">
+    <SelectTrigger class="h-9 w-[200px] gap-2">
+      <Filter class="size-3.5 shrink-0 text-muted-foreground" />
+      <SelectValue :placeholder="t('products_page.filter_warehouse')" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">{{ t('products_page.all_warehouses') }}</SelectItem>
+      <SelectItem
+        v-for="w in warehouseOptions"
+        :key="w.id"
+        :value="String(w.id)"
+      >
+        {{ warehouseLabel(w) }}
+      </SelectItem>
+    </SelectContent>
+  </Select>
+
+  <Button
+    v-if="hasActiveFilters"
+    variant="ghost"
+    size="sm"
+    class="h-9 gap-1.5 text-muted-foreground"
+    :disabled="loading"
+    @click="clearFilters"
+  >
+    <X class="size-3.5" />
+    {{ t('products_page.clear_filters') }}
+  </Button>
+
+</div>
+
+<!-- Right side — new product button -->
+<Button
+  v-if="canCreateProduct"
+  class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] shrink-0"
+  as-child
+>
+  <NuxtLink to="/products/create">
+    <Plus class="size-4" />
+    {{ t('products_page.new_product') }}
+  </NuxtLink>
+</Button>
+
+</div>
 
     <div v-if="loadingFilters" class="text-xs text-muted-foreground">
       {{ t('common.loading') }}…
@@ -799,19 +589,20 @@ onMounted(async () => {
             </TableCell>
             <TableCell>
               <div class="flex flex-wrap items-center gap-1 justify-end">
-                <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
+                <Button v-if="canShowProduct" variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
                   <NuxtLink :to="`/products/show/${row.id}`">
                     <Eye class="size-3.5" />
                     {{ t('common.view') }}
                   </NuxtLink>
                 </Button>
-                <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
+                <Button v-if="canEditProduct" variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
                   <NuxtLink :to="`/products/edit/${row.id}`">
                     <Pencil class="size-3.5" />
                     {{ t('common.edit') }}
                   </NuxtLink>
                 </Button>
-                <Button
+                <!-- <Button
+                  v-if="canDeleteProduct"
                   variant="outline"
                   size="sm"
                   class="h-8 gap-1 px-2 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30"
@@ -819,7 +610,7 @@ onMounted(async () => {
                 >
                   <Trash2 class="size-3.5" />
                   {{ t('common.delete') }}
-                </Button>
+                </Button> -->
               </div>
             </TableCell>
             </TableRow>
