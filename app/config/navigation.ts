@@ -57,8 +57,8 @@ export const navItems: NavGroup[] = [
         labelKey: 'nav.items.products',
         icon: Package,
         path: '/products',
-        // TEMP: backend product permissions are not ready yet; show products nav unconditionally.
-        // TODO: restore `module: 'products'` and `createPath` after backend permission rollout.
+        module: 'products',
+        createPath: '/products/create',
       },
       {
         labelKey: 'nav.items.units',

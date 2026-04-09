@@ -51,12 +51,11 @@ const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 const config = useRuntimeConfig()
 const authStore = useAuthStore()
-// TEMP: backend product permissions are not ready yet, so UI action gates are disabled.
-// TODO: switch these back to usePermissions() checks when products.* permissions are available.
-const canCreateProduct = true
-const canShowProduct = true
-const canEditProduct = true
-const canDeleteProduct = true
+const { canCreate: canCreateProd, canEdit: canEditProd, canDelete: canDeleteProd, can: canPerm } = usePermissions()
+const canCreateProduct = computed(() => canCreateProd('products'))
+const canShowProduct = computed(() => canPerm('products.show'))
+const canEditProduct = computed(() => canEditProd('products'))
+const canDeleteProduct = computed(() => canDeleteProd('products'))
 
 interface Pagination {
   current_page: number
@@ -601,7 +600,7 @@ onMounted(async () => {
                     {{ t('common.edit') }}
                   </NuxtLink>
                 </Button>
-                <!-- <Button
+                <Button
                   v-if="canDeleteProduct"
                   variant="outline"
                   size="sm"
@@ -610,7 +609,7 @@ onMounted(async () => {
                 >
                   <Trash2 class="size-3.5" />
                   {{ t('common.delete') }}
-                </Button> -->
+                </Button>
               </div>
             </TableCell>
             </TableRow>

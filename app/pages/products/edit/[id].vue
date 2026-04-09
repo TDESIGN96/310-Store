@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { ArrowRight, Loader2 } from 'lucide-vue-next'
+import { ArrowRight, Loader2, ShieldAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 import ProductDetailsSection from '@/components/products/create/ProductDetailsSection.vue'
@@ -13,14 +13,16 @@ definePageMeta({ layout: 'default' })
 const { t, locale } = useI18n()
 const route = useRoute()
 const id = computed(() => route.params.id)
-// TEMP: backend product permissions are not ready yet, so product action gates are disabled.
-// TODO: restore usePermissions() gate for view action.
-const canShowProduct = true
+
+const { can: canPerm } = usePermissions()
+const canShowProduct = computed(() => canPerm('products.show'))
 
 const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 const { $api } = useApi()
 const config = useRuntimeConfig()
 const authStore = useAuthStore()
+
+const canEdit = authStore.hasPermission('products.update')
 
 const productDetailsRef = ref<InstanceType<typeof ProductDetailsSection> | null>(null)
 const warehouseRef = ref<InstanceType<typeof WarehouseAssignmentSection> | null>(null)
@@ -137,6 +139,8 @@ async function loadProduct() {
 }
 
 async function handleSave() {
+  if (!canEdit) return
+
   errorMessage.value = ''
 
   const detailsOk = productDetailsRef.value?.validate() ?? false
@@ -227,6 +231,7 @@ async function handleSave() {
 }
 
 onMounted(() => {
+  if (!canEdit) return
   loadProduct()
 })
 </script>
@@ -248,45 +253,58 @@ onMounted(() => {
     </div>
 
     <div
-      v-if="errorMessage"
-      class="rounded-md bg-red-500/10 border border-red-200 text-red-600 text-sm px-4 py-3"
+      v-if="!canEdit"
+      class="flex flex-col items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-6 py-10 text-center text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
     >
-      {{ errorMessage }}
-    </div>
-
-    <div
-      v-if="loading"
-      class="rounded-lg border p-8 text-center text-muted-foreground"
-    >
-      <Loader2 class="mx-auto size-10 animate-spin mb-3" />
-      <p class="text-sm">{{ t('common.loading') }}</p>
+      <ShieldAlert class="size-8" />
+      <p class="font-medium">{{ t('products_form.no_permission_edit') }}</p>
+      <Button variant="outline" size="sm" as-child>
+        <NuxtLink to="/products">{{ t('common.back') }}</NuxtLink>
+      </Button>
     </div>
 
     <template v-else>
-      <ProductDetailsSection ref="productDetailsRef" />
-      <WarehouseAssignmentSection ref="warehouseRef" />
-      <PriceAssignmentSection ref="priceRef" />
-
-      <div class="flex flex-wrap items-center justify-end gap-2 pb-6">
-        <Button
-          v-if="canShowProduct"
-          type="button"
-          variant="outline"
-          :disabled="submitting"
-          as-child
-        >
-          <NuxtLink :to="`/products/show/${id}`">{{ t('common.view') }}</NuxtLink>
-        </Button>
-        <Button
-          type="button"
-          class="inline-flex items-center gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] min-w-[120px]"
-          :disabled="submitting"
-          @click="handleSave"
-        >
-          <Loader2 v-if="submitting" class="size-4 animate-spin shrink-0" />
-          <span>{{ submitting ? t('common.saving') : t('products_form.save') }}</span>
-        </Button>
+      <div
+        v-if="errorMessage"
+        class="rounded-md bg-red-500/10 border border-red-200 text-red-600 text-sm px-4 py-3"
+      >
+        {{ errorMessage }}
       </div>
+
+      <div
+        v-if="loading"
+        class="rounded-lg border p-8 text-center text-muted-foreground"
+      >
+        <Loader2 class="mx-auto size-10 animate-spin mb-3" />
+        <p class="text-sm">{{ t('common.loading') }}</p>
+      </div>
+
+      <template v-else>
+        <ProductDetailsSection ref="productDetailsRef" />
+        <WarehouseAssignmentSection ref="warehouseRef" />
+        <PriceAssignmentSection ref="priceRef" />
+
+        <div class="flex flex-wrap items-center justify-end gap-2 pb-6">
+          <Button
+            v-if="canShowProduct"
+            type="button"
+            variant="outline"
+            :disabled="submitting"
+            as-child
+          >
+            <NuxtLink :to="`/products/show/${id}`">{{ t('common.view') }}</NuxtLink>
+          </Button>
+          <Button
+            type="button"
+            class="inline-flex items-center gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] min-w-[120px]"
+            :disabled="submitting"
+            @click="handleSave"
+          >
+            <Loader2 v-if="submitting" class="size-4 animate-spin shrink-0" />
+            <span>{{ submitting ? t('common.saving') : t('products_form.save') }}</span>
+          </Button>
+        </div>
+      </template>
     </template>
   </div>
 </template>

@@ -16,9 +16,8 @@ definePageMeta({ layout: 'default' })
 const { t, locale } = useI18n()
 const route = useRoute()
 const id = computed(() => route.params.id)
-// TEMP: backend product permissions are not ready yet, so product action gates are disabled.
-// TODO: restore usePermissions() gate for edit action.
-const canEditProduct = true
+const { canEdit: canEditProd } = usePermissions()
+const canEditProduct = computed(() => canEditProd('products'))
 
 interface ProductCategory {
   id: number

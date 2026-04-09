@@ -802,6 +802,7 @@ export default {
     categories_load_error: 'تعذر تحميل التصنيفات.',
     units_load_error: 'تعذر تحميل الوحدات.',
     not_authenticated: 'يجب تسجيل الدخول لإنشاء منتج.',
+    no_permission_edit: 'ليس لديك صلاحية لتعديل هذا المنتج.',
     validation_name_required: 'اسم المنتج مطلوب',
     validation_name_ar_required: 'الاسم بالعربية مطلوب',
     validation_name_en_required: 'الاسم بالإنجليزية مطلوب',

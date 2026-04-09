@@ -803,6 +803,7 @@ export default {
     categories_load_error: 'Could not load categories.',
     units_load_error: 'Could not load units.',
     not_authenticated: 'You must be signed in to create a product.',
+    no_permission_edit: 'You do not have permission to edit this product.',
     validation_name_required: 'Product name is required',
     validation_name_ar_required: 'Arabic name is required',
     validation_name_en_required: 'English name is required',
