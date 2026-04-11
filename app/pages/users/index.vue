@@ -99,7 +99,7 @@ const canShowUser = computed(() => can('users.show'))
 const users = ref<UserItem[]>([])
 const search = ref('')
 const loading = ref(false)
-const errorMessage = ref('')
+const { listLoadError, clearListLoadError, setListLoadErrorFromException } = useResourceListLoadError('users_page')
 const pagination = ref<UsersPagination | null>(null)
 const currentPage = ref(1)
 
@@ -125,7 +125,7 @@ const loadRolesForFilter = async () => {
 
 const loadUsers = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
-  errorMessage.value = ''
+  clearListLoadError()
 
   try {
     const params: Record<string, string | number> = { page }
@@ -166,7 +166,7 @@ const loadUsers = async (page = currentPage.value, query = search.value.trim()) 
     pagination.value = paginationData
     currentPage.value = paginationData?.current_page ?? page
   } catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error)
+    setListLoadErrorFromException(error)
   } finally {
     loading.value = false
   }
@@ -205,6 +205,11 @@ function onStatusFilterChange(value: unknown) {
 const hasActiveFilters = computed(
   () => filterRoleId.value !== 'all' || filterStatus.value !== 'all',
 )
+
+const rolePrimaryName = (role: { name_ar?: string; name_en?: string; name?: string }) =>
+  locale.value === 'ar'
+    ? (role.name_ar || role.name_en || role.name || '—')
+    : (role.name_en || role.name_ar || role.name || '—')
 
 const handleEdit = (user: UserItem) => {
   navigateTo(`/users/edit/${user.id}`)
@@ -338,7 +343,7 @@ const formatDate = (dateStr: string | null) => {
 const rolesDisplay = (roles: UserRole[], maxWords = 8) => {
   if (!roles?.length) return '—'
   const sep = locale.value === 'ar' ? '، ' : ', '
-  const full = roles.map(r => r.name_ar || r.name_en || r.name).join(sep)
+  const full = roles.map(r => rolePrimaryName(r)).join(sep)
   const words = full.split(/[\s،]+/).filter(Boolean)
   if (words.length <= maxWords) return full
   return words.slice(0, maxWords).join(' ') + '...'
@@ -394,7 +399,7 @@ onMounted(() => {
               :key="role.id"
               :value="String(role.id)"
             >
-              {{ role.name_ar || role.name_en }}
+              {{ rolePrimaryName(role) }}
             </SelectItem>
           </SelectContent>
         </Select>
@@ -447,11 +452,14 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="errorMessage">
+          <TableRow v-else-if="listLoadError">
             <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
-                <span>{{ errorMessage }}</span>
+                <p class="font-medium text-center">{{ listLoadError.title }}</p>
+                <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+                  {{ listLoadError.detail }}
+                </p>
                 <Button variant="outline" size="sm" @click="loadUsers">{{ t('common.retry') }}</Button>
               </div>
             </TableCell>

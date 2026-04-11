@@ -37,7 +37,6 @@ const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const { $api } = useApi()
 const { canAccess } = usePermissions()
-const { getErrorMessage } = useApiError()
 
 /** API envelope for GET `/activities` (supports several Laravel response shapes). */
 interface ActivitiesResponse {
@@ -70,7 +69,7 @@ function userProfileHref(userId: number): string {
 
 const rows = ref<ActivityTableRow[]>([])
 const loading = ref(false)
-const errorMessage = ref('')
+const { listLoadError, clearListLoadError, setListLoadErrorFromException } = useResourceListLoadError('activities_page')
 const pagination = ref<ActivitiesPagination | null>(null)
 const currentPage = ref(1)
 
@@ -178,7 +177,7 @@ async function loadActivities(page = currentPage.value): Promise<void> {
   if (!canViewLog.value)
     return
   loading.value = true
-  errorMessage.value = ''
+  clearListLoadError()
   try {
     const { params } = buildActivitiesQueryParams(page)
     const data = await $api<ActivitiesResponse>('/activities', {
@@ -191,7 +190,7 @@ async function loadActivities(page = currentPage.value): Promise<void> {
     currentPage.value = resolvedPage
   }
   catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error) || t('activities_page.load_error')
+    setListLoadErrorFromException(error)
   }
   finally {
     loading.value = false
@@ -252,7 +251,7 @@ function formatActivityDate(iso: string): string {
 }
 
 const emptyMessage = computed(() => {
-  if (rows.value.length > 0 || loading.value || errorMessage.value)
+  if (rows.value.length > 0 || loading.value || listLoadError.value)
     return ''
   return t('activities_page.empty')
 })
@@ -377,11 +376,14 @@ onMounted(() => {
                 </div>
               </TableCell>
             </TableRow>
-            <TableRow v-else-if="errorMessage">
+            <TableRow v-else-if="listLoadError">
               <TableCell :colspan="3" class="py-14 text-center">
                 <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                   <ShieldAlert class="size-6" />
-                  <span>{{ errorMessage }}</span>
+                  <p class="font-medium text-center">{{ listLoadError.title }}</p>
+                  <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+                    {{ listLoadError.detail }}
+                  </p>
                   <Button variant="outline" size="sm" @click="loadActivities()">
                     {{ t('common.retry') }}
                   </Button>

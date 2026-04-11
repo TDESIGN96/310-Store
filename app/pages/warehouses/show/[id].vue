@@ -43,7 +43,12 @@ const canEditWarehouse = computed(() => canEdit('warehouses'))
 
 const warehouse = ref<WarehouseDetail | null>(null)
 const loading = ref(false)
-const errorMessage = ref('')
+const {
+  loadError,
+  clearLoadError,
+  setLoadErrorNotFound,
+  setLoadErrorFromException,
+} = useResourceListLoadError('warehouses_show', 'error')
 
 const parseWarehouse = (res: WarehouseShowResponse): WarehouseDetail | null => {
   const raw = res.data
@@ -96,25 +101,20 @@ const statusConfig = (status: string) => {
 
 const loadWarehouse = async () => {
   loading.value = true
-  errorMessage.value = ''
+  clearLoadError()
   warehouse.value = null
 
   try {
     const res = await $api<WarehouseShowResponse>(`/warehouses/${warehouseId}`)
     const w = parseWarehouse(res)
     if (!w) {
-      errorMessage.value = t('warehouses_show.not_found')
+      setLoadErrorNotFound()
       return
     }
     warehouse.value = w
   }
   catch (error: unknown) {
-    const msg = (error as { data?: { message?: string | { ar?: string } } })?.data?.message
-    errorMessage.value =
-      typeof msg === 'string'
-        ? msg
-        : (msg as { ar?: string } | undefined)?.ar
-        ?? t('warehouses_show.load_error')
+    setLoadErrorFromException(error)
   }
   finally {
     loading.value = false
@@ -177,11 +177,14 @@ onMounted(() => {
       </div>
 
       <div
-        v-else-if="errorMessage"
+        v-else-if="loadError"
         class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
       >
         <ShieldAlert class="size-8" />
-        <span>{{ errorMessage }}</span>
+        <p class="font-medium text-center">{{ loadError.title }}</p>
+        <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+          {{ loadError.detail }}
+        </p>
         <div class="flex gap-2">
           <Button variant="outline" size="sm" @click="loadWarehouse">
             {{ t('warehouses_show.retry') }}

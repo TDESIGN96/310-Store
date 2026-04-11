@@ -173,6 +173,19 @@ export default {
     col_date: 'Date',
     loading: 'Loading activities…',
     load_error: 'Could not load activities',
+    list_error_not_found_title: 'We could not load the activity log',
+    list_error_not_found_detail:
+      'The page may have moved, the link may be invalid, or the data is temporarily unavailable. Please try again.',
+    list_error_forbidden_title: 'You cannot view the activity log',
+    list_error_forbidden_detail:
+      'Your account does not have permission to open this page. Ask an administrator if you need access.',
+    list_error_unauthorized_title: 'Sign-in required',
+    list_error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    list_error_server_title: 'Could not load the activity log',
+    list_error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    list_error_generic_title: 'Could not load the activity log',
     empty: 'No activities match your search or filters.',
     no_permission: 'You do not have permission to view the activity log.',
     back_home: 'Back to home',
@@ -298,6 +311,19 @@ export default {
     delete_body: 'Are you sure you want to delete the role {name}?',
     delete_confirm: 'Yes, delete',
     load_error: 'Could not load roles',
+    list_error_not_found_title: 'We could not load the roles list',
+    list_error_not_found_detail:
+      'The address may be wrong, the list may have moved, or the data is temporarily unavailable. Try again or reopen Roles from the menu.',
+    list_error_forbidden_title: 'You cannot view roles',
+    list_error_forbidden_detail:
+      'Your account does not have permission to open the roles list. Ask an administrator if you need access.',
+    list_error_unauthorized_title: 'Sign-in required',
+    list_error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    list_error_server_title: 'Could not load roles',
+    list_error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    list_error_generic_title: 'Could not load roles',
     clone_name_suffix_en: ' copy',
     clone_name_suffix_ar: ' نسخة',
     delete_success: 'Role "{name}" deleted successfully',
@@ -350,6 +376,19 @@ export default {
     col_added_by: 'Added by',
     col_created: 'Created at',
     loading: 'Loading users…',
+    list_error_not_found_title: 'We could not load the users list',
+    list_error_not_found_detail:
+      'The page may have moved, the link may be invalid, or the data is temporarily unavailable. Please try again.',
+    list_error_forbidden_title: 'You cannot view users',
+    list_error_forbidden_detail:
+      'Your account does not have permission to open the users list. Ask an administrator if you need access.',
+    list_error_unauthorized_title: 'Sign-in required',
+    list_error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    list_error_server_title: 'Could not load users',
+    list_error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    list_error_generic_title: 'Could not load users',
     no_results: 'No matching search or filter results',
     no_users: 'No users yet',
     pagination: 'Showing {from}–{to} of {total} users',
@@ -422,6 +461,19 @@ export default {
   users_show: {
     title: 'User details',
     subtitle: 'View user information',
+    error_not_found_title: 'We could not find this user',
+    error_not_found_detail:
+      'This user may have been deleted, the link may be invalid, or the record is no longer available.',
+    error_forbidden_title: 'You cannot view this user',
+    error_forbidden_detail:
+      'Your account does not have permission to open this record. Ask an administrator if you need access.',
+    error_unauthorized_title: 'Sign-in required',
+    error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    error_server_title: 'Could not load this user',
+    error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    error_generic_title: 'Could not load this user',
     no_view_permission: 'You do not have permission to view this user',
     back: 'Back to users',
     loading: 'Loading data…',
@@ -462,6 +514,19 @@ export default {
     pagination: 'Showing {from}–{to} of {total} units',
     total: 'Total: {total} units',
     load_error: 'Could not load units',
+    list_error_not_found_title: 'We could not load the units list',
+    list_error_not_found_detail:
+      'The address may be wrong, the list may have moved, or the data is temporarily unavailable. Try again or reopen Units from the menu.',
+    list_error_forbidden_title: 'You cannot view units',
+    list_error_forbidden_detail:
+      'Your account does not have permission to open the units list. Ask an administrator if you need access.',
+    list_error_unauthorized_title: 'Sign-in required',
+    list_error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    list_error_server_title: 'Could not load units',
+    list_error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    list_error_generic_title: 'Could not load units',
     delete_success: 'Unit "{name}" deleted successfully',
     delete_error: 'Could not delete the unit',
     deactivate_success: 'Unit "{name}" deactivated successfully',
@@ -519,6 +584,19 @@ export default {
     pagination: 'Showing {from}–{to} of {total} categories',
     total: 'Total: {total} categories',
     load_error: 'Could not load categories',
+    list_error_not_found_title: 'We could not load the categories list',
+    list_error_not_found_detail:
+      'The address may be wrong, the list may have moved, or the data is temporarily unavailable. Try again or reopen Categories from the menu.',
+    list_error_forbidden_title: 'You cannot view categories',
+    list_error_forbidden_detail:
+      'Your account does not have permission to open the categories list. Ask an administrator if you need access.',
+    list_error_unauthorized_title: 'Sign-in required',
+    list_error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    list_error_server_title: 'Could not load categories',
+    list_error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    list_error_generic_title: 'Could not load categories',
     delete_success: 'Category "{name}" deleted successfully',
     delete_error: 'Could not delete the category',
     deactivate_success: 'Category "{name}" deactivated successfully',
@@ -571,6 +649,19 @@ export default {
     pagination: 'Showing {from}–{to} of {total} warehouses',
     total: 'Total: {total} warehouses',
     load_error: 'Could not load warehouses',
+    list_error_not_found_title: 'We could not load the warehouses list',
+    list_error_not_found_detail:
+      'The page may have moved, the link may be invalid, or the data is temporarily unavailable. Please try again.',
+    list_error_forbidden_title: 'You cannot view warehouses',
+    list_error_forbidden_detail:
+      'Your account does not have permission to open the warehouses list. Ask an administrator if you need access.',
+    list_error_unauthorized_title: 'Sign-in required',
+    list_error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    list_error_server_title: 'Could not load warehouses',
+    list_error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    list_error_generic_title: 'Could not load warehouses',
     deactivate_success: 'Warehouse "{name}" deactivated successfully',
     deactivate_error: 'Could not deactivate the warehouse',
     activate_success: 'Warehouse "{name}" activated successfully',
@@ -633,6 +724,19 @@ export default {
     loading: 'Loading…',
     load_error: 'Could not load warehouse data',
     not_found: 'Warehouse not found',
+    error_not_found_title: 'We could not find this warehouse',
+    error_not_found_detail:
+      'It may have been deleted, the link may be wrong, or it may no longer exist.',
+    error_forbidden_title: 'You cannot view this warehouse',
+    error_forbidden_detail:
+      'Your account does not have permission to open this record. If you think this is a mistake, ask an administrator to review your access.',
+    error_unauthorized_title: 'Sign-in required',
+    error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    error_server_title: 'Something went wrong on our side',
+    error_server_detail:
+      'We could not load the warehouse right now. Please wait a moment and try again.',
+    error_generic_title: 'Could not load this warehouse',
     retry: 'Retry',
     back: 'Back to warehouses',
     edit_warehouse: 'Edit warehouse',
@@ -659,6 +763,32 @@ export default {
     all_warehouses: 'All warehouses',
     clear_filters: 'Clear filters',
     load_error: 'Could not load products',
+    list_error_not_found_title: 'We could not load the products list',
+    list_error_not_found_detail:
+      'The address may be wrong, the list may have moved, or the data is temporarily unavailable. Try again or reopen Products from the menu.',
+    list_error_forbidden_title: 'You cannot view products',
+    list_error_forbidden_detail:
+      'Your account does not have permission to open the products list. Ask an administrator if you need access.',
+    list_error_unauthorized_title: 'Sign-in required',
+    list_error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    list_error_server_title: 'Could not load products',
+    list_error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    list_error_generic_title: 'Could not load products',
+    error_not_found_title: 'We could not find this product',
+    error_not_found_detail:
+      'This product may have been deleted, the link may be invalid, or the record is no longer available.',
+    error_forbidden_title: 'You cannot view this product',
+    error_forbidden_detail:
+      'Your account does not have permission to open this record. Ask an administrator if you need access.',
+    error_unauthorized_title: 'Sign-in required',
+    error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    error_server_title: 'Could not load this product',
+    error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    error_generic_title: 'Could not load this product',
     multiple_warehouses: 'Multiple warehouses',
     col_sku: 'SKU',
     col_name: 'Product name',
@@ -871,6 +1001,19 @@ export default {
     loading: 'Loading…',
     load_error: 'Could not load unit data',
     not_found: 'Unit not found',
+    error_not_found_title: 'We could not find this unit',
+    error_not_found_detail:
+      'This unit may have been deleted, the link may be invalid, or the record is no longer available.',
+    error_forbidden_title: 'You cannot view this unit',
+    error_forbidden_detail:
+      'Your account does not have permission to open this record. Ask an administrator if you need access.',
+    error_unauthorized_title: 'Sign-in required',
+    error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    error_server_title: 'Could not load this unit',
+    error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    error_generic_title: 'Could not load this unit',
     retry: 'Retry',
     back: 'Back to units',
     edit: 'Edit',
@@ -939,6 +1082,19 @@ export default {
     loading: 'Loading…',
     load_error: 'Could not load category data',
     not_found: 'Category not found',
+    error_not_found_title: 'We could not find this category',
+    error_not_found_detail:
+      'This category may have been deleted, the link may be invalid, or the record is no longer available.',
+    error_forbidden_title: 'You cannot view this category',
+    error_forbidden_detail:
+      'Your account does not have permission to open this record. Ask an administrator if you need access.',
+    error_unauthorized_title: 'Sign-in required',
+    error_unauthorized_detail:
+      'Your session may have expired. Sign in again, then return to this page.',
+    error_server_title: 'Could not load this category',
+    error_server_detail:
+      'Something went wrong on our side. Please wait a moment and try again.',
+    error_generic_title: 'Could not load this category',
     retry: 'Retry',
     back: 'Back to categories',
     edit: 'Edit',

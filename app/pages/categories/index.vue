@@ -107,7 +107,7 @@ const canShow = computed(() => canPerm('categories.show'))
 
 const categories = ref<CategoryItem[]>([])
 const loading = ref(false)
-const errorMessage = ref('')
+const { listLoadError, clearListLoadError, setListLoadErrorFromException } = useResourceListLoadError('categories_page')
 const pagination = ref<CategoriesPagination | null>(null)
 const currentPage = ref(1)
 
@@ -179,7 +179,7 @@ const loadParentsForFilter = async () => {
 
 const loadCategories = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
-  errorMessage.value = ''
+  clearListLoadError()
   try {
     const params: Record<string, string | number> = { page }
     if (query) {
@@ -212,11 +212,8 @@ const loadCategories = async (page = currentPage.value, query = search.value.tri
     currentPage.value = paginationData?.current_page ?? page
     selectedIds.value = new Set()
   }
-  catch (error: any) {
-    errorMessage.value
-      = error?.data?.message?.ar
-      ?? error?.data?.message
-      ?? t('categories_page.load_error')
+  catch (error: unknown) {
+    setListLoadErrorFromException(error)
   }
   finally {
     loading.value = false
@@ -777,11 +774,14 @@ onMounted(() => {
           </TableRow>
 
           <!-- Error -->
-          <TableRow v-else-if="errorMessage">
+          <TableRow v-else-if="listLoadError">
             <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
-                <span>{{ errorMessage }}</span>
+                <p class="font-medium text-center">{{ listLoadError.title }}</p>
+                <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+                  {{ listLoadError.detail }}
+                </p>
                 <Button variant="outline" size="sm" @click="loadCategories()">
                   {{ t('common.retry') }}
                 </Button>

@@ -80,10 +80,9 @@ interface ProductShowResponse {
 }
 
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFound } = useResourceListLoadError('products_page', 'error')
 
 const loading = ref(false)
-const errorMessage = ref('')
 const product = ref<ProductDetail | null>(null)
 
 const productName = computed(() => {
@@ -136,19 +135,19 @@ const boolLabel = (value: unknown) => {
 
 async function loadProduct() {
   loading.value = true
-  errorMessage.value = ''
+  clearLoadError()
   product.value = null
   try {
     const res = await $api<ProductShowResponse>(`/products/${id.value}`)
     const data = res.data?.product ?? res.product ?? null
     if (!data || typeof data !== 'object' || !('id' in data)) {
-      errorMessage.value = t('products_page.not_found')
+      setLoadErrorNotFound()
       return
     }
     product.value = data
   }
   catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error)
+    setLoadErrorFromException(error)
   }
   finally {
     loading.value = false
@@ -193,11 +192,14 @@ onMounted(() => {
     </div>
 
     <div
-      v-else-if="errorMessage"
+      v-else-if="loadError"
       class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
     >
       <ShieldAlert class="size-8" />
-      <span>{{ errorMessage }}</span>
+      <p class="font-medium text-center">{{ loadError.title }}</p>
+      <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+        {{ loadError.detail }}
+      </p>
       <div class="flex gap-2">
         <Button variant="outline" size="sm" @click="loadProduct">{{ t('common.retry') }}</Button>
         <Button variant="ghost" size="sm" as-child>

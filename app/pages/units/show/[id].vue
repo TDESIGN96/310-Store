@@ -57,7 +57,7 @@ const deleting = ref(false)
 
 const unit = ref<UnitDetail | null>(null)
 const loading = ref(false)
-const errorMessage = ref('')
+const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFound } = useResourceListLoadError('units_show', 'error')
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return '—'
@@ -98,25 +98,20 @@ const statusConfig = (status: string) => {
 
 const loadUnit = async () => {
   loading.value = true
-  errorMessage.value = ''
+  clearLoadError()
   unit.value = null
 
   try {
     const res = await $api<UnitShowResponse>(`/units/${unitId}`)
     const data = res.data
     if (!data || typeof data !== 'object' || !('id' in data)) {
-      errorMessage.value = t('units_show.not_found')
+      setLoadErrorNotFound()
       return
     }
     unit.value = data as UnitDetail
   }
   catch (error: unknown) {
-    const msg = (error as { data?: { message?: string | { ar?: string } } })?.data?.message
-    errorMessage.value =
-      typeof msg === 'string'
-        ? msg
-        : (msg as { ar?: string } | undefined)?.ar
-        ?? t('units_show.load_error')
+    setLoadErrorFromException(error)
   }
   finally {
     loading.value = false
@@ -211,11 +206,14 @@ onMounted(() => {
 
       <!-- Error -->
       <div
-        v-else-if="errorMessage"
+        v-else-if="loadError"
         class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
       >
         <ShieldAlert class="size-8" />
-        <span>{{ errorMessage }}</span>
+        <p class="font-medium text-center">{{ loadError.title }}</p>
+        <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+          {{ loadError.detail }}
+        </p>
         <div class="flex gap-2">
           <Button variant="outline" size="sm" @click="loadUnit">
             {{ t('units_show.retry') }}

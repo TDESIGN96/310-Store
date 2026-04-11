@@ -173,6 +173,19 @@ export default {
     col_date: 'التاريخ',
     loading: 'جاري تحميل الأنشطة…',
     load_error: 'تعذر تحميل سجل النشاط',
+    list_error_not_found_title: 'تعذر تحميل سجل النشاط',
+    list_error_not_found_detail:
+      'قد تكون الصفحة قد نُقلت، أو أن الرابط غير صحيح، أو أن البيانات غير متاحة مؤقتاً. يرجى إعادة المحاولة.',
+    list_error_forbidden_title: 'لا يمكنك عرض سجل النشاط',
+    list_error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح هذه الصفحة. اطلب من المسؤول منحك الوصول إذا كنت بحاجة إليه.',
+    list_error_unauthorized_title: 'يلزم تسجيل الدخول',
+    list_error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    list_error_server_title: 'تعذر تحميل سجل النشاط',
+    list_error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    list_error_generic_title: 'تعذر تحميل سجل النشاط',
     empty: 'لا توجد أنشطة مطابقة للبحث أو الفلاتر.',
     no_permission: 'لا تملك صلاحية عرض سجل النشاط.',
     back_home: 'العودة للرئيسية',
@@ -298,6 +311,19 @@ export default {
     delete_body: 'هل تريد بالفعل حذف هذه الصلاحية {name} ؟',
     delete_confirm: 'نعم، احذف',
     load_error: 'تعذر تحميل قائمة الصلاحيات حالياً',
+    list_error_not_found_title: 'تعذر تحميل قائمة الصلاحيات',
+    list_error_not_found_detail:
+      'قد يكون العنوان غير صحيح، أو نُقلت القائمة، أو البيانات غير متاحة مؤقتاً. أعد المحاولة أو افتح الصلاحيات من القائمة.',
+    list_error_forbidden_title: 'لا يمكنك عرض الصلاحيات',
+    list_error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح قائمة الأدوار. اطلب من المسؤول منحك الوصول إن كنت بحاجة إليه.',
+    list_error_unauthorized_title: 'يلزم تسجيل الدخول',
+    list_error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    list_error_server_title: 'تعذر تحميل قائمة الصلاحيات',
+    list_error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    list_error_generic_title: 'تعذر تحميل قائمة الصلاحيات',
     clone_name_suffix_en: ' copy',
     clone_name_suffix_ar: ' نسخة',
     delete_success: 'تم حذف "{name}" بنجاح',
@@ -350,6 +376,19 @@ export default {
     col_added_by: 'أُضيف بواسطة',
     col_created: 'تاريخ الإنشاء',
     loading: 'جاري تحميل المستخدمين…',
+    list_error_not_found_title: 'تعذر تحميل قائمة المستخدمين',
+    list_error_not_found_detail:
+      'قد تكون الصفحة قد نُقلت، أو أن الرابط غير صحيح، أو أن البيانات غير متاحة مؤقتاً. يرجى إعادة المحاولة.',
+    list_error_forbidden_title: 'لا يمكنك عرض المستخدمين',
+    list_error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح قائمة المستخدمين. اطلب من المسؤول منحك الوصول إذا كنت بحاجة إليه.',
+    list_error_unauthorized_title: 'يلزم تسجيل الدخول',
+    list_error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    list_error_server_title: 'تعذر تحميل قائمة المستخدمين',
+    list_error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    list_error_generic_title: 'تعذر تحميل قائمة المستخدمين',
     no_results: 'لا توجد نتائج مطابقة للبحث أو الفلاتر',
     no_users: 'لا يوجد مستخدمون',
     pagination: 'عرض {from}–{to} من إجمالي {total} مستخدم',
@@ -421,6 +460,19 @@ export default {
   users_show: {
     title: 'عرض المستخدم',
     subtitle: 'عرض تفاصيل المستخدم',
+    error_not_found_title: 'تعذر العثور على هذا المستخدم',
+    error_not_found_detail:
+      'قد يكون هذا المستخدم قد حُذف، أو أن الرابط غير صحيح، أو أن السجل لم يعد متاحاً.',
+    error_forbidden_title: 'لا يمكنك عرض هذا المستخدم',
+    error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح هذا السجل. اطلب من المسؤول منحك الوصول إذا كنت بحاجة إليه.',
+    error_unauthorized_title: 'يلزم تسجيل الدخول',
+    error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    error_server_title: 'تعذر تحميل بيانات هذا المستخدم',
+    error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    error_generic_title: 'تعذر تحميل بيانات هذا المستخدم',
     no_view_permission: 'ليس لديك صلاحية لعرض هذا المستخدم',
     back: 'العودة إلى المستخدمين',
     loading: 'جاري تحميل البيانات…',
@@ -461,6 +513,19 @@ export default {
     pagination: 'عرض {from}–{to} من إجمالي {total} وحدة',
     total: 'إجمالي {total} وحدة',
     load_error: 'تعذر تحميل قائمة الوحدات حالياً',
+    list_error_not_found_title: 'تعذر تحميل قائمة الوحدات',
+    list_error_not_found_detail:
+      'قد يكون العنوان غير صحيح، أو نُقلت القائمة، أو البيانات غير متاحة مؤقتاً. أعد المحاولة أو افتح الوحدات من القائمة.',
+    list_error_forbidden_title: 'لا يمكنك عرض الوحدات',
+    list_error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح قائمة وحدات القياس. اطلب من المسؤول منحك الوصول إن كنت بحاجة إليه.',
+    list_error_unauthorized_title: 'يلزم تسجيل الدخول',
+    list_error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    list_error_server_title: 'تعذر تحميل قائمة الوحدات',
+    list_error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    list_error_generic_title: 'تعذر تحميل قائمة الوحدات',
     delete_success: 'تم حذف "{name}" بنجاح',
     delete_error: 'تعذر حذف الوحدة حالياً',
     deactivate_success: 'تم إيقاف الوحدة "{name}" بنجاح',
@@ -518,6 +583,19 @@ export default {
     pagination: 'عرض {from}–{to} من إجمالي {total} فئة',
     total: 'إجمالي {total} فئة',
     load_error: 'تعذر تحميل قائمة الفئات حالياً',
+    list_error_not_found_title: 'تعذر تحميل قائمة الفئات',
+    list_error_not_found_detail:
+      'قد يكون العنوان غير صحيح، أو نُقلت القائمة، أو البيانات غير متاحة مؤقتاً. أعد المحاولة أو افتح الفئات من القائمة.',
+    list_error_forbidden_title: 'لا يمكنك عرض الفئات',
+    list_error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح قائمة فئات المنتجات. اطلب من المسؤول منحك الوصول إن كنت بحاجة إليه.',
+    list_error_unauthorized_title: 'يلزم تسجيل الدخول',
+    list_error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    list_error_server_title: 'تعذر تحميل قائمة الفئات',
+    list_error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    list_error_generic_title: 'تعذر تحميل قائمة الفئات',
     delete_success: 'تم حذف "{name}" بنجاح',
     delete_error: 'تعذر حذف الفئة حالياً',
     deactivate_success: 'تم إيقاف الفئة "{name}" بنجاح',
@@ -570,6 +648,19 @@ export default {
     pagination: 'عرض {from}–{to} من إجمالي {total} مستودع',
     total: 'إجمالي {total} مستودع',
     load_error: 'تعذر تحميل قائمة المستودعات حالياً',
+    list_error_not_found_title: 'تعذر تحميل قائمة المستودعات',
+    list_error_not_found_detail:
+      'قد تكون الصفحة قد نُقلت، أو أن الرابط غير صحيح، أو أن البيانات غير متاحة مؤقتاً. يرجى إعادة المحاولة.',
+    list_error_forbidden_title: 'لا يمكنك عرض المستودعات',
+    list_error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح قائمة المستودعات. اطلب من المسؤول منحك الوصول إذا كنت بحاجة إليه.',
+    list_error_unauthorized_title: 'يلزم تسجيل الدخول',
+    list_error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    list_error_server_title: 'تعذر تحميل قائمة المستودعات',
+    list_error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    list_error_generic_title: 'تعذر تحميل قائمة المستودعات',
     deactivate_success: 'تم إيقاف المستودع "{name}" بنجاح',
     deactivate_error: 'تعذر إيقاف المستودع حالياً',
     activate_success: 'تم تفعيل المستودع "{name}" بنجاح',
@@ -632,6 +723,19 @@ export default {
     loading: 'جاري التحميل…',
     load_error: 'تعذر تحميل بيانات المستودع',
     not_found: 'المستودع غير موجود',
+    error_not_found_title: 'تعذر العثور على هذا المستودع',
+    error_not_found_detail:
+      'قد يكون قد حُذف، أو أن الرابط غير صحيح، أو أنه لم يعد موجود.',
+    error_forbidden_title: 'لا يمكنك عرض هذا المستودع',
+    error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح هذا السجل. إذا كنت تعتقد أن ذلك خطأ، اطلب من المسؤول مراجعة صلاحياتك.',
+    error_unauthorized_title: 'يلزم تسجيل الدخول',
+    error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    error_server_title: 'حدث خطأ من جهة الخادم',
+    error_server_detail:
+      'تعذر تحميل المستودع حالياً. انتظر قليلاً ثم أعد المحاولة.',
+    error_generic_title: 'تعذر تحميل هذا المستودع',
     retry: 'إعادة المحاولة',
     back: 'العودة إلى المستودعات',
     edit_warehouse: 'تعديل المستودع',
@@ -658,6 +762,32 @@ export default {
     all_warehouses: 'كل المستودعات',
     clear_filters: 'مسح التصفية',
     load_error: 'تعذر تحميل المنتجات',
+    list_error_not_found_title: 'تعذر تحميل قائمة المنتجات',
+    list_error_not_found_detail:
+      'قد يكون العنوان غير صحيح، أو نُقلت القائمة، أو البيانات غير متاحة مؤقتاً. أعد المحاولة أو افتح المنتجات من القائمة.',
+    list_error_forbidden_title: 'لا يمكنك عرض المنتجات',
+    list_error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح قائمة المنتجات. اطلب من المسؤول منحك الوصول إن كنت بحاجة إليه.',
+    list_error_unauthorized_title: 'يلزم تسجيل الدخول',
+    list_error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    list_error_server_title: 'تعذر تحميل قائمة المنتجات',
+    list_error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    list_error_generic_title: 'تعذر تحميل قائمة المنتجات',
+    error_not_found_title: 'تعذر العثور على هذا المنتج',
+    error_not_found_detail:
+      'قد يكون هذا المنتج قد حُذف، أو أن الرابط غير صحيح، أو أن السجل لم يعد متاحاً.',
+    error_forbidden_title: 'لا يمكنك عرض هذا المنتج',
+    error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح هذا السجل. اطلب من المسؤول منحك الوصول إذا كنت بحاجة إليه.',
+    error_unauthorized_title: 'يلزم تسجيل الدخول',
+    error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    error_server_title: 'تعذر تحميل بيانات هذا المنتج',
+    error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    error_generic_title: 'تعذر تحميل بيانات هذا المنتج',
     multiple_warehouses: 'عدة مخازن',
     col_sku: 'SKU',
     col_name: 'الاسم',
@@ -869,6 +999,19 @@ export default {
     loading: 'جاري التحميل…',
     load_error: 'تعذر تحميل بيانات الوحدة',
     not_found: 'لم يتم العثور على الوحدة',
+    error_not_found_title: 'تعذر العثور على هذه الوحدة',
+    error_not_found_detail:
+      'قد تكون هذه الوحدة قد حُذفت، أو أن الرابط غير صحيح، أو أن السجل لم يعد متاحاً.',
+    error_forbidden_title: 'لا يمكنك عرض هذه الوحدة',
+    error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح هذا السجل. اطلب من المسؤول منحك الوصول إذا كنت بحاجة إليه.',
+    error_unauthorized_title: 'يلزم تسجيل الدخول',
+    error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    error_server_title: 'تعذر تحميل بيانات هذه الوحدة',
+    error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    error_generic_title: 'تعذر تحميل بيانات هذه الوحدة',
     retry: 'إعادة المحاولة',
     back: 'العودة للوحدات',
     edit: 'تعديل',
@@ -937,6 +1080,19 @@ export default {
     loading: 'جاري التحميل…',
     load_error: 'تعذر تحميل بيانات الفئة',
     not_found: 'لم يتم العثور على الفئة',
+    error_not_found_title: 'تعذر العثور على هذه الفئة',
+    error_not_found_detail:
+      'قد تكون هذه الفئة قد حُذفت، أو أن الرابط غير صحيح، أو أن السجل لم يعد متاحاً.',
+    error_forbidden_title: 'لا يمكنك عرض هذه الفئة',
+    error_forbidden_detail:
+      'حسابك لا يملك صلاحية فتح هذا السجل. اطلب من المسؤول منحك الوصول إذا كنت بحاجة إليه.',
+    error_unauthorized_title: 'يلزم تسجيل الدخول',
+    error_unauthorized_detail:
+      'انتهت جلستك أو تحتاج لتسجيل الدخول مجدداً. سجّل الدخول ثم عد إلى هذه الصفحة.',
+    error_server_title: 'تعذر تحميل بيانات هذه الفئة',
+    error_server_detail:
+      'حدث خطأ من جهة الخادم. انتظر قليلاً ثم أعد المحاولة.',
+    error_generic_title: 'تعذر تحميل بيانات هذه الفئة',
     retry: 'إعادة المحاولة',
     back: 'العودة للفئات',
     edit: 'تعديل',

@@ -80,7 +80,7 @@ const canShowWarehouse = computed(() => canAccess('warehouses'))
 
 const warehouses = ref<WarehouseItem[]>([])
 const loading = ref(false)
-const errorMessage = ref('')
+const { listLoadError, clearListLoadError, setListLoadErrorFromException } = useResourceListLoadError('warehouses_page')
 const pagination = ref<WarehousesPagination | null>(null)
 const currentPage = ref(1)
 
@@ -92,7 +92,7 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const loadWarehouses = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
-  errorMessage.value = ''
+  clearListLoadError()
   try {
     const params: Record<string, string | number> = { page }
     if (query) {
@@ -119,11 +119,8 @@ const loadWarehouses = async (page = currentPage.value, query = search.value.tri
     pagination.value = paginationData
     currentPage.value = paginationData?.current_page ?? page
   }
-  catch (error: any) {
-    errorMessage.value
-      = error?.data?.message?.ar
-      ?? error?.data?.message
-      ?? t('warehouses_page.load_error')
+  catch (error: unknown) {
+    setListLoadErrorFromException(error)
   }
   finally {
     loading.value = false
@@ -183,6 +180,11 @@ const warehouseDisplayName = (w: WarehouseItem) => {
   return w.name_en?.trim() || w.name_ar?.trim() || '—'
 }
 
+const truncateWarehouseName = (name: string, maxLength = 30) => {
+  if (name.length <= maxLength) return name
+  return `${name.slice(0, maxLength)}...`
+}
+
 const isActiveStatus = (status: string) => String(status).toLowerCase() === 'active'
 
 const statusConfig = (status: string) => {
@@ -204,7 +206,7 @@ const statusConfig = (status: string) => {
 
 const emptyListMessage = computed(() => {
   if (warehouses.value.length > 0) return ''
-  if (loading.value || errorMessage.value) return ''
+  if (loading.value || listLoadError.value) return ''
   if (filterStatus.value !== 'all') return t('warehouses_page.empty_filter')
   if (search.value.trim()) return t('warehouses_page.empty_search')
   return t('warehouses_page.no_warehouses')
@@ -411,11 +413,14 @@ onMounted(() => loadWarehouses())
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="errorMessage">
+          <TableRow v-else-if="listLoadError">
             <TableCell :colspan="5" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
-                <span>{{ errorMessage }}</span>
+                <p class="font-medium text-center">{{ listLoadError.title }}</p>
+                <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+                  {{ listLoadError.detail }}
+                </p>
                 <Button variant="outline" size="sm" @click="loadWarehouses()">
                   {{ t('common.retry') }}
                 </Button>
@@ -444,9 +449,9 @@ onMounted(() => loadWarehouses())
                 @click="handleView(wh)"
               >
                 <Eye class="size-3.5 shrink-0" aria-hidden="true" />
-                <span class="min-w-0">{{ warehouseDisplayName(wh) }}</span>
+                <span class="min-w-0">{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>
               </button>
-              <span v-else>{{ warehouseDisplayName(wh) }}</span>
+              <span v-else>{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">
               {{ wh.location || '—' }}
@@ -582,7 +587,7 @@ onMounted(() => loadWarehouses())
         <AlertDialogDescription class="rtl:text-right">
           {{
             t('warehouses_page.delete_dialog_body', {
-              name: warehouseToDelete ? warehouseDisplayName(warehouseToDelete) : '',
+              name: warehouseToDelete ? truncateWarehouseName(warehouseDisplayName(warehouseToDelete)) : '',
             })
           }}
         </AlertDialogDescription>

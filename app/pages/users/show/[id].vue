@@ -80,11 +80,11 @@ const { $api } = useApi()
 const user = ref<UserData | null>(null)
 const roles = ref<RoleItem[]>([])
 const loading = ref(false)
-const errorMessage = ref('')
+const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFound } = useResourceListLoadError('users_show', 'error')
 
 const loadUser = async () => {
   loading.value = true
-  errorMessage.value = ''
+  clearLoadError()
 
   try {
     const data = await $api<UserResponse>(`/users/${userId}`)
@@ -98,10 +98,10 @@ const loadUser = async () => {
       user.value = null
     }
     if (!userData) {
-      errorMessage.value = t('errors.not_found')
+      setLoadErrorNotFound()
     }
   } catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error)
+    setLoadErrorFromException(error)
   } finally {
     loading.value = false
   }
@@ -135,8 +135,14 @@ const loadRoles = async () => {
 
 const roleLabel = (role: UserRole) => {
   const match = roles.value.find(r => Number(r.id) === Number(role.id))
-  if (match) return match.name_ar || match.name_en
-  return role.name_ar || role.name_en || role.name
+  if (match) {
+    return locale.value === 'ar'
+      ? (match.name_ar || match.name_en || role.name_ar || role.name_en || role.name)
+      : (match.name_en || match.name_ar || role.name_en || role.name_ar || role.name)
+  }
+  return locale.value === 'ar'
+    ? (role.name_ar || role.name_en || role.name)
+    : (role.name_en || role.name_ar || role.name)
 }
 
 const permissionLabel = (permission: string) => actionLabel(permission)
@@ -225,11 +231,14 @@ onMounted(() => {
 
       <!-- Error state -->
       <div
-        v-else-if="errorMessage"
+        v-else-if="loadError"
         class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
       >
         <ShieldAlert class="size-8" />
-        <span>{{ errorMessage }}</span>
+        <p class="font-medium text-center">{{ loadError.title }}</p>
+        <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+          {{ loadError.detail }}
+        </p>
         <Button variant="outline" size="sm" @click="loadUser">{{ t('common.retry') }}</Button>
       </div>
 
