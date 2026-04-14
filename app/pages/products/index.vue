@@ -15,7 +15,14 @@ import {
   X,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -91,6 +98,7 @@ interface ProductRow {
   categoryLabel: string
   warehouseLabel: string
   qty: number
+  productType: 'single' | 'combo' | 'unknown'
 }
 
 interface ProductsResponse {
@@ -140,11 +148,15 @@ function isWarehouseActive(warehouse: Record<string, unknown> | null | undefined
 }
 
 function warehouseDisplayName(warehouse: Record<string, unknown>, loc: string): string {
+  if (loc === 'ar') {
+    if (typeof warehouse.name_ar === 'string' && warehouse.name_ar.trim()) return warehouse.name_ar.trim()
+    if (typeof warehouse.name === 'string' && warehouse.name.trim()) return warehouse.name.trim()
+    if (typeof warehouse.name_en === 'string' && warehouse.name_en.trim()) return warehouse.name_en.trim()
+    return '—'
+  }
+  if (typeof warehouse.name_en === 'string' && warehouse.name_en.trim()) return warehouse.name_en.trim()
   if (typeof warehouse.name === 'string' && warehouse.name.trim()) return warehouse.name.trim()
-  if (loc === 'ar' && typeof warehouse.name_ar === 'string' && warehouse.name_ar.trim())
-    return warehouse.name_ar.trim()
-  if (typeof warehouse.name_en === 'string' && warehouse.name_en.trim())
-    return warehouse.name_en.trim()
+  if (typeof warehouse.name_ar === 'string' && warehouse.name_ar.trim()) return warehouse.name_ar.trim()
   return '—'
 }
 
@@ -197,17 +209,28 @@ function categoryLabelFromProduct(raw: Record<string, unknown>, loc: string): st
     if (typeof c.name_en === 'string' && c.name_en.trim()) return c.name_en
     if (typeof c.name === 'string' && c.name.trim()) return c.name
   }
+  if (loc === 'ar' && typeof raw.category_name_ar === 'string' && raw.category_name_ar.trim())
+    return raw.category_name_ar
+  if (loc === 'en' && typeof raw.category_name_en === 'string' && raw.category_name_en.trim())
+    return raw.category_name_en
   const fallback = raw.category_name ?? raw.categoryName
   return typeof fallback === 'string' ? fallback : '—'
 }
 
 /** Stored/display name exactly as from API `name` when present. */
 function productDisplayName(raw: Record<string, unknown>, loc: string): string {
-  if (typeof raw.name === 'string') return raw.name
-  if (typeof raw.title === 'string') return raw.title
-  if (loc === 'ar')
-    return String(raw.name_ar ?? raw.name_en ?? '—')
-  return String(raw.name_en ?? raw.name_ar ?? '—')
+  if (loc === 'ar') {
+    if (typeof raw.name_ar === 'string' && raw.name_ar.trim()) return raw.name_ar
+    if (typeof raw.name === 'string' && raw.name.trim()) return raw.name
+    if (typeof raw.title === 'string' && raw.title.trim()) return raw.title
+    if (typeof raw.name_en === 'string' && raw.name_en.trim()) return raw.name_en
+    return '—'
+  }
+  if (typeof raw.name_en === 'string' && raw.name_en.trim()) return raw.name_en
+  if (typeof raw.name === 'string' && raw.name.trim()) return raw.name
+  if (typeof raw.title === 'string' && raw.title.trim()) return raw.title
+  if (typeof raw.name_ar === 'string' && raw.name_ar.trim()) return raw.name_ar
+  return '—'
 }
 
 function productSku(raw: Record<string, unknown>): string {
@@ -223,6 +246,21 @@ function normalizeProductRow(raw: Record<string, unknown>, loc: string, multiple
   const pivots = extractWarehousePivotList(raw)
   const { warehouseLabel, qty } = deriveWarehouseAndQty(pivots, loc, multipleWh)
 
+  const isComboRaw = raw.is_combo ?? raw.isCombo ?? raw.product_type
+  let productType: ProductRow['productType'] = 'single'
+  if (
+    isComboRaw === true
+    || isComboRaw === 1
+    || isComboRaw === '1'
+    || (typeof isComboRaw === 'string' && isComboRaw.toLowerCase() === 'true')
+    || (typeof isComboRaw === 'string' && isComboRaw.toLowerCase() === 'combo')
+  ) {
+    productType = 'combo'
+  }
+  else if (typeof isComboRaw === 'string' && isComboRaw.toLowerCase() === 'unknown') {
+    productType = 'unknown'
+  }
+
   return {
     id: numId,
     sku: productSku(raw),
@@ -230,6 +268,7 @@ function normalizeProductRow(raw: Record<string, unknown>, loc: string, multiple
     categoryLabel: categoryLabelFromProduct(raw, loc),
     warehouseLabel,
     qty,
+    productType,
   }
 }
 
@@ -350,6 +389,11 @@ watch(search, () => {
     currentPage.value = 1
     loadProducts(1, search.value.trim())
   }, 450)
+})
+
+watch(locale, async () => {
+  await loadFilterOptions()
+  await loadProducts(currentPage.value, search.value.trim())
 })
 
 function clearFilters() {
@@ -495,17 +539,27 @@ onMounted(async () => {
 
 </div>
 
-<!-- Right side — new product button -->
-<Button
-  v-if="canCreateProduct"
-  class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] shrink-0"
-  as-child
->
-  <NuxtLink to="/products/create">
-    <Plus class="size-4" />
-    {{ t('products_page.new_product') }}
-  </NuxtLink>
-</Button>
+<!-- Right side — create dropdown -->
+<DropdownMenu v-if="canCreateProduct">
+  <DropdownMenuTrigger as-child>
+    <Button class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] shrink-0">
+      <Plus class="size-4" />
+      {{ t('products_page.new_product') }}
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent align="end">
+    <DropdownMenuItem as-child>
+      <NuxtLink to="/products/create" class="flex w-full cursor-pointer">
+        {{ t('products_page.create_single_option') }}
+      </NuxtLink>
+    </DropdownMenuItem>
+    <DropdownMenuItem as-child>
+      <NuxtLink to="/products/create-combo" class="flex w-full cursor-pointer">
+        {{ t('products_page.create_combo_option') }}
+      </NuxtLink>
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
 
 </div>
 
@@ -575,7 +629,16 @@ onMounted(async () => {
               {{ row.sku }}
             </TableCell>
             <TableCell class="text-sm font-medium">
-              {{ row.name }}
+              <div class="inline-flex items-center gap-2">
+                <span>{{ row.name }}</span>
+                <Badge
+                  v-if="row.productType === 'combo'"
+                  variant="secondary"
+                  class="text-[10px] uppercase tracking-wide"
+                >
+                  {{ t('products_page.combo_badge') }}
+                </Badge>
+              </div>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">
               {{ row.warehouseLabel }}
@@ -589,13 +652,13 @@ onMounted(async () => {
             <TableCell>
               <div class="flex flex-wrap items-center gap-1 justify-end">
                 <Button v-if="canShowProduct" variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
-                  <NuxtLink :to="`/products/show/${row.id}`">
+                  <NuxtLink :to="row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`">
                     <Eye class="size-3.5" />
                     {{ t('common.view') }}
                   </NuxtLink>
                 </Button>
                 <Button v-if="canEditProduct" variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
-                  <NuxtLink :to="`/products/edit/${row.id}`">
+                  <NuxtLink :to="row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`">
                     <Pencil class="size-3.5" />
                     {{ t('common.edit') }}
                   </NuxtLink>

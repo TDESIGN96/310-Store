@@ -3,9 +3,9 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { ArrowRight, Loader2, ShieldAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
-import ProductDetailsSection from '@/components/products/create/ProductDetailsSection.vue'
-import WarehouseAssignmentSection from '@/components/products/create/WarehouseAssignmentSection.vue'
-import PriceAssignmentSection from '@/components/products/create/PriceAssignmentSection.vue'
+import ComboDetailsSection from '@/components/products/create/ComboDetailsSection.vue'
+import ComboBundleComponentsSection from '@/components/products/create/ComboBundleComponentsSection.vue'
+import ComboPriceAssignmentSection from '@/components/products/create/ComboPriceAssignmentSection.vue'
 import { normalizeApiLocale } from '@/utils/apiLocale'
 
 definePageMeta({ layout: 'default' })
@@ -13,63 +13,60 @@ definePageMeta({ layout: 'default' })
 const { t, locale } = useI18n()
 const route = useRoute()
 const id = computed(() => route.params.id)
-
 const { can: canPerm } = usePermissions()
 const canShowProduct = computed(() => canPerm('products.show'))
-
 const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 const { $api } = useApi()
 const config = useRuntimeConfig()
 const authStore = useAuthStore()
-
 const canEdit = authStore.hasPermission('products.update')
 
-const productDetailsRef = ref<InstanceType<typeof ProductDetailsSection> | null>(null)
-const warehouseRef = ref<InstanceType<typeof WarehouseAssignmentSection> | null>(null)
-const priceRef = ref<InstanceType<typeof PriceAssignmentSection> | null>(null)
+const detailsRef = ref<InstanceType<typeof ComboDetailsSection> | null>(null)
+const bundleRef = ref<InstanceType<typeof ComboBundleComponentsSection> | null>(null)
+const priceRef = ref<InstanceType<typeof ComboPriceAssignmentSection> | null>(null)
 
 const loading = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
+const TEMP_COMBO_WAREHOUSE_ID = 1
+const TEMP_COMBO_QUANTITY = 1
+const TEMP_COMBO_MIN_QUANTITY = 0
 
 interface UploadedFileResponse {
-  data?: {
-    file?: {
-      path?: string
-      url?: string
-    }
-  }
+  data?: { file?: { path?: string; url?: string } }
 }
 
-interface ProductEditData {
+interface WarehouseListItem {
+  id?: number | string
+}
+
+interface WarehousesListResponse {
+  data?: { warehouses?: WarehouseListItem[] }
+  warehouses?: WarehouseListItem[]
+}
+
+interface ComboEditData {
   id: number
   name_en?: string
   name_ar?: string
   sku?: string
   description?: string
-  barcode?: string
   category?: { id?: number }
   unit?: { id?: number }
+  is_combo?: boolean | number | string
+  product_type?: string
+  combo_items?: Array<{ product_id?: number | string; quantity?: number | string }>
   price?: string | number
-  inventory?: Array<{
-    warehouse_id?: number
-    quantity?: number | string
-    min_quantity?: number | string
-    allow_notification?: boolean | string | number
-    warehouse?: { id?: number }
-  }>
   tiered_prices?: Array<{
     quantity_from?: string | number
     quantity_to?: string | number
     price?: string | number
   }>
-  is_combo?: boolean | number | string
-  product_type?: string
 }
 
 interface ProductShowResponse {
-  data?: { product?: ProductEditData }
-  product?: ProductEditData
+  data?: { product?: ComboEditData }
+  product?: ComboEditData
 }
 
 function isComboValue(value: unknown): boolean {
@@ -95,15 +92,39 @@ async function uploadFileAndGetUrl(file: File, token: string): Promise<string> {
     },
   })
   const fileUrl = uploadResult?.data?.file?.url || uploadResult?.data?.file?.path
-  if (!fileUrl)
-    throw new Error('File upload response did not include url/path')
+  if (!fileUrl) throw new Error('File upload response did not include url/path')
   return fileUrl
+}
+
+async function resolveDummyWarehouseId(token: string): Promise<number> {
+  const base = config.public.apiBase as string
+  try {
+    const response = await $fetch<WarehousesListResponse>(`${base.replace(/\/$/, '')}/warehouses`, {
+      method: 'GET',
+      query: { page: 1, per_page: 100, status: 'active' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        'Accept-Language': normalizeApiLocale(locale.value),
+      },
+    })
+    const list = response.data?.warehouses ?? response.warehouses ?? []
+    const firstWarehouse = list.find((w) => {
+      const warehouseId = Number(w.id)
+      return Number.isFinite(warehouseId) && warehouseId > 0
+    })
+    if (!firstWarehouse) return TEMP_COMBO_WAREHOUSE_ID
+    return Number(firstWarehouse.id)
+  }
+  catch {
+    return TEMP_COMBO_WAREHOUSE_ID
+  }
 }
 
 async function loadProduct() {
   loading.value = true
   errorMessage.value = ''
-  let prefillProduct: ProductEditData | null = null
+  let prefillProduct: ComboEditData | null = null
   try {
     const res = await $api<ProductShowResponse>(`/products/${id.value}`)
     const p = res.data?.product ?? res.product
@@ -112,8 +133,8 @@ async function loadProduct() {
       return
     }
     const isCombo = isComboValue(p.is_combo) || (typeof p.product_type === 'string' && p.product_type.toLowerCase() === 'combo')
-    if (isCombo) {
-      await navigateTo(`/products/edit-combo/${id.value}`)
+    if (!isCombo) {
+      await navigateTo(`/products/edit/${id.value}`)
       return
     }
     prefillProduct = p
@@ -125,29 +146,18 @@ async function loadProduct() {
     loading.value = false
   }
 
-  if (!prefillProduct || errorMessage.value)
-    return
+  if (!prefillProduct || errorMessage.value) return
 
   await nextTick()
-  productDetailsRef.value?.setInitialData({
+  detailsRef.value?.setInitialData({
     name_ar: prefillProduct.name_ar,
     name_en: prefillProduct.name_en,
     sku: prefillProduct.sku,
     category_id: prefillProduct.category?.id ?? null,
     unit_id: prefillProduct.unit?.id ?? null,
     description: prefillProduct.description ?? '',
-    barcode: prefillProduct.barcode ?? '',
   })
-
-  warehouseRef.value?.setAssignments(
-    (prefillProduct.inventory ?? []).map(row => ({
-      warehouse_id: row.warehouse_id ?? row.warehouse?.id,
-      quantity: row.quantity ?? 0,
-      min_quantity: row.min_quantity ?? 0,
-      allow_notification: row.allow_notification ?? false,
-    })),
-  )
-
+  bundleRef.value?.setBundleItems(prefillProduct.combo_items ?? [])
   priceRef.value?.setPricing({
     price: prefillProduct.price ?? '',
     tiered_prices: prefillProduct.tiered_prices ?? [],
@@ -156,13 +166,12 @@ async function loadProduct() {
 
 async function handleSave() {
   if (!canEdit) return
-
   errorMessage.value = ''
 
-  const detailsOk = productDetailsRef.value?.validate() ?? false
-  const warehouseOk = warehouseRef.value?.validate() ?? false
+  const detailsOk = detailsRef.value?.validate() ?? false
+  const bundleOk = bundleRef.value?.validate() ?? false
   const priceOk = priceRef.value?.validate() ?? false
-  if (!detailsOk || !warehouseOk || !priceOk) return
+  if (!detailsOk || !bundleOk || !priceOk) return
 
   const token = authStore.token
   if (!token) {
@@ -172,7 +181,10 @@ async function handleSave() {
 
   submitting.value = true
   try {
-    const detailsPayload = productDetailsRef.value!.getPayload()
+    const detailsPayload = detailsRef.value!.getPayload()
+    const bundleItems = bundleRef.value!.getBundleItems()
+    const pricing = priceRef.value!.getPricingPayload()
+    const dummyWarehouseId = await resolveDummyWarehouseId(token)
 
     const payload: Record<string, unknown> = {
       name_ar: detailsPayload.name_ar,
@@ -181,45 +193,25 @@ async function handleSave() {
       category_id: Number(detailsPayload.category_id),
       unit_id: Number(detailsPayload.unit_id),
       inventory: [] as Array<Record<string, unknown>>,
-      tiered_prices: [] as Array<Record<string, unknown>>,
+      description: detailsPayload.description || undefined,
+      is_combo: true,
+      combo_items: bundleItems,
+      price: Number(pricing.price),
+      tiered_prices: pricing.tiered_prices,
     }
-    if (detailsPayload.description)
-      payload.description = detailsPayload.description
-    if (detailsPayload.barcode)
-      payload.barcode = detailsPayload.barcode
-
-    if (detailsPayload.main_image_file) {
-      const mainImageUrl = await uploadFileAndGetUrl(detailsPayload.main_image_file, token)
-      payload.main_image_url = mainImageUrl
-    }
-    const additionalImages: string[] = []
-    for (const file of detailsPayload.additional_image_files) {
-      const imageUrl = await uploadFileAndGetUrl(file, token)
-      additionalImages.push(imageUrl)
-    }
-    if (additionalImages.length)
-      payload.images = additionalImages
 
     const inventory = payload.inventory as Array<Record<string, unknown>>
-    warehouseRef.value!.getAssignments().forEach((row) => {
-      inventory.push({
-        warehouse_id: Number(row.warehouse_id),
-        quantity: Number(row.quantity),
-        min_quantity: Number(row.min_quantity),
-        allow_notification: Boolean(row.allow_notification),
-      })
+    inventory.push({
+      warehouse_id: Number(dummyWarehouseId),
+      quantity: Number(TEMP_COMBO_QUANTITY),
+      min_quantity: Number(TEMP_COMBO_MIN_QUANTITY),
+      allow_notification: false,
     })
 
-    const pricing = priceRef.value!.getPricing()
-    payload.price = Number(pricing.standard_price)
-    const tieredPrices = payload.tiered_prices as Array<Record<string, unknown>>
-    pricing.tiered_prices.forEach((row) => {
-      tieredPrices.push({
-        quantity_from: Number(row.quantity_from),
-        quantity_to: Number(row.quantity_to),
-        price: Number(row.price),
-      })
-    })
+    if (detailsPayload.image_file) {
+      const imageUrl = await uploadFileAndGetUrl(detailsPayload.image_file, token)
+      payload.main_image_url = imageUrl
+    }
 
     const base = config.public.apiBase as string
     await $fetch(`${base.replace(/\/$/, '')}/products/${id.value}`, {
@@ -237,7 +229,7 @@ async function handleSave() {
   }
   catch (error: unknown) {
     if (isValidationError(error))
-      productDetailsRef.value?.applyServerErrors(getFieldErrors(error))
+      detailsRef.value?.applyServerErrors(getFieldErrors(error))
     else
       errorMessage.value = getErrorMessage(error)
   }
@@ -262,9 +254,7 @@ onMounted(() => {
       </Button>
       <div>
         <h1 class="text-2xl font-bold tracking-tight">{{ t('products_page.edit_title') }}</h1>
-        <p class="text-sm text-muted-foreground mt-1">
-          {{ t('products_page.edit_subtitle', { id: String(id) }) }}
-        </p>
+        <p class="text-sm text-muted-foreground mt-1">{{ t('products_page.edit_subtitle', { id: String(id) }) }}</p>
       </div>
     </div>
 
@@ -280,25 +270,19 @@ onMounted(() => {
     </div>
 
     <template v-else>
-      <div
-        v-if="errorMessage"
-        class="rounded-md bg-red-500/10 border border-red-200 text-red-600 text-sm px-4 py-3"
-      >
+      <div v-if="errorMessage" class="rounded-md bg-red-500/10 border border-red-200 text-red-600 text-sm px-4 py-3">
         {{ errorMessage }}
       </div>
 
-      <div
-        v-if="loading"
-        class="rounded-lg border p-8 text-center text-muted-foreground"
-      >
+      <div v-if="loading" class="rounded-lg border p-8 text-center text-muted-foreground">
         <Loader2 class="mx-auto size-10 animate-spin mb-3" />
         <p class="text-sm">{{ t('common.loading') }}</p>
       </div>
 
       <template v-else>
-        <ProductDetailsSection ref="productDetailsRef" />
-        <WarehouseAssignmentSection ref="warehouseRef" />
-        <PriceAssignmentSection ref="priceRef" />
+        <ComboDetailsSection ref="detailsRef" />
+        <ComboBundleComponentsSection ref="bundleRef" />
+        <ComboPriceAssignmentSection ref="priceRef" />
 
         <div class="flex flex-wrap items-center justify-end gap-2 pb-6">
           <Button
@@ -308,7 +292,7 @@ onMounted(() => {
             :disabled="submitting"
             as-child
           >
-            <NuxtLink :to="`/products/show/${id}`">{{ t('common.view') }}</NuxtLink>
+            <NuxtLink :to="`/products/show-combo/${id}`">{{ t('common.view') }}</NuxtLink>
           </Button>
           <Button
             type="button"

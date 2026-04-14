@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, Package, Loader2, ShieldAlert, Pencil } from 'lucide-vue-next'
+import { ArrowRight, Loader2, ShieldAlert, Pencil, Package } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -18,6 +18,8 @@ const route = useRoute()
 const id = computed(() => route.params.id)
 const { canEdit: canEditProd } = usePermissions()
 const canEditProduct = computed(() => canEditProd('products'))
+const { $api } = useApi()
+const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFound } = useResourceListLoadError('products_page', 'error')
 
 interface ProductCategory {
   id: number
@@ -32,62 +34,61 @@ interface ProductUnit {
   symbol?: string
 }
 
+interface ComboItem {
+  product_id?: number | string
+  quantity?: number | string
+  sort_order?: number
+  product?: {
+    id?: number
+    name_ar?: string
+    name_en?: string
+    name?: string
+  }
+}
+
 interface ProductTieredPrice {
   quantity_from: string | number
   quantity_to: string | number
   price: string | number
 }
 
-interface ProductInventoryItem {
-  warehouse_id?: number
-  quantity?: string | number
-  min_quantity?: string | number
-  allow_notification?: boolean | string | number
-  warehouse?: {
-    id: number
-    name_ar: string
-    name_en: string
-  }
-}
-
-interface ProductDetail {
+interface ComboProductDetail {
   id: number
   name_en?: string
   name_ar?: string
   sku?: string
-  identifier?: string
   description?: string
-  barcode?: string
   main_image_url?: string
   images?: string[]
   price?: string | number
-  category?: ProductCategory
-  unit?: ProductUnit
-  tiered_prices?: ProductTieredPrice[]
-  inventory?: ProductInventoryItem[]
-  created_at?: string
-  updated_at?: string
   is_combo?: boolean | number | string
   product_type?: string
+  category?: ProductCategory
+  unit?: ProductUnit
+  combo_items?: ComboItem[]
+  tiered_prices?: ProductTieredPrice[]
+  created_at?: string
+  updated_at?: string
 }
 
 interface ProductShowResponse {
-  status?: string
-  status_code?: number
-  data?: {
-    product?: ProductDetail
-  }
-  product?: ProductDetail
-  message?: string | null
+  data?: { product?: ComboProductDetail }
+  product?: ComboProductDetail
 }
 
-const { $api } = useApi()
-const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFound } = useResourceListLoadError('products_page', 'error')
-
 const loading = ref(false)
-const product = ref<ProductDetail | null>(null)
+const product = ref<ComboProductDetail | null>(null)
 
-const productName = computed(() => {
+function isComboValue(value: unknown): boolean {
+  if (value === true || value === 1 || value === '1') return true
+  if (typeof value === 'string') {
+    const normalized = value.toLowerCase()
+    return normalized === 'true' || normalized === 'combo'
+  }
+  return false
+}
+
+const comboName = computed(() => {
   if (!product.value) return '—'
   if (locale.value === 'ar') return product.value.name_ar || product.value.name_en || '—'
   return product.value.name_en || product.value.name_ar || '—'
@@ -113,6 +114,18 @@ const allImages = computed(() => {
   return [p.main_image_url, ...additional].filter((v): v is string => Boolean(v))
 })
 
+const comboItemsForView = computed(() => {
+  const list = product.value?.combo_items ?? []
+  return [...list].sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+})
+
+function comboItemName(item: ComboItem): string {
+  const p = item.product
+  if (!p) return `#${item.product_id ?? '—'}`
+  if (locale.value === 'ar') return p.name_ar || p.name_en || p.name || `#${item.product_id ?? '—'}`
+  return p.name_en || p.name_ar || p.name || `#${item.product_id ?? '—'}`
+}
+
 const formatDate = (value?: string) => {
   if (!value) return '—'
   try {
@@ -130,20 +143,6 @@ const formatDate = (value?: string) => {
   }
 }
 
-const boolLabel = (value: unknown) => {
-  const truthy = value === true || value === 1 || value === '1' || value === 'true'
-  return truthy ? t('common.yes') : t('common.no')
-}
-
-function isComboValue(value: unknown): boolean {
-  if (value === true || value === 1 || value === '1') return true
-  if (typeof value === 'string') {
-    const normalized = value.toLowerCase()
-    return normalized === 'true' || normalized === 'combo'
-  }
-  return false
-}
-
 async function loadProduct() {
   loading.value = true
   clearLoadError()
@@ -156,8 +155,8 @@ async function loadProduct() {
       return
     }
     const isCombo = isComboValue(data.is_combo) || (typeof data.product_type === 'string' && data.product_type.toLowerCase() === 'combo')
-    if (isCombo) {
-      await navigateTo(`/products/show-combo/${id.value}`)
+    if (!isCombo) {
+      await navigateTo(`/products/show/${id.value}`)
       return
     }
     product.value = data
@@ -185,14 +184,12 @@ onMounted(() => {
           </NuxtLink>
         </Button>
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">{{ t('products_page.show_title') }}</h1>
-          <p class="text-sm text-muted-foreground mt-1">
-            {{ t('products_page.show_subtitle', { id: String(id) }) }}
-          </p>
+          <h1 class="text-2xl font-bold tracking-tight">{{ t('products_combo.title') }}</h1>
+          <p class="text-sm text-muted-foreground mt-1">{{ t('products_page.show_subtitle', { id: String(id) }) }}</p>
         </div>
       </div>
       <Button v-if="canEditProduct && product" class="gap-2" variant="outline" as-child>
-        <NuxtLink :to="`/products/edit/${id}`">
+        <NuxtLink :to="`/products/edit-combo/${id}`">
           <Pencil class="size-4" />
           {{ t('common.edit') }}
         </NuxtLink>
@@ -234,12 +231,20 @@ onMounted(() => {
         </div>
         <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_page.col_name') }}</p>
-            <p class="font-medium">{{ productName }}</p>
+            <p class="text-xs text-muted-foreground">{{ t('products_form.name_ar') }}</p>
+            <p class="font-medium">{{ product.name_ar || '—' }}</p>
+          </div>
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('products_form.name_en') }}</p>
+            <p class="font-medium">{{ product.name_en || '—' }}</p>
           </div>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('products_page.col_sku') }}</p>
             <p class="font-mono">{{ product.sku || '—' }}</p>
+          </div>
+          <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('products_page.col_name') }}</p>
+            <p class="font-medium">{{ comboName }}</p>
           </div>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('products_page.col_category') }}</p>
@@ -252,10 +257,6 @@ onMounted(() => {
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('products_page.col_price') }}</p>
             <p>{{ product.price ?? '—' }}</p>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_form.barcode') }}</p>
-            <p class="font-mono">{{ product.barcode || '—' }}</p>
           </div>
           <div class="space-y-1 md:col-span-2">
             <p class="text-xs text-muted-foreground">{{ t('products_form.description') }}</p>
@@ -274,22 +275,30 @@ onMounted(() => {
 
       <div class="rounded-lg border overflow-hidden">
         <div class="bg-muted/40 px-4 py-3 border-b">
-          <h2 class="font-semibold">{{ t('products_page.show_images') }}</h2>
+          <h2 class="font-semibold">{{ t('products_combo.section_bundle_title') }}</h2>
         </div>
         <div class="p-4">
-          <div v-if="allImages.length" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <a
-              v-for="(url, idx) in allImages"
-              :key="`${url}-${idx}`"
-              :href="url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="block rounded border overflow-hidden bg-muted/20"
-            >
-              <img :src="url" :alt="`${productName} ${idx + 1}`" class="w-full h-32 object-cover">
-            </a>
+          <div class="rounded-md border overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{{ t('products_combo.col_product') }}</TableHead>
+                  <TableHead>{{ t('products_combo.col_quantity') }}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-if="!comboItemsForView.length">
+                  <TableCell :colspan="2" class="text-center text-sm text-muted-foreground py-8">
+                    {{ t('products_page.not_found') }}
+                  </TableCell>
+                </TableRow>
+                <TableRow v-for="(row, idx) in comboItemsForView" :key="idx">
+                  <TableCell>{{ comboItemName(row) }}</TableCell>
+                  <TableCell>{{ row.quantity ?? 0 }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
-          <p v-else class="text-sm text-muted-foreground">{{ t('products_page.show_no_images') }}</p>
         </div>
       </div>
 
@@ -326,52 +335,24 @@ onMounted(() => {
 
       <div class="rounded-lg border overflow-hidden">
         <div class="bg-muted/40 px-4 py-3 border-b">
-          <h2 class="font-semibold">{{ t('products_page.show_inventory') }}</h2>
+          <h2 class="font-semibold">{{ t('products_page.show_images') }}</h2>
         </div>
         <div class="p-4">
-          <div class="rounded-md border overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{{ t('warehouse_assignment.col_warehouse') }}</TableHead>
-                  <TableHead>{{ t('warehouse_assignment.col_stock') }}</TableHead>
-                  <TableHead>{{ t('warehouse_assignment.col_min_qty') }}</TableHead>
-                  <TableHead>{{ t('warehouse_assignment.col_notifications') }}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-if="!product.inventory?.length">
-                  <TableCell :colspan="4" class="text-center text-sm text-muted-foreground py-8">
-                    {{ t('products_page.show_no_inventory') }}
-                  </TableCell>
-                </TableRow>
-                <TableRow v-for="(row, idx) in product.inventory" :key="idx">
-                  <TableCell>
-                    {{
-                      locale === 'ar'
-                        ? (row.warehouse?.name_ar || row.warehouse?.name_en || `#${row.warehouse_id ?? '—'}`)
-                        : (row.warehouse?.name_en || row.warehouse?.name_ar || `#${row.warehouse_id ?? '—'}`)
-                    }}
-                  </TableCell>
-                  <TableCell>{{ row.quantity ?? 0 }}</TableCell>
-                  <TableCell>{{ row.min_quantity ?? 0 }}</TableCell>
-                  <TableCell>{{ boolLabel(row.allow_notification) }}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <div v-if="allImages.length" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <a
+              v-for="(url, idx) in allImages"
+              :key="`${url}-${idx}`"
+              :href="url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="block rounded border overflow-hidden bg-muted/20"
+            >
+              <img :src="url" :alt="`${comboName} ${idx + 1}`" class="w-full h-32 object-cover">
+            </a>
           </div>
+          <p v-else class="text-sm text-muted-foreground">{{ t('products_page.show_no_images') }}</p>
         </div>
       </div>
     </template>
-
-    <div v-else class="rounded-lg border p-8 text-center text-muted-foreground">
-      <Button variant="ghost" size="icon" class="size-8" as-child>
-        <NuxtLink to="/products">
-          <ArrowRight class="size-4" />
-        </NuxtLink>
-      </Button>
-      <Package class="mx-auto size-10 opacity-40 mb-3" />
-      <p class="text-sm">{{ t('products_page.not_found') }}</p>
-    </div>
   </div>
 </template>
