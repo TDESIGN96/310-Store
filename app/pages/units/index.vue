@@ -511,7 +511,7 @@ onMounted(() => loadUnits())
         </div>
 
         <!-- Status Filter -->
-        <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
+        <Select :key="`unit-status-${locale}`" :model-value="filterStatus" @update:model-value="onStatusFilterChange">
           <SelectTrigger class="w-[min(100%,11rem)] h-9">
             <Filter class="size-3.5 shrink-0 text-muted-foreground ml-1" />
             <SelectValue :placeholder="t('common.status')" />

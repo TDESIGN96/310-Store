@@ -277,7 +277,7 @@ onMounted(() => {
                 <p class="text-xs text-muted-foreground">{{ t('units_show.added_by') }}</p>
                 <p class="text-sm font-medium">{{ authorDisplay(unit.created_by) }}</p>
               </div>
-              <div class="space-y-1">
+              <div v-if="unit.updated_by != null" class="space-y-1">
                 <p class="text-xs text-muted-foreground">{{ t('units_show.updated_by') }}</p>
                 <p class="text-sm font-medium">{{ authorDisplay(unit.updated_by) }}</p>
               </div>
@@ -285,7 +285,7 @@ onMounted(() => {
                 <p class="text-xs text-muted-foreground">{{ t('units_show.created_at') }}</p>
                 <p class="text-sm">{{ formatDate(unit.created_at) }}</p>
               </div>
-              <div class="space-y-1">
+              <div v-if="unit.updated_by != null" class="space-y-1">
                 <p class="text-xs text-muted-foreground">{{ t('units_show.updated_at') }}</p>
                 <p class="text-sm">{{ formatDate(unit.updated_at) }}</p>
               </div>

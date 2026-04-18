@@ -31,8 +31,8 @@ export const useApi = () => {
         return
       }
 
-      // 422 → handled per form with getFieldErrors() + field UI
-      if (response.status === 422) return
+      // 404/422 → handled by page-level inline UI (loadError/field errors)
+      if (response.status === 404 || response.status === 422) return
 
       // Backend `message` (e.g. Arabic) — getErrorMessage reads `response._data`
       import('vue-sonner').then(({ toast }) => {

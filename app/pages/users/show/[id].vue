@@ -55,6 +55,8 @@ interface UserData {
   name: string
   email: string
   email_verified_at: string | null
+  created_by?: number | null
+  updated_by?: number | null
   created_at: string
   updated_at: string
   roles: UserRole[]
@@ -305,7 +307,7 @@ onMounted(() => {
               </p>
               <p class="text-sm">{{ formatDate(user.created_at) }}</p>
             </div>
-            <div class="space-y-1">
+            <div v-if="user.updated_by != null" class="space-y-1">
               <p class="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar class="size-3.5" />
                 {{ t('users_show.updated_at') }}

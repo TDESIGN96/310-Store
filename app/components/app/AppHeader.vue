@@ -40,6 +40,7 @@ const setLanguage = async (code: 'ar' | 'en') => {
   if (locale.value === code) return
   // Nuxt i18n: use setLocale() — assigning locale.value skips loading non-default locale messages.
   await setLocale(code)
+  reloadNuxtApp()
 }
 
 const roleLabelKey = (role: string | undefined) => {

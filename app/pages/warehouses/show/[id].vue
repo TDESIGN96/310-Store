@@ -13,6 +13,12 @@ interface WarehouseManager {
   email?: string
 }
 
+interface WarehouseAuthor {
+  id: number
+  name?: string
+  email?: string
+}
+
 interface WarehouseDetail {
   id: number
   name_ar: string
@@ -21,6 +27,8 @@ interface WarehouseDetail {
   address?: string | null
   status: string
   manager?: WarehouseManager | null
+  created_by?: WarehouseAuthor | number | null
+  updated_by?: WarehouseAuthor | number | null
   created_at?: string
   updated_at?: string
 }
@@ -80,6 +88,12 @@ const formatDate = (dateStr: string | null | undefined) => {
   catch {
     return dateStr
   }
+}
+
+const authorDisplay = (value?: WarehouseAuthor | number | null) => {
+  if (!value) return '—'
+  if (typeof value === 'number') return `#${value}`
+  return value.name || `#${value.id}`
 }
 
 const statusConfig = (status: string) => {
@@ -244,7 +258,7 @@ onMounted(() => {
         </div>
 
         <div
-          v-if="warehouse.created_at || warehouse.updated_at"
+          v-if="warehouse.created_by != null || warehouse.updated_by != null || warehouse.created_at || warehouse.updated_at"
           class="rounded-lg border overflow-hidden"
         >
           <div class="bg-muted/40 px-4 py-3 border-b">
@@ -254,11 +268,19 @@ onMounted(() => {
             </h2>
           </div>
           <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('common.added_by') }}</p>
+              <p class="text-sm font-medium">{{ authorDisplay(warehouse.created_by) }}</p>
+            </div>
+            <div v-if="warehouse.updated_by != null" class="space-y-1">
+              <p class="text-xs text-muted-foreground">{{ t('common.last_modified_by') }}</p>
+              <p class="text-sm font-medium">{{ authorDisplay(warehouse.updated_by) }}</p>
+            </div>
             <div v-if="warehouse.created_at" class="space-y-1">
               <p class="text-xs text-muted-foreground">{{ t('common.created_at') }}</p>
               <p class="text-sm font-medium">{{ formatDate(warehouse.created_at) }}</p>
             </div>
-            <div v-if="warehouse.updated_at" class="space-y-1">
+            <div v-if="warehouse.updated_by != null && warehouse.updated_at" class="space-y-1">
               <p class="text-xs text-muted-foreground">{{ t('common.updated_at') }}</p>
               <p class="text-sm font-medium">{{ formatDate(warehouse.updated_at) }}</p>
             </div>

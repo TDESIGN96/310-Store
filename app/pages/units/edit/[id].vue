@@ -71,8 +71,7 @@ const fieldErrors = ref({
 
 // ── Validation regexes ─────────────────────────────────────────────────────────
 
-const ARABIC_RE = /^[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF\s\u0020-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E]+$/
-const ENGLISH_RE = /^[A-Za-z\s]+$/
+const MIXED_NAME_RE = /^[A-Za-z\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s]+$/
 
 // ── Data loading ───────────────────────────────────────────────────────────────
 
@@ -116,14 +115,14 @@ const validateForm = (): boolean => {
   if (!nameAr.value.trim()) {
     fieldErrors.value.name_ar = t('units_form.validation_name_ar_required')
   }
-  else if (!ARABIC_RE.test(nameAr.value.trim())) {
+  else if (!MIXED_NAME_RE.test(nameAr.value.trim())) {
     fieldErrors.value.name_ar = t('units_form.validation_name_ar_letters')
   }
 
   if (!nameEn.value.trim()) {
     fieldErrors.value.name_en = t('units_form.validation_name_en_required')
   }
-  else if (!ENGLISH_RE.test(nameEn.value.trim())) {
+  else if (!MIXED_NAME_RE.test(nameEn.value.trim())) {
     fieldErrors.value.name_en = t('units_form.validation_name_en_letters')
   }
 

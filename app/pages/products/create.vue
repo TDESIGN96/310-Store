@@ -78,6 +78,7 @@ async function handleSave() {
       sku: detailsPayload.sku,
       category_id: Number(detailsPayload.category_id),
       unit_id: Number(detailsPayload.unit_id),
+      is_combo: false,
       inventory: [] as Array<Record<string, unknown>>,
       tiered_prices: [] as Array<Record<string, unknown>>,
     }

@@ -238,6 +238,10 @@ watch(search, (value) => {
   }, 1000)
 })
 
+watch(locale, () => {
+  loadParentsForFilter()
+})
+
 const onStatusFilterChange = (value: unknown) => {
   const v = String(value ?? 'all')
   filterStatus.value = (['active', 'inactive'] as const).includes(v as any)
@@ -585,7 +589,7 @@ onMounted(() => {
         </div>
 
         <!-- Status Filter -->
-        <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
+        <Select :key="`status-${locale}`" :model-value="filterStatus" @update:model-value="onStatusFilterChange">
           <SelectTrigger class="w-[min(100%,11rem)] h-9">
             <Filter class="size-3.5 shrink-0 text-muted-foreground ml-1" />
             <SelectValue :placeholder="t('common.status')" />
@@ -598,7 +602,7 @@ onMounted(() => {
         </Select>
 
         <!-- Parent Category Filter -->
-        <Select :model-value="filterParentId" @update:model-value="onParentFilterChange">
+        <Select :key="`parent-${locale}`" :model-value="filterParentId" @update:model-value="onParentFilterChange">
           <SelectTrigger class="w-[min(100%,13rem)] h-9">
             <Tag class="size-3.5 shrink-0 text-muted-foreground ml-1" />
             <SelectValue :placeholder="t('categories_page.filter_parent')" />

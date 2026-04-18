@@ -30,6 +30,11 @@ interface RoleItem {
   id: string
   name_en: string
   name_ar: string
+  created_by?: {
+    id: number | string
+    name?: string
+    email?: string
+  } | number | null
 }
 
 interface RolesPagination {
@@ -117,6 +122,13 @@ const rolePrimaryName = (role: RoleItem) =>
     ? (role.name_ar || role.name_en || '—')
     : (role.name_en || role.name_ar || '—')
 
+const createdByDisplay = (value?: RoleItem['created_by']) => {
+  if (!value) return '—'
+  if (typeof value === 'number') return `#${value}`
+  const id = typeof value.id === 'number' || typeof value.id === 'string' ? value.id : '—'
+  return value.name || `#${id}`
+}
+
 const confirmDelete = async () => {
   if (!roleToDelete.value) return
 
@@ -189,13 +201,14 @@ onMounted(loadRoles)
             <TableHead class="rtl:text-right font-medium">
               {{ locale === 'ar' ? t('roles_page.col_name_ar') : t('roles_page.col_name_en') }}
             </TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
             <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="2" class="py-14 text-center">
+            <TableCell :colspan="3" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('roles_page.loading') }}
@@ -204,7 +217,7 @@ onMounted(loadRoles)
           </TableRow>
 
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="2" class="py-14 text-center">
+            <TableCell :colspan="3" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -217,7 +230,7 @@ onMounted(loadRoles)
           </TableRow>
 
           <TableRow v-else-if="roles.length === 0">
-            <TableCell :colspan="2" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="3" class="py-14 text-center text-sm text-muted-foreground">
               {{ search ? t('roles_page.no_results_search') : t('roles_page.no_roles') }}
             </TableCell>
           </TableRow>
@@ -229,6 +242,7 @@ onMounted(loadRoles)
             class="hover:bg-muted/30 transition-colors"
           >
             <TableCell class="font-medium">{{ rolePrimaryName(role) }}</TableCell>
+            <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(role.created_by) }}</TableCell>
             <TableCell>
               <div class="flex items-center gap-3 text-sm">
                 <button

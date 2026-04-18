@@ -307,7 +307,7 @@ onMounted(() => {
                 <p class="text-xs text-muted-foreground">{{ t('categories_show.added_by') }}</p>
                 <p class="text-sm font-medium">{{ authorDisplay(category.created_by) }}</p>
               </div>
-              <div class="space-y-1">
+              <div v-if="category.updated_by != null" class="space-y-1">
                 <p class="text-xs text-muted-foreground">{{ t('categories_show.updated_by') }}</p>
                 <p class="text-sm font-medium">{{ authorDisplay(category.updated_by) }}</p>
               </div>
@@ -315,7 +315,7 @@ onMounted(() => {
                 <p class="text-xs text-muted-foreground">{{ t('categories_show.created_at') }}</p>
                 <p class="text-sm">{{ formatDate(category.created_at) }}</p>
               </div>
-              <div class="space-y-1">
+              <div v-if="category.updated_by != null" class="space-y-1">
                 <p class="text-xs text-muted-foreground">{{ t('categories_show.updated_at') }}</p>
                 <p class="text-sm">{{ formatDate(category.updated_at) }}</p>
               </div>

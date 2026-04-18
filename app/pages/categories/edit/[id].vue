@@ -188,9 +188,8 @@ const selectParent = (id: number | null) => {
 
 // ── Regexes ────────────────────────────────────────────────────────────────────
 
-// Arabic letters, diacritics (tashkeel), and spaces
-const ARABIC_RE = /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s]+$/
-const ENGLISH_RE = /^[A-Za-z\s]+$/
+// Allows mixed Arabic + English letters and spaces.
+const MIXED_NAME_RE = /^[A-Za-z\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s]+$/
 
 // ── Description ────────────────────────────────────────────────────────────────
 
@@ -205,14 +204,14 @@ const validateLocal = (): boolean => {
   if (!nameAr.value.trim()) {
     fieldErrors.value.name_ar = t('categories_form.validation_name_ar_required')
   }
-  else if (!ARABIC_RE.test(nameAr.value.trim())) {
+  else if (!MIXED_NAME_RE.test(nameAr.value.trim())) {
     fieldErrors.value.name_ar = t('categories_form.validation_name_ar_letters')
   }
 
   if (!nameEn.value.trim()) {
     fieldErrors.value.name_en = t('categories_form.validation_name_en_required')
   }
-  else if (!ENGLISH_RE.test(nameEn.value.trim())) {
+  else if (!MIXED_NAME_RE.test(nameEn.value.trim())) {
     fieldErrors.value.name_en = t('categories_form.validation_name_en_letters')
   }
 
@@ -409,9 +408,7 @@ onMounted(async () => {
               <p v-if="fieldErrors.name_ar" class="text-xs text-red-500">
                 {{ fieldErrors.name_ar }}
               </p>
-              <p v-else class="text-xs text-muted-foreground">
-                {{ t('categories_form.name_ar_hint') }}
-              </p>
+             
             </div>
 
             <!-- English Name -->
@@ -429,9 +426,7 @@ onMounted(async () => {
               <p v-if="fieldErrors.name_en" class="text-xs text-red-500">
                 {{ fieldErrors.name_en }}
               </p>
-              <p v-else class="text-xs text-muted-foreground">
-                {{ t('categories_form.name_en_hint') }}
-              </p>
+              
             </div>
 
             <!-- Parent Category -->

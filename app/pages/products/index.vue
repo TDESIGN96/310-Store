@@ -85,6 +85,12 @@ interface WarehouseFilterItem {
   status: string
 }
 
+interface ProductAuthor {
+  id: number
+  name?: string
+  email?: string
+}
+
 interface WarehousesListResponse {
   data?: { warehouses?: WarehouseFilterItem[]; pagination?: Pagination }
   warehouses?: WarehouseFilterItem[]
@@ -99,6 +105,7 @@ interface ProductRow {
   warehouseLabel: string
   qty: number
   productType: 'single' | 'combo' | 'unknown'
+  createdBy?: ProductAuthor | number | null
 }
 
 interface ProductsResponse {
@@ -269,7 +276,14 @@ function normalizeProductRow(raw: Record<string, unknown>, loc: string, multiple
     warehouseLabel,
     qty,
     productType,
+    createdBy: (raw.created_by ?? raw.createdBy ?? null) as ProductRow['createdBy'],
   }
+}
+
+const createdByDisplay = (value?: ProductRow['createdBy']) => {
+  if (!value) return '—'
+  if (typeof value === 'number') return `#${value}`
+  return value.name || `#${value.id}`
 }
 
 const rows = ref<ProductRow[]>([])
@@ -455,11 +469,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-4">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex items-center gap-3">
-        <div
-          class="flex size-10 items-center justify-center rounded-lg bg-[#215260]/10 text-[#215260]"
-        >
-          <Package class="size-5" />
-        </div>
+       
         <div>
           <h1 class="text-2xl font-bold tracking-tight">{{ t('products_page.title') }}</h1>
           <p class="text-sm text-muted-foreground mt-1">
@@ -491,7 +501,7 @@ onMounted(async () => {
     />
   </div>
 
-  <Select :model-value="filterCategoryId" @update:model-value="onCategoryFilterChange">
+  <Select :key="`product-category-${locale}`" :model-value="filterCategoryId" @update:model-value="onCategoryFilterChange">
     <SelectTrigger class="h-9 w-[200px] gap-2">
       <Filter class="size-3.5 shrink-0 text-muted-foreground" />
       <SelectValue :placeholder="t('products_page.filter_category')" />
@@ -508,7 +518,7 @@ onMounted(async () => {
     </SelectContent>
   </Select>
 
-  <Select :model-value="filterWarehouseId" @update:model-value="onWarehouseFilterChange">
+  <Select :key="`product-warehouse-${locale}`" :model-value="filterWarehouseId" @update:model-value="onWarehouseFilterChange">
     <SelectTrigger class="h-9 w-[200px] gap-2">
       <Filter class="size-3.5 shrink-0 text-muted-foreground" />
       <SelectValue :placeholder="t('products_page.filter_warehouse')" />
@@ -586,6 +596,9 @@ onMounted(async () => {
             <TableHead class="rtl:text-right font-medium whitespace-nowrap">
               {{ t('products_page.col_qty') }}
             </TableHead>
+            <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+              {{ t('common.added_by') }}
+            </TableHead>
             <TableHead class="rtl:text-right font-medium w-[1%]">
               {{ t('products_page.col_actions') }}
             </TableHead>
@@ -593,7 +606,7 @@ onMounted(async () => {
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="6" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('common.loading') }}…
@@ -601,7 +614,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="6" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -615,7 +628,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="rows.length === 0">
-            <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
               {{ t('products_page.no_products') }}
             </TableCell>
           </TableRow>
@@ -648,6 +661,9 @@ onMounted(async () => {
             </TableCell>
             <TableCell class="text-sm tabular-nums">
               {{ row.qty }}
+            </TableCell>
+            <TableCell class="text-sm text-muted-foreground">
+              {{ createdByDisplay(row.createdBy) }}
             </TableCell>
             <TableCell>
               <div class="flex flex-wrap items-center gap-1 justify-end">

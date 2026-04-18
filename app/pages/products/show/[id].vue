@@ -32,6 +32,12 @@ interface ProductUnit {
   symbol?: string
 }
 
+interface ProductAuthor {
+  id: number
+  name?: string
+  email?: string
+}
+
 interface ProductTieredPrice {
   quantity_from: string | number
   quantity_to: string | number
@@ -65,6 +71,8 @@ interface ProductDetail {
   unit?: ProductUnit
   tiered_prices?: ProductTieredPrice[]
   inventory?: ProductInventoryItem[]
+  created_by?: ProductAuthor | number | null
+  updated_by?: ProductAuthor | number | null
   created_at?: string
   updated_at?: string
   is_combo?: boolean | number | string
@@ -133,6 +141,12 @@ const formatDate = (value?: string) => {
 const boolLabel = (value: unknown) => {
   const truthy = value === true || value === 1 || value === '1' || value === 'true'
   return truthy ? t('common.yes') : t('common.no')
+}
+
+const authorDisplay = (value?: ProductAuthor | number | null) => {
+  if (!value) return '—'
+  if (typeof value === 'number') return `#${value}`
+  return value.name || `#${value.id}`
 }
 
 function isComboValue(value: unknown): boolean {
@@ -262,10 +276,18 @@ onMounted(() => {
             <p class="text-sm leading-relaxed">{{ product.description || '—' }}</p>
           </div>
           <div class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('common.added_by') }}</p>
+            <p>{{ authorDisplay(product.created_by) }}</p>
+          </div>
+          <div v-if="product.updated_by != null" class="space-y-1">
+            <p class="text-xs text-muted-foreground">{{ t('common.last_modified_by') }}</p>
+            <p>{{ authorDisplay(product.updated_by) }}</p>
+          </div>
+          <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('common.created_at') }}</p>
             <p>{{ formatDate(product.created_at) }}</p>
           </div>
-          <div class="space-y-1">
+          <div v-if="product.updated_by != null" class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('common.updated_at') }}</p>
             <p>{{ formatDate(product.updated_at) }}</p>
           </div>

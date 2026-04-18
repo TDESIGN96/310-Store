@@ -9,6 +9,7 @@ export function subjectPathFromMorph(subjectType: string, subjectId: number): st
   if (t.includes('unit')) return `/units/show/${subjectId}`
   if (t.includes('categor')) return `/categories/show/${subjectId}`
   if (t.includes('warehouse')) return `/warehouses/show/${subjectId}`
+  if (t.includes('product')) return `/products/show/${subjectId}`
   if (t.includes('role')) return `/roles/edit/${subjectId}`
   return null
 }

@@ -334,11 +334,22 @@ const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '—'
   try {
     const d = new Date(dateStr)
-    return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' })
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
   } catch {
     return dateStr
   }
 }
+
+const statusConfig = (isActive: boolean) =>
+  isActive
+    ? {
+        label: t('common.active'),
+        class: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+      }
+    : {
+        label: t('common.inactive'),
+        class: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+      }
 
 const rolesDisplay = (roles: UserRole[], maxWords = 8) => {
   if (!roles?.length) return '—'
@@ -496,10 +507,10 @@ onMounted(() => {
             <TableCell class="text-sm">{{ rolesDisplay(user.roles) }}</TableCell>
             <TableCell>
               <span
-                :class="user.is_active ? 'text-green-600' : 'text-muted-foreground'"
-                class="text-sm"
+                class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                :class="statusConfig(user.is_active).class"
               >
-                {{ user.is_active ? t('common.yes') : t('common.no') }}
+                {{ statusConfig(user.is_active).label }}
               </span>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(user.created_by) }}</TableCell>

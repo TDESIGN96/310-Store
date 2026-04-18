@@ -265,11 +265,7 @@ onMounted(() => {
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex items-center gap-3">
-      <div
-        class="flex size-10 items-center justify-center rounded-lg bg-[#215260]/10 text-[#215260]"
-      >
-        <History class="size-5" />
-      </div>
+      
       <div>
         <h1 class="text-2xl font-bold tracking-tight">{{ t('activities_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">

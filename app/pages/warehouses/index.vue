@@ -42,6 +42,12 @@ interface WarehouseManager {
   email?: string
 }
 
+interface WarehouseAuthor {
+  id: number
+  name?: string
+  email?: string
+}
+
 interface WarehouseItem {
   id: number
   name_ar: string
@@ -49,6 +55,8 @@ interface WarehouseItem {
   location: string
   address?: string
   manager?: WarehouseManager | null
+  created_by?: WarehouseAuthor | number | null
+  created_at?: string | null
   status: string
 }
 
@@ -202,6 +210,28 @@ const statusConfig = (status: string) => {
     }
   }
   return { label: status || '—', class: 'bg-muted text-muted-foreground' }
+}
+
+const createdByDisplay = (value?: WarehouseItem['created_by']) => {
+  if (!value) return '—'
+  if (typeof value === 'number') return `#${value}`
+  return value.name || `#${value.id}`
+}
+
+const formatDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return '—'
+  try {
+    const d = new Date(dateStr)
+    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
+    return d.toLocaleDateString(loc, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+  catch {
+    return dateStr
+  }
 }
 
 const emptyListMessage = computed(() => {
@@ -399,13 +429,16 @@ onMounted(() => loadWarehouses())
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="rtl:text-right font-medium">{{ t('common.created_at') }}</TableHead>
+            
             <TableHead class="rtl:text-right font-medium">{{ t('warehouses_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="5" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('warehouses_page.loading') }}
@@ -414,7 +447,7 @@ onMounted(() => loadWarehouses())
           </TableRow>
 
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="5" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -429,7 +462,7 @@ onMounted(() => loadWarehouses())
           </TableRow>
 
           <TableRow v-else-if="warehouses.length === 0">
-            <TableCell :colspan="5" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
               {{ emptyListMessage }}
             </TableCell>
           </TableRow>
@@ -467,6 +500,13 @@ onMounted(() => loadWarehouses())
                 {{ statusConfig(wh.status).label }}
               </span>
             </TableCell>
+            <TableCell class="text-sm text-muted-foreground">
+              {{ createdByDisplay(wh.created_by) }}
+            </TableCell>
+            <TableCell class="text-sm text-muted-foreground">
+              {{ formatDate(wh.created_at) }}
+            </TableCell>
+            
             <TableCell>
               <div class="flex flex-wrap items-center gap-3 text-sm">
                 <button
