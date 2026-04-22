@@ -6,6 +6,7 @@ import {
   Users,
   Ruler,
   Layers,
+  SlidersHorizontal,
   Warehouse,
   History,
 } from 'lucide-vue-next'
@@ -67,6 +68,13 @@ export const navItems: NavGroup[] = [
         path: '/categories',
         module: 'categories',
         createPath: '/categories/create',
+      },
+      {
+        labelKey: 'nav.items.attributes',
+        icon: SlidersHorizontal,
+        path: '/attributes',
+        module: 'attributes',
+        createPath: '/attributes/create',
       },
       {
         labelKey: 'nav.items.warehouses',

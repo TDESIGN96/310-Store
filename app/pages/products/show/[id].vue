@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, Package, Loader2, ShieldAlert, Pencil } from 'lucide-vue-next'
+import { ArrowRight, Package, Loader2, ShieldAlert, Pencil, Layers, ImageIcon, Warehouse } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -16,8 +18,14 @@ definePageMeta({ layout: 'default' })
 const { t, locale } = useI18n()
 const route = useRoute()
 const id = computed(() => route.params.id)
-const { canEdit: canEditProd } = usePermissions()
+const { canEdit: canEditProd, canAccess } = usePermissions()
 const canEditProduct = computed(() => canEditProd('products'))
+const canListVariations = computed(() => canAccess('variation'))
+
+const isTruthy = (value: unknown) =>
+  value === true || value === 1 || value === '1' || value === 'true'
+
+const variationActive = (variation: ProductVariation) => isTruthy(variation.is_active)
 
 interface ProductCategory {
   id: number
@@ -38,12 +46,6 @@ interface ProductAuthor {
   email?: string
 }
 
-interface ProductTieredPrice {
-  quantity_from: string | number
-  quantity_to: string | number
-  price: string | number
-}
-
 interface ProductInventoryItem {
   warehouse_id?: number
   quantity?: string | number
@@ -54,6 +56,21 @@ interface ProductInventoryItem {
     name_ar: string
     name_en: string
   }
+}
+
+interface ProductVariation {
+  id: number
+  sku?: string
+  barcode?: string
+  price?: string | number
+  buying_price?: string | number
+  stock_quantity?: string | number
+  is_active?: boolean | number | string
+  resolved_price?: string | number
+  label?: string
+  attribute_values?: Array<{ id: number, name?: string, attribute_id?: number }>
+  tiered_prices?: Array<{ quantity_from?: string | number, quantity_to?: string | number, price?: string | number }>
+  inventory?: ProductInventoryItem[]
 }
 
 interface ProductDetail {
@@ -67,10 +84,13 @@ interface ProductDetail {
   main_image_url?: string
   images?: string[]
   price?: string | number
+  is_available?: boolean | number | string
+  all_variations_inactive?: boolean | number | string
   category?: ProductCategory
   unit?: ProductUnit
-  tiered_prices?: ProductTieredPrice[]
   inventory?: ProductInventoryItem[]
+  variations?: ProductVariation[]
+  is_incomplete?: boolean | number | string
   created_by?: ProductAuthor | number | null
   updated_by?: ProductAuthor | number | null
   created_at?: string
@@ -121,6 +141,40 @@ const allImages = computed(() => {
   return [p.main_image_url, ...additional].filter((v): v is string => Boolean(v))
 })
 
+const totalVariationStock = computed(() => {
+  const list = product.value?.variations ?? []
+  return list.reduce((sum, row) => sum + Number(row.stock_quantity ?? 0), 0)
+})
+
+const isIncomplete = computed(() => {
+  const value = product.value?.is_incomplete
+  return value === true || value === 1 || value === '1' || value === 'true'
+})
+
+const isAvailable = computed(() => {
+  const value = product.value?.is_available
+  return value === true || value === 1 || value === '1' || value === 'true'
+})
+
+const variationInventorySummary = (variation: ProductVariation) => {
+  const list = variation.inventory ?? []
+  if (!list.length) return '—'
+  return list.map((row) => {
+    const warehouseName = locale.value === 'ar'
+      ? (row.warehouse?.name_ar || row.warehouse?.name_en || `#${row.warehouse_id ?? '—'}`)
+      : (row.warehouse?.name_en || row.warehouse?.name_ar || `#${row.warehouse_id ?? '—'}`)
+    return `${warehouseName}: ${row.quantity ?? 0}`
+  }).join(' | ')
+}
+
+const variationAttributesSummary = (variation: ProductVariation) => {
+  const values = variation.attribute_values ?? []
+  if (!values.length) return '—'
+  return values.map(v => v.name || `#${v.id}`).join(', ')
+}
+
+const variationName = (variation: ProductVariation) => variation.label || `#${variation.id}`
+
 const formatDate = (value?: string) => {
   if (!value) return '—'
   try {
@@ -139,7 +193,7 @@ const formatDate = (value?: string) => {
 }
 
 const boolLabel = (value: unknown) => {
-  const truthy = value === true || value === 1 || value === '1' || value === 'true'
+  const truthy = isTruthy(value)
   return truthy ? t('common.yes') : t('common.no')
 }
 
@@ -198,24 +252,52 @@ onMounted(() => {
             <ArrowRight class="size-4" />
           </NuxtLink>
         </Button>
-        <div>
-          <h1 class="text-2xl font-bold tracking-tight">{{ t('products_page.show_title') }}</h1>
-          <p class="text-sm text-muted-foreground mt-1">
+        <div class="min-w-0 space-y-1">
+          <h1 class="text-2xl font-bold tracking-tight">
+            {{ t('products_page.show_title') }}
+          </h1>
+          <p v-if="product" class="truncate text-lg font-semibold text-foreground">
+            {{ productName }}
+          </p>
+          <p class="text-sm text-muted-foreground">
             {{ t('products_page.show_subtitle', { id: String(id) }) }}
           </p>
+          <div v-if="product" class="flex flex-wrap gap-2 pt-1">
+            <Badge v-if="isIncomplete" variant="destructive">
+              {{ t('products_page.warning_badge') }}
+            </Badge>
+            <Badge
+              v-else-if="isAvailable"
+              class="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100"
+              variant="outline"
+            >
+              {{ t('products_page.show_is_available') }}: {{ t('common.yes') }}
+            </Badge>
+            <Badge v-else variant="secondary">
+              {{ t('products_page.show_is_available') }}: {{ t('common.no') }}
+            </Badge>
+          </div>
         </div>
       </div>
-      <Button v-if="canEditProduct && product" class="gap-2" variant="outline" as-child>
-        <NuxtLink :to="`/products/edit/${id}`">
-          <Pencil class="size-4" />
-          {{ t('common.edit') }}
-        </NuxtLink>
-      </Button>
+      <div v-if="product && (canEditProduct || canListVariations)" class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+        <Button v-if="canListVariations" class="gap-2" variant="outline" as-child>
+          <NuxtLink :to="`/products/variations/${id}`">
+            <Layers class="size-4" />
+            {{ t('products_page.manage_variations') }}
+          </NuxtLink>
+        </Button>
+        <Button v-if="canEditProduct" class="gap-2" variant="default" as-child>
+          <NuxtLink :to="`/products/edit/${id}`">
+            <Pencil class="size-4" />
+            {{ t('common.edit') }}
+          </NuxtLink>
+        </Button>
+      </div>
     </div>
 
     <div
       v-if="loading"
-      class="flex items-center justify-center py-20 text-muted-foreground gap-2 text-sm"
+      class="flex items-center justify-center gap-2 rounded-xl border bg-card py-20 text-sm text-muted-foreground shadow-sm"
     >
       <Loader2 class="size-5 animate-spin" />
       {{ t('common.loading') }}
@@ -223,7 +305,7 @@ onMounted(() => {
 
     <div
       v-else-if="loadError"
-      class="flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+      class="flex flex-col items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-10 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
     >
       <ShieldAlert class="size-8" />
       <p class="font-medium text-center">{{ loadError.title }}</p>
@@ -239,154 +321,351 @@ onMounted(() => {
     </div>
 
     <template v-else-if="product">
-      <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
-          <h2 class="font-semibold flex items-center gap-2">
-            <Package class="size-4" />
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
+          <Package class="size-4 shrink-0 text-muted-foreground" />
+          <h2 class="text-base font-semibold tracking-tight">
             {{ t('products_page.show_basic_info') }}
           </h2>
         </div>
-        <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_page.col_name') }}</p>
-            <p class="font-medium">{{ productName }}</p>
+        <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="space-y-1.5">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {{ t('products_page.col_category') }}
+              </p>
+              <p class="text-sm text-foreground">{{ categoryLabel }}</p>
+            </div>
+            <div class="space-y-1.5">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {{ t('products_form.unit') }}
+              </p>
+              <p class="text-sm text-foreground">{{ unitLabel }}</p>
+            </div>
+            <div class="space-y-1.5">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {{ t('products_page.show_identifier') }}
+              </p>
+              <p class="font-mono text-sm text-foreground">{{ product.identifier || '—' }}</p>
+            </div>
           </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_page.col_sku') }}</p>
-            <p class="font-mono">{{ product.sku || '—' }}</p>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_page.col_category') }}</p>
-            <p>{{ categoryLabel }}</p>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_form.unit') }}</p>
-            <p>{{ unitLabel }}</p>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_page.col_price') }}</p>
-            <p>{{ product.price ?? '—' }}</p>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('products_form.barcode') }}</p>
-            <p class="font-mono">{{ product.barcode || '—' }}</p>
-          </div>
-          <div class="space-y-1 md:col-span-2">
-            <p class="text-xs text-muted-foreground">{{ t('products_form.description') }}</p>
-            <p class="text-sm leading-relaxed">{{ product.description || '—' }}</p>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('common.added_by') }}</p>
-            <p>{{ authorDisplay(product.created_by) }}</p>
-          </div>
-          <div v-if="product.updated_by != null" class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('common.last_modified_by') }}</p>
-            <p>{{ authorDisplay(product.updated_by) }}</p>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('common.created_at') }}</p>
-            <p>{{ formatDate(product.created_at) }}</p>
-          </div>
-          <div v-if="product.updated_by != null" class="space-y-1">
-            <p class="text-xs text-muted-foreground">{{ t('common.updated_at') }}</p>
-            <p>{{ formatDate(product.updated_at) }}</p>
-          </div>
-        </div>
-      </div>
 
-      <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
-          <h2 class="font-semibold">{{ t('products_page.show_images') }}</h2>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-lg border bg-muted/20 px-3 py-3">
+              <p class="text-xs font-medium text-muted-foreground">
+                {{ t('products_variations.variations') }}
+              </p>
+              <p class="mt-1 text-xl font-semibold tabular-nums tracking-tight">
+                {{ product.variations?.length ?? 0 }}
+              </p>
+            </div>
+            <div class="rounded-lg border bg-muted/20 px-3 py-3">
+              <p class="text-xs font-medium text-muted-foreground">
+                {{ t('products_variations.total_stock') }}
+              </p>
+              <p class="mt-1 text-xl font-semibold tabular-nums tracking-tight">
+                {{ totalVariationStock }}
+              </p>
+            </div>
+            <div class="rounded-lg border bg-muted/20 px-3 py-3">
+              <p class="text-xs font-medium text-muted-foreground">
+                {{ t('products_variations.warning_state') }}
+              </p>
+              <p class="mt-1 text-sm font-medium leading-tight">
+                {{ isIncomplete ? t('products_page.warning_badge') : t('common.no') }}
+              </p>
+            </div>
+            <div class="rounded-lg border bg-muted/20 px-3 py-3">
+              <p class="text-xs font-medium text-muted-foreground">
+                {{ t('products_page.show_all_variations_inactive') }}
+              </p>
+              <p class="mt-1 text-sm font-medium leading-tight">
+                {{ boolLabel(product.all_variations_inactive) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="rounded-lg border bg-muted/10 p-4">
+            <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {{ t('products_form.description') }}
+            </p>
+            <p class="mt-2 text-sm leading-relaxed text-foreground">
+              {{ product.description || '—' }}
+            </p>
+          </div>
+
+          <div class="grid gap-4 border-t pt-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="space-y-1.5">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {{ t('common.added_by') }}
+              </p>
+              <p class="text-sm">{{ authorDisplay(product.created_by) }}</p>
+            </div>
+            <div v-if="product.updated_by != null" class="space-y-1.5">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {{ t('common.last_modified_by') }}
+              </p>
+              <p class="text-sm">{{ authorDisplay(product.updated_by) }}</p>
+            </div>
+            <div class="space-y-1.5">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {{ t('common.created_at') }}
+              </p>
+              <p class="text-sm tabular-nums">{{ formatDate(product.created_at) }}</p>
+            </div>
+            <div v-if="product.updated_by != null" class="space-y-1.5">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {{ t('common.updated_at') }}
+              </p>
+              <p class="text-sm tabular-nums">{{ formatDate(product.updated_at) }}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
+          <Layers class="size-4 shrink-0 text-muted-foreground" />
+          <h2 class="text-base font-semibold tracking-tight">
+            {{ t('products_variations.variations') }}
+          </h2>
         </div>
-        <div class="p-4">
-          <div v-if="allImages.length" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
+          <div class="overflow-hidden rounded-lg border">
+            <div class="border-b bg-muted/30 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {{ t('products_page.show_variation_pricing_section') }}
+            </div>
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow class="border-0 hover:bg-muted/40 bg-muted/40">
+                    <TableHead class="rtl:text-right font-medium">
+                      {{ t('products_page.show_variation_label') }}
+                    </TableHead>
+                    <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+                      {{ t('products_variations.variation_sku') }}
+                    </TableHead>
+                    <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+                      {{ t('products_variations.variation_barcode') }}
+                    </TableHead>
+                    <TableHead class="text-end font-medium whitespace-nowrap">
+                      {{ t('products_variations.buying_price') }}
+                    </TableHead>
+                    <TableHead class="text-end font-medium whitespace-nowrap">
+                      {{ t('products_variations.variation_price') }}
+                    </TableHead>
+                    <TableHead class="text-end font-medium whitespace-nowrap">
+                      {{ t('products_variations.variation_qty') }}
+                    </TableHead>
+                    <TableHead class="w-[1%] whitespace-nowrap text-end font-medium">
+                      {{ t('products_page.col_status') }}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-if="!product.variations?.length">
+                    <TableCell :colspan="7" class="py-12 text-center text-sm text-muted-foreground">
+                      {{ t('products_variations.no_variations') }}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow
+                    v-for="variation in product.variations || []"
+                    :key="`pricing-${variation.id}`"
+                    class="transition-colors hover:bg-muted/25"
+                  >
+                    <TableCell class="align-middle font-medium">
+                      {{ variationName(variation) }}
+                    </TableCell>
+                    <TableCell class="align-middle font-mono text-sm">
+                      {{ variation.sku || '—' }}
+                    </TableCell>
+                    <TableCell class="align-middle font-mono text-sm">
+                      {{ variation.barcode || '—' }}
+                    </TableCell>
+                    <TableCell class="align-middle text-end tabular-nums text-sm">
+                      {{ variation.buying_price ?? '—' }}
+                    </TableCell>
+                    <TableCell class="align-middle text-end tabular-nums text-sm">
+                      {{ variation.price ?? '—' }}
+                    </TableCell>
+                    <TableCell class="align-middle text-end tabular-nums text-sm">
+                      {{ variation.stock_quantity ?? 0 }}
+                    </TableCell>
+                    <TableCell class="align-middle text-end">
+                      <Badge
+                        v-if="variationActive(variation)"
+                        class="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100"
+                        variant="outline"
+                      >
+                        {{ t('common.yes') }}
+                      </Badge>
+                      <Badge v-else variant="secondary">
+                        {{ t('common.no') }}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div class="overflow-hidden rounded-lg border">
+            <div class="border-b bg-muted/30 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {{ t('products_page.show_variation_configuration_section') }}
+            </div>
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow class="border-0 hover:bg-muted/40 bg-muted/40">
+                    <TableHead class="w-[160px] rtl:text-right font-medium whitespace-nowrap">
+                      {{ t('products_page.show_variation_label') }}
+                    </TableHead>
+                    <TableHead class="rtl:text-right font-medium min-w-[200px]">
+                      {{ t('products_page.show_variation_attributes') }}
+                    </TableHead>
+                    <TableHead class="rtl:text-right font-medium min-w-[200px]">
+                      {{ t('products_page.show_variation_tiered_prices') }}
+                    </TableHead>
+                    <TableHead class="rtl:text-right font-medium min-w-[220px]">
+                      {{ t('products_page.show_variation_inventory') }}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-if="!product.variations?.length">
+                    <TableCell :colspan="4" class="py-12 text-center text-sm text-muted-foreground">
+                      {{ t('products_variations.no_variations') }}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow
+                    v-for="variation in product.variations || []"
+                    :key="`config-${variation.id}`"
+                    class="transition-colors hover:bg-muted/25"
+                  >
+                    <TableCell class="align-middle font-medium whitespace-nowrap">
+                      {{ variationName(variation) }}
+                    </TableCell>
+                    <TableCell class="align-middle text-sm leading-relaxed whitespace-normal">
+                      {{ variationAttributesSummary(variation) }}
+                    </TableCell>
+                    <TableCell class="align-middle">
+                      <div
+                        v-if="variation.tiered_prices?.length"
+                        class="space-y-1.5 rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-xs tabular-nums"
+                      >
+                        <p v-for="(tier, tierIdx) in variation.tiered_prices" :key="tierIdx" class="leading-snug">
+                          {{ tier.quantity_from ?? 0 }} – {{ tier.quantity_to ?? 0 }} · {{ tier.price ?? 0 }}
+                        </p>
+                      </div>
+                      <span v-else class="text-sm text-muted-foreground">—</span>
+                    </TableCell>
+                    <TableCell class="align-middle text-sm leading-relaxed whitespace-normal">
+                      {{ variationInventorySummary(variation) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
+          <ImageIcon class="size-4 shrink-0 text-muted-foreground" />
+          <h2 class="text-base font-semibold tracking-tight">
+            {{ t('products_page.show_images') }}
+          </h2>
+        </div>
+        <CardContent class="px-4 py-5 sm:px-6 sm:py-6">
+          <div v-if="allImages.length" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <a
               v-for="(url, idx) in allImages"
               :key="`${url}-${idx}`"
               :href="url"
               target="_blank"
               rel="noopener noreferrer"
-              class="block rounded border overflow-hidden bg-muted/20"
+              class="group block overflow-hidden rounded-lg border bg-muted/15 shadow-sm ring-offset-background transition-shadow hover:ring-2 hover:ring-ring/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <img :src="url" :alt="`${productName} ${idx + 1}`" class="w-full h-32 object-cover">
+              <div class="aspect-square w-full overflow-hidden bg-muted/30">
+                <img
+                  :src="url"
+                  :alt="`${productName} ${idx + 1}`"
+                  class="size-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                >
+              </div>
             </a>
           </div>
-          <p v-else class="text-sm text-muted-foreground">{{ t('products_page.show_no_images') }}</p>
-        </div>
-      </div>
+          <p v-else class="text-sm text-muted-foreground">
+            {{ t('products_page.show_no_images') }}
+          </p>
+        </CardContent>
+      </Card>
 
-      <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
-          <h2 class="font-semibold">{{ t('products_page.show_tiered_prices') }}</h2>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
+          <Warehouse class="size-4 shrink-0 text-muted-foreground" />
+          <h2 class="text-base font-semibold tracking-tight">
+            {{ t('products_page.show_inventory') }}
+          </h2>
         </div>
-        <div class="p-4">
-          <div class="rounded-md border overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{{ t('price_assignment.col_min_qty') }}</TableHead>
-                  <TableHead>{{ t('price_assignment.col_max_qty') }}</TableHead>
-                  <TableHead>{{ t('price_assignment.col_price') }}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-if="!product.tiered_prices?.length">
-                  <TableCell :colspan="3" class="text-center text-sm text-muted-foreground py-8">
-                    {{ t('products_page.show_no_tiered_prices') }}
-                  </TableCell>
-                </TableRow>
-                <TableRow v-for="(row, idx) in product.tiered_prices" :key="idx">
-                  <TableCell>{{ row.quantity_from }}</TableCell>
-                  <TableCell>{{ row.quantity_to }}</TableCell>
-                  <TableCell>{{ row.price }}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+        <CardContent class="px-4 pb-5 sm:px-6 sm:pb-6">
+          <div class="overflow-hidden rounded-lg border">
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow class="border-0 hover:bg-muted/40 bg-muted/40">
+                    <TableHead class="rtl:text-right font-medium">
+                      {{ t('warehouse_assignment.col_warehouse') }}
+                    </TableHead>
+                    <TableHead class="text-end font-medium whitespace-nowrap">
+                      {{ t('warehouse_assignment.col_stock') }}
+                    </TableHead>
+                    <TableHead class="text-end font-medium whitespace-nowrap">
+                      {{ t('warehouse_assignment.col_min_qty') }}
+                    </TableHead>
+                    <TableHead class="w-[1%] whitespace-nowrap text-end font-medium">
+                      {{ t('warehouse_assignment.col_notifications') }}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-if="!product.inventory?.length">
+                    <TableCell :colspan="4" class="py-12 text-center text-sm text-muted-foreground">
+                      {{ t('products_page.show_no_inventory') }}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow
+                    v-for="(row, idx) in product.inventory || []"
+                    :key="idx"
+                    class="transition-colors hover:bg-muted/25"
+                  >
+                    <TableCell class="align-middle text-sm">
+                      {{
+                        locale === 'ar'
+                          ? (row.warehouse?.name_ar || row.warehouse?.name_en || `#${row.warehouse_id ?? '—'}`)
+                          : (row.warehouse?.name_en || row.warehouse?.name_ar || `#${row.warehouse_id ?? '—'}`)
+                      }}
+                    </TableCell>
+                    <TableCell class="align-middle text-end tabular-nums text-sm">
+                      {{ row.quantity ?? 0 }}
+                    </TableCell>
+                    <TableCell class="align-middle text-end tabular-nums text-sm">
+                      {{ row.min_quantity ?? 0 }}
+                    </TableCell>
+                    <TableCell class="align-middle text-end text-sm">
+                      {{ boolLabel(row.allow_notification) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
-          <h2 class="font-semibold">{{ t('products_page.show_inventory') }}</h2>
-        </div>
-        <div class="p-4">
-          <div class="rounded-md border overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{{ t('warehouse_assignment.col_warehouse') }}</TableHead>
-                  <TableHead>{{ t('warehouse_assignment.col_stock') }}</TableHead>
-                  <TableHead>{{ t('warehouse_assignment.col_min_qty') }}</TableHead>
-                  <TableHead>{{ t('warehouse_assignment.col_notifications') }}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-if="!product.inventory?.length">
-                  <TableCell :colspan="4" class="text-center text-sm text-muted-foreground py-8">
-                    {{ t('products_page.show_no_inventory') }}
-                  </TableCell>
-                </TableRow>
-                <TableRow v-for="(row, idx) in product.inventory" :key="idx">
-                  <TableCell>
-                    {{
-                      locale === 'ar'
-                        ? (row.warehouse?.name_ar || row.warehouse?.name_en || `#${row.warehouse_id ?? '—'}`)
-                        : (row.warehouse?.name_en || row.warehouse?.name_ar || `#${row.warehouse_id ?? '—'}`)
-                    }}
-                  </TableCell>
-                  <TableCell>{{ row.quantity ?? 0 }}</TableCell>
-                  <TableCell>{{ row.min_quantity ?? 0 }}</TableCell>
-                  <TableCell>{{ boolLabel(row.allow_notification) }}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </template>
 
-    <div v-else class="rounded-lg border p-8 text-center text-muted-foreground">
+    <div v-else class="rounded-xl border bg-card p-10 text-center text-muted-foreground shadow-sm">
       <Button variant="ghost" size="icon" class="size-8" as-child>
         <NuxtLink to="/products">
           <ArrowRight class="size-4" />

@@ -99,11 +99,11 @@ interface WarehousesListResponse {
 
 interface ProductRow {
   id: number
-  sku: string
   name: string
   categoryLabel: string
-  warehouseLabel: string
   qty: number
+  variationsCount: number
+  isIncomplete: boolean
   productType: 'single' | 'combo' | 'unknown'
   createdBy?: ProductAuthor | number | null
 }
@@ -240,9 +240,13 @@ function productDisplayName(raw: Record<string, unknown>, loc: string): string {
   return '—'
 }
 
-function productSku(raw: Record<string, unknown>): string {
-  const v = raw.sku ?? raw.code ?? raw.SKU
-  return typeof v === 'string' ? v : v != null ? String(v) : '—'
+function variationRows(raw: Record<string, unknown>): Array<Record<string, unknown>> {
+  if (!Array.isArray(raw.variations)) return []
+  return raw.variations.filter((v): v is Record<string, unknown> => Boolean(v) && typeof v === 'object')
+}
+
+function totalStockFromVariations(rows: Array<Record<string, unknown>>): number {
+  return rows.reduce((sum, v) => sum + Number(v.stock_quantity ?? 0), 0)
 }
 
 function normalizeProductRow(raw: Record<string, unknown>, loc: string, multipleWh: string): ProductRow | null {
@@ -251,7 +255,9 @@ function normalizeProductRow(raw: Record<string, unknown>, loc: string, multiple
   if (!Number.isFinite(numId)) return null
 
   const pivots = extractWarehousePivotList(raw)
-  const { warehouseLabel, qty } = deriveWarehouseAndQty(pivots, loc, multipleWh)
+  const variationList = variationRows(raw)
+  const variationsQty = totalStockFromVariations(variationList)
+  const { qty: fallbackQty } = deriveWarehouseAndQty(pivots, loc, multipleWh)
 
   const isComboRaw = raw.is_combo ?? raw.isCombo ?? raw.product_type
   let productType: ProductRow['productType'] = 'single'
@@ -270,11 +276,11 @@ function normalizeProductRow(raw: Record<string, unknown>, loc: string, multiple
 
   return {
     id: numId,
-    sku: productSku(raw),
     name: productDisplayName(raw, loc),
     categoryLabel: categoryLabelFromProduct(raw, loc),
-    warehouseLabel,
-    qty,
+    qty: variationList.length ? variationsQty : fallbackQty,
+    variationsCount: variationList.length,
+    isIncomplete: raw.is_incomplete === true || raw.is_incomplete === 1 || raw.is_incomplete === '1',
     productType,
     createdBy: (raw.created_by ?? raw.createdBy ?? null) as ProductRow['createdBy'],
   }
@@ -581,32 +587,29 @@ onMounted(async () => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="rtl:text-right font-medium whitespace-nowrap">
-              {{ t('products_page.col_sku') }}
-            </TableHead>
-            <TableHead class="rtl:text-right font-medium min-w-[140px]">
+            <TableHead class="rtl:text-right font-medium min-w-[220px]">
               {{ t('products_page.col_name') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium">
-              {{ t('products_page.col_warehouse') }}
-            </TableHead>
-            <TableHead class="rtl:text-right font-medium">
+            <TableHead class="rtl:text-right font-medium min-w-[150px]">
               {{ t('products_page.col_category') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+            <TableHead class="rtl:text-right font-medium whitespace-nowrap text-center">
               {{ t('products_page.col_qty') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+            <TableHead class="rtl:text-right font-medium whitespace-nowrap text-center">
+              {{ t('products_page.variations_col') }}
+            </TableHead>
+            <TableHead class="rtl:text-right font-medium whitespace-nowrap min-w-[120px]">
               {{ t('common.added_by') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium w-[1%]">
+            <TableHead class="rtl:text-right font-medium min-w-[260px] text-right">
               {{ t('products_page.col_actions') }}
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="6" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('common.loading') }}…
@@ -614,7 +617,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="6" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -628,7 +631,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="rows.length === 0">
-            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
               {{ t('products_page.no_products') }}
             </TableCell>
           </TableRow>
@@ -636,14 +639,11 @@ onMounted(async () => {
             <TableRow
               v-for="row in rows"
               :key="row.id"
-              class="hover:bg-muted/30 transition-colors"
+              class="hover:bg-muted/30 transition-colors align-middle"
             >
-            <TableCell class="font-mono text-sm whitespace-nowrap">
-              {{ row.sku }}
-            </TableCell>
             <TableCell class="text-sm font-medium">
               <div class="inline-flex items-center gap-2">
-                <span>{{ row.name }}</span>
+                <span class="max-w-[260px] truncate">{{ row.name }}</span>
                 <Badge
                   v-if="row.productType === 'combo'"
                   variant="secondary"
@@ -651,21 +651,28 @@ onMounted(async () => {
                 >
                   {{ t('products_page.combo_badge') }}
                 </Badge>
+                <Badge
+                  v-if="row.isIncomplete"
+                  variant="destructive"
+                  class="text-[10px] uppercase tracking-wide"
+                >
+                  {{ t('products_page.warning_badge') }}
+                </Badge>
               </div>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">
-              {{ row.warehouseLabel }}
-            </TableCell>
-            <TableCell class="text-sm">
               {{ row.categoryLabel }}
             </TableCell>
-            <TableCell class="text-sm tabular-nums">
+            <TableCell class="text-sm tabular-nums text-center">
               {{ row.qty }}
+            </TableCell>
+            <TableCell class="text-sm text-center">
+              {{ row.variationsCount }}
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">
               {{ createdByDisplay(row.createdBy) }}
             </TableCell>
-            <TableCell>
+            <TableCell class="text-right">
               <div class="flex flex-wrap items-center gap-1 justify-end">
                 <Button v-if="canShowProduct" variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
                   <NuxtLink :to="row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`">
@@ -677,6 +684,11 @@ onMounted(async () => {
                   <NuxtLink :to="row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`">
                     <Pencil class="size-3.5" />
                     {{ t('common.edit') }}
+                  </NuxtLink>
+                </Button>
+                <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
+                  <NuxtLink :to="`/products/variations/${row.id}`">
+                    {{ t('products_page.manage_variations') }}
                   </NuxtLink>
                 </Button>
                 <Button
