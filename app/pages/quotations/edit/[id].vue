@@ -48,6 +48,7 @@ import {
 import RichTextEditor from '@/components/quotations/RichTextEditor.vue'
 import { useQuotationsStore } from '@/stores/quotations'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
+import { firstValidationToastDescription, validateQuotationDraft } from '@/composables/useQuotationDraftValidation'
 
 definePageMeta({ layout: 'default' })
 
@@ -58,6 +59,7 @@ const { canEdit } = usePermissions()
 const canEditQuotation = computed(() => canEdit('quotations'))
 const quotationsStore = useQuotationsStore()
 const { searchProducts, lookupBarcode, resolvingBarcode, loadingProducts } = useQuotationProducts()
+const { getErrorMessage } = useApiError()
 
 const loading = ref(false)
 const formErrors = ref<Record<string, string>>({})
@@ -102,7 +104,9 @@ const handleBarcodeSubmit = async () => {
   if (!code) return
   const matched = await lookupBarcode(code)
   if (!matched) {
-    toast.error(t('quotations_page.barcode_not_found'))
+    toast.error(t('quotations_page.system_error_title'), {
+      description: t('quotations_page.barcode_not_found'),
+    })
     return
   }
   addProductToRows(matched.product, matched.variationId)
@@ -134,50 +138,61 @@ watch(productSearch, (value) => {
 })
 
 const validate = (): boolean => {
-  const errors: Record<string, string> = {}
-  if (!draft.value.issue_date) errors.issue_date = t('quotations_page.issue_date_required')
-  if (!draft.value.expiry_date) errors.expiry_date = t('quotations_page.expiry_date_required')
-  if (draft.value.issue_date && draft.value.expiry_date && draft.value.expiry_date < draft.value.issue_date) {
-    errors.expiry_date = t('quotations_page.expiry_after_issue')
-  }
-  if (!selectedRowsCount.value) errors.items = t('quotations_page.product_required')
-
-  draft.value.items.forEach((item, idx) => {
-    if (!item.product_id) return
-    if (item.product?.variations.length && !item.variation_id) errors[`row_${idx}_variation`] = t('quotations_page.variation_required')
-    if (!Number.isFinite(item.qty) || item.qty <= 0) errors[`row_${idx}_qty`] = t('quotations_page.qty_invalid')
-    if (!Number.isFinite(item.unit_price) || item.unit_price < 0) errors[`row_${idx}_unit_price`] = t('quotations_page.unit_price_invalid')
-  })
-
+  const errors = validateQuotationDraft(draft.value, selectedRowsCount.value, t)
   formErrors.value = errors
   return Object.keys(errors).length === 0
+}
+
+const extractQuotationFromResponse = (res: unknown): Record<string, unknown> | null => {
+  if (!res || typeof res !== 'object') return null
+  const root = res as Record<string, unknown>
+  const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
+  const q = (nested?.quotation ?? root.quotation) as Record<string, unknown> | null
+  return q && typeof q === 'object' ? q : null
 }
 
 type SaveMode = 'close' | 'add' | 'print' | 'download'
 
 const saveQuotation = async (mode: SaveMode) => {
   if (!canEditQuotation.value || !canEditStatus.value) return
-  if (!validate()) return
+  if (!validate()) {
+    toast.error(t('quotations_page.system_error_title'), {
+      description: firstValidationToastDescription(formErrors.value),
+    })
+    return
+  }
   quotationsStore.submitting = true
   errorMessage.value = ''
   try {
-    await quotationsStore.updateQuotation(id.value)
+    const res = await quotationsStore.updateQuotation(id.value)
+    const quotation = extractQuotationFromResponse(res)
+    if (String(quotation?.status ?? '').toLowerCase() === 'expired') {
+      toast.info(t('quotations_page.system_status_expired_notice'))
+    }
     if (mode === 'close') {
-      toast.success(t('quotations_page.update_success'))
+      toast.success(t('quotations_page.system_success_title'), {
+        description: t('quotations_page.system_save_success_body'),
+      })
       await navigateTo('/quotations')
       return
     }
     if (mode === 'add') {
-      toast.success(t('quotations_page.update_success'))
+      toast.success(t('quotations_page.system_success_title'), {
+        description: `${t('quotations_page.system_save_success_body')} ${t('quotations_page.system_save_and_add_hint')}`,
+      })
       quotationsStore.resetDraft()
       await navigateTo('/quotations/create')
       return
     }
-    toast.success(t('quotations_page.update_success'))
+    toast.success(t('quotations_page.system_success_title'), {
+      description: t('quotations_page.system_save_success_body'),
+    })
     toast.info(mode === 'print' ? t('quotations_page.print_unavailable') : t('quotations_page.download_unavailable'))
   }
-  catch {
-    errorMessage.value = t('quotations_page.save_error')
+  catch (error: unknown) {
+    const msg = getErrorMessage(error) || t('quotations_page.save_error')
+    errorMessage.value = msg
+    toast.error(t('quotations_page.system_error_title'), { description: msg })
   }
   finally {
     quotationsStore.submitting = false
@@ -334,6 +349,8 @@ onMounted(async () => {
             </div>
           </div>
 
+          <p v-if="formErrors.items" class="text-xs text-red-600">{{ formErrors.items }}</p>
+
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
               <Table>
@@ -373,7 +390,16 @@ onMounted(async () => {
                       <Input :model-value="item.unit_price" type="number" min="0" class="text-end tabular-nums" @update:model-value="value => quotationsStore.setRowUnitPrice(idx, Number(value))" />
                     </TableCell>
                     <TableCell class="min-w-[120px] text-end">
-                      <Input :model-value="item.discount_percent" type="number" min="0" max="100" class="text-end tabular-nums" @update:model-value="value => quotationsStore.setRowDiscount(idx, Number(value))" />
+                      <Input
+                        :model-value="item.discount_percent"
+                        type="number"
+                        step="0.01"
+                        class="text-end tabular-nums"
+                        @update:model-value="value => quotationsStore.setRowDiscount(idx, Number(value))"
+                      />
+                      <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600">
+                        {{ formErrors[`row_${idx}_discount`] }}
+                      </p>
                     </TableCell>
                     <TableCell class="text-end font-medium tabular-nums">{{ formatMoney(rowTotals(idx).rowTotal) }}</TableCell>
                     <TableCell class="text-end">
@@ -472,7 +498,7 @@ onMounted(async () => {
         <AlertDialogFooter>
           <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
           <AlertDialogAction class="bg-red-600 text-white hover:bg-red-700" @click="quotationsStore.clearAllRows()">
-            {{ t('quotations_page.clear_all') }}
+            {{ t('quotations_page.clear_all_confirm') }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

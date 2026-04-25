@@ -351,7 +351,8 @@ export const useQuotationsStore = defineStore('quotations', () => {
   const setRowDiscount = (index: number, value: number) => {
     const row = draft.value.items[index]
     if (!row) return
-    row.discount_percent = normalizePercent(value)
+    const n = Number(value)
+    row.discount_percent = Number.isFinite(n) ? n : 0
   }
 
   const buildPayload = () => ({
@@ -376,7 +377,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
         description: item.description || undefined,
         qty: item.qty,
         unit_price: item.unit_price,
-        discount_percent: item.discount_percent,
+        discount_percent: normalizePercent(item.discount_percent),
         line_discount: rowMath(item).lineDiscount,
         row_total: rowMath(item).rowTotal,
       })),

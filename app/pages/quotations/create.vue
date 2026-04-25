@@ -48,6 +48,7 @@ import {
 import RichTextEditor from '@/components/quotations/RichTextEditor.vue'
 import { useQuotationsStore } from '@/stores/quotations'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
+import { firstValidationToastDescription, validateQuotationDraft } from '@/composables/useQuotationDraftValidation'
 
 definePageMeta({ layout: 'default' })
 
@@ -99,7 +100,9 @@ const handleBarcodeSubmit = async () => {
   if (!code) return
   const matched = await lookupBarcode(code)
   if (!matched) {
-    toast.error(t('quotations_page.barcode_not_found'))
+    toast.error(t('quotations_page.system_error_title'), {
+      description: t('quotations_page.barcode_not_found'),
+    })
     return
   }
   addProductToRows(matched.product, matched.variationId)
@@ -131,27 +134,7 @@ watch(productSearch, (value) => {
 })
 
 const validate = (): boolean => {
-  const errors: Record<string, string> = {}
-  if (!draft.value.issue_date) errors.issue_date = t('quotations_page.issue_date_required')
-  if (!draft.value.expiry_date) errors.expiry_date = t('quotations_page.expiry_date_required')
-  if (draft.value.issue_date && draft.value.expiry_date && draft.value.expiry_date < draft.value.issue_date) {
-    errors.expiry_date = t('quotations_page.expiry_after_issue')
-  }
-  if (!selectedRowsCount.value) errors.items = t('quotations_page.product_required')
-
-  draft.value.items.forEach((item, idx) => {
-    if (!item.product_id) return
-    if (item.product?.variations.length && !item.variation_id) {
-      errors[`row_${idx}_variation`] = t('quotations_page.variation_required')
-    }
-    if (!Number.isFinite(item.qty) || item.qty <= 0) {
-      errors[`row_${idx}_qty`] = t('quotations_page.qty_invalid')
-    }
-    if (!Number.isFinite(item.unit_price) || item.unit_price < 0) {
-      errors[`row_${idx}_unit_price`] = t('quotations_page.unit_price_invalid')
-    }
-  })
-
+  const errors = validateQuotationDraft(draft.value, selectedRowsCount.value, t)
   formErrors.value = errors
   return Object.keys(errors).length === 0
 }
@@ -160,7 +143,12 @@ type SaveMode = 'close' | 'add'
 
 const saveQuotation = async (mode: SaveMode) => {
   if (!canCreateQuotation.value) return
-  if (!validate()) return
+  if (!validate()) {
+    toast.error(t('quotations_page.system_error_title'), {
+      description: firstValidationToastDescription(formErrors.value),
+    })
+    return
+  }
 
   quotationsStore.submitting = true
   errorMessage.value = ''
@@ -179,18 +167,24 @@ const saveQuotation = async (mode: SaveMode) => {
     }
 
     if (mode === 'close') {
-      toast.success(t('quotations_page.save_success'))
+      toast.success(t('quotations_page.system_success_title'), {
+        description: t('quotations_page.system_save_success_body'),
+      })
       await navigateTo('/quotations')
       return
     }
 
-    toast.success(t('quotations_page.save_and_add_success'))
+    toast.success(t('quotations_page.system_success_title'), {
+      description: `${t('quotations_page.system_save_success_body')} ${t('quotations_page.system_save_and_add_hint')}`,
+    })
     quotationsStore.resetDraft()
     formErrors.value = {}
     errorMessage.value = ''
   }
   catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error)
+    const msg = getErrorMessage(error)
+    errorMessage.value = msg
+    toast.error(t('quotations_page.system_error_title'), { description: msg })
   }
   finally {
     quotationsStore.submitting = false
@@ -422,11 +416,13 @@ onMounted(() => {
                         <Input
                           :model-value="item.discount_percent"
                           type="number"
-                          min="0"
-                          max="100"
+                          step="0.01"
                           class="h-9 w-full text-start tabular-nums"
                           @update:model-value="value => quotationsStore.setRowDiscount(idx, Number(value))"
                         />
+                        <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600">
+                          {{ formErrors[`row_${idx}_discount`] }}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell class="align-top py-3 text-start tabular-nums">
@@ -559,7 +555,7 @@ onMounted(() => {
             class="bg-red-600 text-white hover:bg-red-700"
             @click="quotationsStore.clearAllRows()"
           >
-            {{ t('quotations_page.clear_all') }}
+            {{ t('quotations_page.clear_all_confirm') }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
