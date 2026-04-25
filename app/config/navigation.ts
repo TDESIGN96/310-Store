@@ -2,6 +2,7 @@ import type { Component } from 'vue'
 import {
   LayoutDashboard,
   Package,
+  FileText,
   ShieldCheck,
   Users,
   Ruler,
@@ -54,6 +55,13 @@ export const navItems: NavGroup[] = [
         path: '/products',
         module: 'products',
         createPath: '/products/create',
+      },
+      {
+        labelKey: 'nav.items.quotations',
+        icon: FileText,
+        path: '/quotations',
+        module: 'quotations',
+        createPath: '/quotations/create',
       },
       {
         labelKey: 'nav.items.units',

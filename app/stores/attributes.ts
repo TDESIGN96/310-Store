@@ -39,6 +39,7 @@ interface AttributesListResponse {
 }
 
 export const useAttributesStore = defineStore('attributes', () => {
+  const { $api } = useApi()
   const options = ref<AttributeOption[]>([])
   const loading = ref(false)
   const loaded = ref(false)
@@ -69,7 +70,6 @@ export const useAttributesStore = defineStore('attributes', () => {
     if (loaded.value && !force) return
     loading.value = true
     try {
-      const { $api } = useApi()
       const res = await $api<AttributesListResponse>('/attributes', {
         params: { page: 1, per_page: 100 },
       })

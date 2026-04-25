@@ -3,7 +3,9 @@ export type PermissionModule =
   | 'users'
   | 'roles'
   | 'products'
-  | 'variation'
+  | 'quotations'
+  | 'invoices'
+  | 'product_variations'
   | 'units'
   | 'categories'
   | 'attributes'
@@ -53,15 +55,35 @@ export const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
-    id: 'variation',
+    id: 'quotations',
     permissions: [
-      { id: 'variation.index' },
-      { id: 'variation.show' },
-      { id: 'variation.store' },
-      { id: 'variation.update' },
-      { id: 'variation.destroy' },
-      { id: 'variation.activate' },
-      { id: 'variation.deactivate' },
+      { id: 'quotations.index' },
+      { id: 'quotations.show' },
+      { id: 'quotations.store' },
+      { id: 'quotations.update' },
+      { id: 'quotations.destroy' },
+    ],
+  },
+  {
+    id: 'invoices',
+    permissions: [
+      { id: 'invoices.index' },
+      { id: 'invoices.show' },
+      { id: 'invoices.store' },
+      { id: 'invoices.update' },
+      { id: 'invoices.destroy' },
+    ],
+  },
+  {
+    id: 'product_variations',
+    permissions: [
+      { id: 'product_variations.index' },
+      { id: 'product_variations.show' },
+      { id: 'product_variations.store' },
+      { id: 'product_variations.update' },
+      { id: 'product_variations.destroy' },
+      { id: 'product_variations.activate' },
+      { id: 'product_variations.deactivate' },
     ],
   },
   {

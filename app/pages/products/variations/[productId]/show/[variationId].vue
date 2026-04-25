@@ -12,7 +12,7 @@ const { t } = useI18n()
 const productsStore = useProductsStore()
 const { getErrorMessage } = useApiError()
 const { can } = usePermissions()
-const canShowVariation = computed(() => can('variation.show'))
+const canShowVariation = computed(() => can('product_variations.show'))
 
 const loading = ref(false)
 const errorMessage = ref('')

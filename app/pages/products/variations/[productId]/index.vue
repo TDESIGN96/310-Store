@@ -28,20 +28,29 @@ const productId = computed(() => String(route.params.productId))
 const { t } = useI18n()
 const productsStore = useProductsStore()
 const { getErrorMessage } = useApiError()
+const { $api } = useApi()
 const { can } = usePermissions()
 
 const loading = ref(false)
 const actionLoadingId = ref<number | null>(null)
 const rows = ref<Array<Record<string, unknown>>>([])
 const deleteTarget = ref<Record<string, unknown> | null>(null)
+const productName = ref('')
 
-const canListVariations = computed(() => can('variation.index'))
-const canShowVariation = computed(() => can('variation.show'))
-const canCreateVariation = computed(() => can('variation.store'))
-const canEditVariation = computed(() => can('variation.update'))
-const canDeleteVariation = computed(() => can('variation.destroy'))
-const canActivateVariation = computed(() => can('variation.activate'))
-const canDeactivateVariation = computed(() => can('variation.deactivate'))
+interface ProductShowResponse {
+  data?: {
+    product?: Record<string, unknown>
+  }
+  product?: Record<string, unknown>
+}
+
+const canListVariations = computed(() => can('product_variations.index'))
+const canShowVariation = computed(() => can('product_variations.show'))
+const canCreateVariation = computed(() => can('product_variations.store'))
+const canEditVariation = computed(() => can('product_variations.update'))
+const canDeleteVariation = computed(() => can('product_variations.destroy'))
+const canActivateVariation = computed(() => can('product_variations.activate'))
+const canDeactivateVariation = computed(() => can('product_variations.deactivate'))
 
 const isActive = (row: Record<string, unknown>) =>
   row.is_active === true || row.is_active === 1 || row.is_active === '1'
@@ -71,6 +80,17 @@ const loadVariations = async () => {
   }
   finally {
     loading.value = false
+  }
+}
+
+const loadProductName = async () => {
+  try {
+    const res = await $api<ProductShowResponse>(`/products/${productId.value}`)
+    const product = res.data?.product ?? res.product ?? {}
+    productName.value = String(product.name_en ?? product.name_ar ?? product.name ?? '').trim()
+  }
+  catch {
+    productName.value = ''
   }
 }
 
@@ -122,6 +142,7 @@ const confirmDelete = async () => {
 }
 
 onMounted(() => {
+  loadProductName()
   loadVariations()
 })
 </script>
@@ -134,7 +155,9 @@ onMounted(() => {
           <NuxtLink to="/products"><ArrowRight class="size-4" /></NuxtLink>
         </Button>
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">{{ t('products_variations.variations_list_title') }}</h1>
+          <h1 class="text-2xl font-bold tracking-tight">
+            {{ t('products_variations.variations_list_title') }}{{ productName ? ` - ${productName}` : '' }}
+          </h1>
           <p class="text-sm text-muted-foreground">#{{ productId }}</p>
         </div>
       </div>
@@ -166,7 +189,7 @@ onMounted(() => {
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="8" class="py-10 text-center">
+            <TableCell :colspan="8" class="py-10 ">
               <Loader2 class="size-4 animate-spin inline-block mr-2" />
               {{ t('common.loading') }}
             </TableCell>

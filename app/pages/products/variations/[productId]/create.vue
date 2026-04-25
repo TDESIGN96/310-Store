@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, Loader2 } from 'lucide-vue-next'
+import { ArrowRight, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -23,71 +23,106 @@ const attributesStore = useAttributesStore()
 const { getErrorMessage } = useApiError()
 const { $api } = useApi()
 const { can } = usePermissions()
-const canCreateVariation = computed(() => can('variation.store'))
+const canCreateVariation = computed(() => can('product_variations.store'))
 
 const loading = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const warehouses = ref<Array<{ id: number, name_ar?: string, name_en?: string }>>([])
-const form = ref({
+
+interface TierPriceForm {
+  quantity_from: number
+  quantity_to: number
+  price: number
+}
+
+interface VariationForm {
+  sku: string
+  barcode: string
+  price: number
+  buying_price: number
+  stock_quantity: number
+  is_active: boolean
+  warehouse_id: number | null
+  min_quantity: number
+  allow_notification: boolean
+  selectedValues: Record<number, number>
+  tiered_prices: TierPriceForm[]
+}
+
+const createEmptyVariation = (): VariationForm => ({
   sku: '',
   barcode: '',
   price: 0,
   buying_price: 0,
   stock_quantity: 0,
   is_active: true,
-  warehouse_id: null as number | null,
+  warehouse_id: null,
   min_quantity: 0,
   allow_notification: true,
-  selectedValues: {} as Record<number, number>,
-  tiered_prices: [] as Array<{ quantity_from: number, quantity_to: number, price: number }>,
+  selectedValues: {},
+  tiered_prices: [],
 })
+
+const variations = ref<VariationForm[]>([createEmptyVariation()])
 
 const selectedAttributeIds = computed(() => productsStore.draft.attribute_ids)
 
-const addTierPrice = () => {
-  form.value.tiered_prices.push({ quantity_from: 0, quantity_to: 0, price: 0 })
+const addVariationRow = () => {
+  variations.value.push(createEmptyVariation())
 }
 
-const removeTierPrice = (index: number) => {
-  form.value.tiered_prices.splice(index, 1)
+const removeVariationRow = (index: number) => {
+  if (variations.value.length <= 1) return
+  variations.value.splice(index, 1)
 }
 
-const createVariation = async () => {
+const addTierPrice = (rowIndex: number) => {
+  variations.value[rowIndex]?.tiered_prices.push({ quantity_from: 0, quantity_to: 0, price: 0 })
+}
+
+const removeTierPrice = (rowIndex: number, tierIndex: number) => {
+  variations.value[rowIndex]?.tiered_prices.splice(tierIndex, 1)
+}
+
+const createVariationPayload = (row: VariationForm) => {
+  const attributeValueIds = Object.values(row.selectedValues).map(v => Number(v)).filter(Boolean)
+  const payload: Record<string, unknown> = {
+    // TEMP: variation fields are optional on create for now.
+    sku: row.sku,
+    barcode: row.barcode,
+    price: row.price,
+    buying_price: row.buying_price,
+    stock_quantity: row.stock_quantity,
+    is_active: row.is_active,
+    tiered_prices: row.tiered_prices,
+  }
+
+  if (attributeValueIds.length) payload.attribute_value_ids = attributeValueIds
+  if (row.warehouse_id) {
+    payload.inventory = [{
+      warehouse_id: row.warehouse_id,
+      quantity: row.stock_quantity,
+      min_quantity: row.min_quantity,
+      allow_notification: row.allow_notification,
+    }]
+  }
+  return payload
+}
+
+const createVariations = async () => {
   if (!canCreateVariation.value) {
     errorMessage.value = t('common.forbidden')
     return
   }
   errorMessage.value = ''
-  const attribute_value_ids = Object.values(form.value.selectedValues).map(v => Number(v)).filter(Boolean)
-  if (!attribute_value_ids.length) {
-    errorMessage.value = t('products_variations.validation_values_required')
-    return
-  }
-  if (!form.value.warehouse_id) {
-    errorMessage.value = t('products_variations.validation_warehouse_required')
-    return
-  }
+  if (!variations.value.length) variations.value.push(createEmptyVariation())
+
   submitting.value = true
   try {
-    await productsStore.createVariation(productId.value, {
-      sku: form.value.sku,
-      barcode: form.value.barcode,
-      price: form.value.price,
-      buying_price: form.value.buying_price,
-      stock_quantity: form.value.stock_quantity,
-      is_active: form.value.is_active,
-      attribute_value_ids,
-      tiered_prices: form.value.tiered_prices,
-      inventory: [
-        {
-          warehouse_id: form.value.warehouse_id,
-          quantity: form.value.stock_quantity,
-          min_quantity: form.value.min_quantity,
-          allow_notification: form.value.allow_notification,
-        },
-      ],
-    })
+    for (const row of variations.value) {
+      await productsStore.createVariation(productId.value, createVariationPayload(row))
+    }
     toast.success(t('products_variations.create_success'))
     await navigateTo(`/products/variations/${productId.value}`)
   }
@@ -142,65 +177,92 @@ onMounted(async () => {
     </div>
 
     <div v-else class="rounded-lg border p-5 space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div><label class="text-xs font-medium">{{ t('products_variations.variation_sku') }}</label><Input v-model="form.sku" /></div>
-        <div><label class="text-xs font-medium">{{ t('products_variations.variation_barcode') }}</label><Input v-model="form.barcode" /></div>
-        <div><label class="text-xs font-medium">{{ t('products_variations.variation_price') }}</label><Input v-model.number="form.price" type="number" min="0" /></div>
-        <div><label class="text-xs font-medium">{{ t('products_variations.variation_qty') }}</label><Input v-model.number="form.stock_quantity" type="number" min="0" /></div>
-        <div>
-          <label class="text-xs font-medium">{{ t('products_page.filter_warehouse') }}</label>
-          <Select :model-value="form.warehouse_id ? String(form.warehouse_id) : ''" @update:model-value="v => form.warehouse_id = Number(v)">
-            <SelectTrigger><SelectValue :placeholder="t('products_page.filter_warehouse')" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                {{ w.name_en || w.name_ar || `#${w.id}` }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+      <div
+        v-for="(row, rowIndex) in variations"
+        :key="rowIndex"
+        class="rounded-md border p-4 space-y-4"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="font-medium">
+            {{ t('products_variations.add_variation') }} #{{ rowIndex + 1 }}
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            :disabled="variations.length <= 1"
+            @click="removeVariationRow(rowIndex)"
+          >
+            <Trash2 class="size-4 mr-1" />
+            {{ t('common.delete') }}
+          </Button>
         </div>
-        <div><label class="text-xs font-medium">{{ t('warehouse_assignment.col_min_qty') }}</label><Input v-model.number="form.min_quantity" type="number" min="0" /></div>
-      </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div v-for="attributeId in selectedAttributeIds" :key="attributeId">
-          <Select :model-value="form.selectedValues[attributeId] ? String(form.selectedValues[attributeId]) : ''" @update:model-value="v => form.selectedValues[attributeId] = Number(v)">
-            <SelectTrigger><SelectValue :placeholder="attributesStore.attributeName(attributeId)" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="v in attributesStore.valuesByAttributeId.get(attributeId) || []"
-                :key="v.id"
-                :value="String(v.id)"
-              >
-                {{ v.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div><label class="text-xs font-medium">{{ t('products_variations.variation_sku') }}</label><Input v-model="row.sku" /></div>
+          <div><label class="text-xs font-medium">{{ t('products_variations.variation_barcode') }}</label><Input v-model="row.barcode" /></div>
+          <div><label class="text-xs font-medium">{{ t('products_variations.variation_price') }}</label><Input v-model.number="row.price" type="number" min="0" /></div>
+          <div><label class="text-xs font-medium">{{ t('products_variations.buying_price') }}</label><Input v-model.number="row.buying_price" type="number" min="0" /></div>
+          <div><label class="text-xs font-medium">{{ t('products_variations.variation_qty') }}</label><Input v-model.number="row.stock_quantity" type="number" min="0" /></div>
+          <div>
+            <label class="text-xs font-medium">{{ t('products_page.filter_warehouse') }}</label>
+            <Select :model-value="row.warehouse_id ? String(row.warehouse_id) : ''" @update:model-value="v => row.warehouse_id = Number(v)">
+              <SelectTrigger><SelectValue :placeholder="t('products_page.filter_warehouse')" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="w in warehouses" :key="w.id" :value="String(w.id)">
+                  {{ w.name_en || w.name_ar || `#${w.id}` }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><label class="text-xs font-medium">{{ t('warehouse_assignment.col_min_qty') }}</label><Input v-model.number="row.min_quantity" type="number" min="0" /></div>
         </div>
-      </div>
 
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <h2 class="font-medium">{{ t('products_variations.tiered_prices') }}</h2>
-          <Button variant="outline" size="sm" @click="addTierPrice">{{ t('products_variations.add_tier_price') }}</Button>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div v-for="attributeId in selectedAttributeIds" :key="`${rowIndex}_${attributeId}`">
+            <Select :model-value="row.selectedValues[attributeId] ? String(row.selectedValues[attributeId]) : ''" @update:model-value="v => row.selectedValues[attributeId] = Number(v)">
+              <SelectTrigger><SelectValue :placeholder="attributesStore.attributeName(attributeId)" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="v in attributesStore.valuesByAttributeId.get(attributeId) || []"
+                  :key="v.id"
+                  :value="String(v.id)"
+                >
+                  {{ v.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <label class="inline-flex items-center gap-2 text-sm">
-          <Checkbox :model-value="form.allow_notification" @update:model-value="v => form.allow_notification = Boolean(v)" />
-          {{ t('warehouse_assignment.col_notifications') }}
-        </label>
-        <div v-for="(tp, idx) in form.tiered_prices" :key="idx" class="grid grid-cols-3 gap-2">
-          <Input v-model.number="tp.quantity_from" type="number" min="0" />
-          <Input v-model.number="tp.quantity_to" type="number" min="0" />
-          <div class="flex gap-2">
-            <Input v-model.number="tp.price" type="number" min="0" />
-            <Button variant="ghost" size="sm" @click="removeTierPrice(idx)">{{ t('common.delete') }}</Button>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h3 class="font-medium">{{ t('products_variations.tiered_prices') }}</h3>
+            <Button variant="outline" size="sm" @click="addTierPrice(rowIndex)">{{ t('products_variations.add_tier_price') }}</Button>
+          </div>
+          <label class="inline-flex items-center gap-2 text-sm">
+            <Checkbox :model-value="row.allow_notification" @update:model-value="v => row.allow_notification = Boolean(v)" />
+            {{ t('warehouse_assignment.col_notifications') }}
+          </label>
+          <div v-for="(tp, idx) in row.tiered_prices" :key="idx" class="grid grid-cols-3 gap-2">
+            <Input v-model.number="tp.quantity_from" type="number" min="0" />
+            <Input v-model.number="tp.quantity_to" type="number" min="0" />
+            <div class="flex gap-2">
+              <Input v-model.number="tp.price" type="number" min="0" />
+              <Button variant="ghost" size="sm" @click="removeTierPrice(rowIndex, idx)">{{ t('common.delete') }}</Button>
+            </div>
           </div>
         </div>
       </div>
+
+      <Button variant="outline" class="w-full" @click="addVariationRow">
+        <Plus class="size-4 mr-1" />
+        {{ t('products_variations.add_variation') }}
+      </Button>
     </div>
 
     <div v-if="canCreateVariation" class="flex justify-end gap-2">
       <Button variant="outline" as-child><NuxtLink :to="`/products/variations/${productId}`">{{ t('common.cancel') }}</NuxtLink></Button>
-      <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="createVariation">
+      <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="createVariations">
         <Loader2 v-if="submitting" class="size-4 animate-spin mr-1" />
         {{ submitting ? t('common.saving') : t('common.save') }}
       </Button>

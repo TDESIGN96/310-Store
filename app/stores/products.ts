@@ -90,6 +90,7 @@ const draftVariationFromApi = (row: Record<string, unknown>): DraftVariation => 
 }
 
 export const useProductsStore = defineStore('products', () => {
+  const { $api } = useApi()
   const draft = ref<ProductDraft>(emptyDraft())
   const loading = ref(false)
 
@@ -159,7 +160,6 @@ export const useProductsStore = defineStore('products', () => {
   const loadProductDraft = async (id: string | number) => {
     loading.value = true
     try {
-      const { $api } = useApi()
       const res = await $api<ProductShowResponse>(`/products/${id}`)
       const product = res.data?.product ?? res.product
       if (!product) return null
@@ -172,18 +172,15 @@ export const useProductsStore = defineStore('products', () => {
   }
 
   const listVariations = async (productId: string | number) => {
-    const { $api } = useApi()
     const res = await $api<VariationsListResponse>(`/products/${productId}/variations`)
     return res.data?.variations ?? res.variations ?? []
   }
 
   const getVariation = async (productId: string | number, variationId: string | number) => {
-    const { $api } = useApi()
     return await $api(`/products/${productId}/variations/${variationId}`)
   }
 
   const createVariation = async (productId: string | number, payload: Record<string, unknown>) => {
-    const { $api } = useApi()
     return await $api(`/products/${productId}/variations`, { method: 'POST', body: payload })
   }
 
@@ -192,22 +189,18 @@ export const useProductsStore = defineStore('products', () => {
     variationId: string | number,
     payload: Record<string, unknown>,
   ) => {
-    const { $api } = useApi()
     return await $api(`/products/${productId}/variations/${variationId}`, { method: 'PUT', body: payload })
   }
 
   const deleteVariation = async (productId: string | number, variationId: string | number) => {
-    const { $api } = useApi()
     return await $api(`/products/${productId}/variations/${variationId}`, { method: 'DELETE' })
   }
 
   const activateVariation = async (productId: string | number, variationId: string | number) => {
-    const { $api } = useApi()
     return await $api(`/products/${productId}/variations/${variationId}/activate`, { method: 'POST' })
   }
 
   const deactivateVariation = async (productId: string | number, variationId: string | number) => {
-    const { $api } = useApi()
     return await $api(`/products/${productId}/variations/${variationId}/deactivate`, { method: 'POST' })
   }
 

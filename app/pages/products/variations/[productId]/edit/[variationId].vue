@@ -24,7 +24,7 @@ const attributesStore = useAttributesStore()
 const { getErrorMessage } = useApiError()
 const { $api } = useApi()
 const { can } = usePermissions()
-const canEditVariation = computed(() => can('variation.update'))
+const canEditVariation = computed(() => can('product_variations.update'))
 
 const loading = ref(false)
 const submitting = ref(false)

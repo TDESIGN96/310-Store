@@ -211,7 +211,7 @@ const saveProduct = async () => {
     await navigateTo('/products')
   }
   catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error)
+      errorMessage.value = getErrorMessage(error)
   }
   finally {
     submitting.value = false

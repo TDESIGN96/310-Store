@@ -20,7 +20,7 @@ const route = useRoute()
 const id = computed(() => route.params.id)
 const { canEdit: canEditProd, canAccess } = usePermissions()
 const canEditProduct = computed(() => canEditProd('products'))
-const canListVariations = computed(() => canAccess('variation'))
+const canListVariations = computed(() => canAccess('product_variations'))
 
 const isTruthy = (value: unknown) =>
   value === true || value === 1 || value === '1' || value === 'true'
