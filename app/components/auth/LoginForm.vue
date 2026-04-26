@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { AccountSuspendedError, useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
+import { Button } from '@/components/ui/button'
+import { Check, Languages } from 'lucide-vue-next'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const authStore = useAuthStore()
-const { t } = useI18n()
+const { locale, setLocale, t } = useI18n()
 const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
 const phone = ref('')
@@ -14,6 +22,18 @@ const showPass = ref(false)
 const isLoading = ref(false)
 const formError = ref('')
 const fieldErrors = ref({ phone: '', password: '' })
+const localeOptions = computed(() =>
+  [
+    { code: 'ar' as const, label: t('locale.ar') },
+    { code: 'en' as const, label: t('locale.en') },
+  ] as const,
+)
+
+const setLanguage = async (code: 'ar' | 'en') => {
+  if (locale.value === code) return
+  await setLocale(code)
+  reloadNuxtApp()
+}
 
 const handleLogin = async () => {
   isLoading.value = true
@@ -52,6 +72,29 @@ const handleLogin = async () => {
   
   <div class="login-panel">
     <div class="login-card anim-card">
+      <div class="mb-3 flex justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="ghost" size="icon" class="size-8">
+              <Languages class="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="bottom">
+            <DropdownMenuItem
+              v-for="opt in localeOptions"
+              :key="opt.code"
+              class="gap-2 cursor-pointer"
+              @click="setLanguage(opt.code)"
+            >
+              <Check
+                class="size-4 shrink-0"
+                :class="locale === opt.code ? 'opacity-100' : 'opacity-0'"
+              />
+              <span>{{ opt.label }}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <div class="card-header">
         <div class="card-logo-sm anim-fade-down" style="--delay: 0.2s">

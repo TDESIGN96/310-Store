@@ -20,7 +20,7 @@ const productId = computed(() => String(route.params.productId))
 const { t } = useI18n()
 const productsStore = useProductsStore()
 const attributesStore = useAttributesStore()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 const { $api } = useApi()
 const { can } = usePermissions()
 const canCreateVariation = computed(() => can('product_variations.store'))
@@ -28,7 +28,16 @@ const canCreateVariation = computed(() => can('product_variations.store'))
 const loading = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
-const warehouses = ref<Array<{ id: number, name_ar?: string, name_en?: string }>>([])
+const fieldErrors = ref<Record<string, string>>({})
+type WarehouseItem = {
+  id: number
+  name_ar?: string
+  name_en?: string
+  status?: string
+  is_active?: boolean | number | string
+}
+
+const warehouses = ref<WarehouseItem[]>([])
 
 interface TierPriceForm {
   quantity_from: number
@@ -36,37 +45,75 @@ interface TierPriceForm {
   price: number
 }
 
+interface InventoryRowForm {
+  _key: number
+  warehouse_id: number | null
+  quantity: number
+  min_quantity: number
+  allow_notification: boolean
+}
+
 interface VariationForm {
   sku: string
   barcode: string
   price: number
   buying_price: number
-  stock_quantity: number
   is_active: boolean
-  warehouse_id: number | null
-  min_quantity: number
-  allow_notification: boolean
   selectedValues: Record<number, number>
   tiered_prices: TierPriceForm[]
+  inventoryRows: InventoryRowForm[]
 }
+
+let inventoryRowKeyCounter = 0
+
+const createEmptyInventoryRow = (): InventoryRowForm => ({
+  _key: ++inventoryRowKeyCounter,
+  warehouse_id: null,
+  quantity: 0,
+  min_quantity: 0,
+  allow_notification: true,
+})
 
 const createEmptyVariation = (): VariationForm => ({
   sku: '',
   barcode: '',
   price: 0,
   buying_price: 0,
-  stock_quantity: 0,
   is_active: true,
-  warehouse_id: null,
-  min_quantity: 0,
-  allow_notification: true,
   selectedValues: {},
   tiered_prices: [],
+  inventoryRows: [createEmptyInventoryRow()],
 })
 
 const variations = ref<VariationForm[]>([createEmptyVariation()])
 
 const selectedAttributeIds = computed(() => productsStore.draft.attribute_ids)
+const isWarehouseActive = (warehouse: WarehouseItem) => {
+  if (warehouse.status) return String(warehouse.status).toLowerCase() === 'active'
+  if (warehouse.is_active === undefined) return true
+  return warehouse.is_active === true || warehouse.is_active === 1 || warehouse.is_active === '1'
+}
+
+const rowFieldKey = (rowIndex: number, field: string) => `rows.${rowIndex}.${field}`
+const inventoryFieldKey = (rowIndex: number, inventoryIndex: number, field: string) => `rows.${rowIndex}.inventory.${inventoryIndex}.${field}`
+const attributeFieldKey = (rowIndex: number, attributeId: number) => `rows.${rowIndex}.attribute_value_ids.${attributeId}`
+const tierFieldKey = (rowIndex: number, tierIndex: number, field: string) => `rows.${rowIndex}.tiered_prices.${tierIndex}.${field}`
+
+const clearRowErrors = (rowIndex: number) => {
+  Object.keys(fieldErrors.value)
+    .filter(k => k.startsWith(`rows.${rowIndex}.`))
+    .forEach((k) => {
+      delete fieldErrors.value[k]
+    })
+}
+
+const clearFieldError = (key: string) => {
+  if (fieldErrors.value[key]) delete fieldErrors.value[key]
+}
+
+const clearServerErrors = () => {
+  fieldErrors.value = {}
+}
 
 const addVariationRow = () => {
   variations.value.push(createEmptyVariation())
@@ -74,7 +121,27 @@ const addVariationRow = () => {
 
 const removeVariationRow = (index: number) => {
   if (variations.value.length <= 1) return
+  clearRowErrors(index)
   variations.value.splice(index, 1)
+}
+
+const addInventoryRow = (variationIndex: number) => {
+  variations.value[variationIndex]?.inventoryRows.push(createEmptyInventoryRow())
+}
+
+const removeInventoryRow = (variationIndex: number, inventoryRowKey: number) => {
+  const variation = variations.value[variationIndex]
+  if (!variation) return
+  variation.inventoryRows = variation.inventoryRows.filter(r => r._key !== inventoryRowKey)
+}
+
+const availableWarehousesForRow = (variation: VariationForm, inventoryRowKey: number) => {
+  const usedIds = new Set(
+    variation.inventoryRows
+      .filter(r => r._key !== inventoryRowKey && r.warehouse_id)
+      .map(r => String(r.warehouse_id)),
+  )
+  return warehouses.value.filter(w => isWarehouseActive(w) && !usedIds.has(String(w.id)))
 }
 
 const addTierPrice = (rowIndex: number) => {
@@ -87,27 +154,121 @@ const removeTierPrice = (rowIndex: number, tierIndex: number) => {
 
 const createVariationPayload = (row: VariationForm) => {
   const attributeValueIds = Object.values(row.selectedValues).map(v => Number(v)).filter(Boolean)
+  const tieredPrices = row.tiered_prices
+    .map(tp => ({
+      quantity_from: Number(tp.quantity_from ?? 0),
+      quantity_to: Number(tp.quantity_to ?? 0),
+      price: Number(tp.price ?? 0),
+    }))
+    .filter(tp => tp.quantity_from > 0 || tp.quantity_to > 0 || tp.price > 0)
+  const inventory = row.inventoryRows
+    .filter(invRow => invRow.warehouse_id)
+    .map(invRow => ({
+      warehouse_id: Number(invRow.warehouse_id),
+      quantity: Number(invRow.quantity ?? 0),
+      min_quantity: Number(invRow.min_quantity ?? 0),
+      allow_notification: Boolean(invRow.allow_notification),
+    }))
+
   const payload: Record<string, unknown> = {
     // TEMP: variation fields are optional on create for now.
     sku: row.sku,
     barcode: row.barcode,
     price: row.price,
     buying_price: row.buying_price,
-    stock_quantity: row.stock_quantity,
+    stock_quantity: inventory.reduce((sum, invRow) => sum + Number(invRow.quantity ?? 0), 0),
     is_active: row.is_active,
-    tiered_prices: row.tiered_prices,
+    tiered_prices: tieredPrices.length ? tieredPrices : [],
   }
 
   if (attributeValueIds.length) payload.attribute_value_ids = attributeValueIds
-  if (row.warehouse_id) {
-    payload.inventory = [{
-      warehouse_id: row.warehouse_id,
-      quantity: row.stock_quantity,
-      min_quantity: row.min_quantity,
-      allow_notification: row.allow_notification,
-    }]
-  }
+  if (inventory.length) payload.inventory = inventory
   return payload
+}
+
+const validateRow = (row: VariationForm, rowIndex: number) => {
+  let valid = true
+
+  if (!row.sku.trim()) {
+    fieldErrors.value[rowFieldKey(rowIndex, 'sku')] = t('products_form.validation_sku_required')
+    valid = false
+  }
+  if (!row.barcode.trim()) {
+    fieldErrors.value[rowFieldKey(rowIndex, 'barcode')] = t('products_variations.validation_barcode_required')
+    valid = false
+  }
+  if (!(Number(row.price) > 0)) {
+    fieldErrors.value[rowFieldKey(rowIndex, 'price')] = t('price_assignment.validation_standard_required')
+    valid = false
+  }
+  if (!(Number(row.buying_price) > 0)) {
+    fieldErrors.value[rowFieldKey(rowIndex, 'buying_price')] = t('price_assignment.validation_standard_required')
+    valid = false
+  }
+
+  for (const attributeId of selectedAttributeIds.value) {
+    if (!row.selectedValues[attributeId]) {
+      fieldErrors.value[attributeFieldKey(rowIndex, attributeId)] = t('products_variations.validation_values_required')
+      valid = false
+    }
+  }
+
+  if (!row.inventoryRows.length) {
+    fieldErrors.value[rowFieldKey(rowIndex, 'inventory')] = t('products_variations.validation_warehouse_required')
+    valid = false
+  }
+
+  row.inventoryRows.forEach((inventoryRow, inventoryIndex) => {
+    if (!inventoryRow.warehouse_id) {
+      fieldErrors.value[inventoryFieldKey(rowIndex, inventoryIndex, 'warehouse_id')] = t('products_variations.validation_warehouse_required')
+      valid = false
+    }
+    if (Number(inventoryRow.quantity) < 0) {
+      fieldErrors.value[inventoryFieldKey(rowIndex, inventoryIndex, 'quantity')] = t('errors.required')
+      valid = false
+    }
+    if (Number(inventoryRow.min_quantity) < 0) {
+      fieldErrors.value[inventoryFieldKey(rowIndex, inventoryIndex, 'min_quantity')] = t('errors.required')
+      valid = false
+    }
+  })
+
+  row.tiered_prices.forEach((tier, tierIndex) => {
+    if (!(Number(tier.quantity_from) >= 0)) {
+      fieldErrors.value[tierFieldKey(rowIndex, tierIndex, 'quantity_from')] = t('errors.required')
+      valid = false
+    }
+    if (!(Number(tier.quantity_to) > Number(tier.quantity_from))) {
+      fieldErrors.value[tierFieldKey(rowIndex, tierIndex, 'quantity_to')] = t('price_assignment.validation_max_gt_min')
+      valid = false
+    }
+    if (!(Number(tier.price) > 0)) {
+      fieldErrors.value[tierFieldKey(rowIndex, tierIndex, 'price')] = t('price_assignment.validation_standard_required')
+      valid = false
+    }
+  })
+
+  return valid
+}
+
+const applyServerErrorsToRow = (rowIndex: number, errors: Record<string, string>) => {
+  Object.entries(errors).forEach(([key, message]) => {
+    if (!message) return
+
+    if (key.startsWith('inventory.')) {
+      fieldErrors.value[`rows.${rowIndex}.${key}`] = message
+      return
+    }
+    if (key.startsWith('tiered_prices.')) {
+      fieldErrors.value[`rows.${rowIndex}.${key}`] = message
+      return
+    }
+    if (key.startsWith('attribute_value_ids')) {
+      fieldErrors.value[rowFieldKey(rowIndex, 'attribute_value_ids')] = message
+      return
+    }
+    fieldErrors.value[rowFieldKey(rowIndex, key)] = message
+  })
 }
 
 const createVariations = async () => {
@@ -116,22 +277,32 @@ const createVariations = async () => {
     return
   }
   errorMessage.value = ''
+  clearServerErrors()
   if (!variations.value.length) variations.value.push(createEmptyVariation())
+  const allRowsValid = variations.value.every((row, rowIndex) => validateRow(row, rowIndex))
+  if (!allRowsValid) return
 
   submitting.value = true
-  try {
-    for (const row of variations.value) {
+  for (let rowIndex = 0; rowIndex < variations.value.length; rowIndex += 1) {
+    const row = variations.value[rowIndex]!
+    try {
       await productsStore.createVariation(productId.value, createVariationPayload(row))
     }
-    toast.success(t('products_variations.create_success'))
-    await navigateTo(`/products/variations/${productId.value}`)
+    catch (error: unknown) {
+      if (isValidationError(error)) {
+        applyServerErrorsToRow(rowIndex, getFieldErrors(error))
+        errorMessage.value = ''
+      }
+      else {
+        errorMessage.value = getErrorMessage(error)
+      }
+      submitting.value = false
+      return
+    }
   }
-  catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error)
-  }
-  finally {
-    submitting.value = false
-  }
+  toast.success(t('products_variations.create_success'))
+  await navigateTo(`/products/variations/${productId.value}`)
+  submitting.value = false
 }
 
 onMounted(async () => {
@@ -139,7 +310,8 @@ onMounted(async () => {
   loading.value = true
   try {
     const whRes = await $api('/warehouses', { params: { page: 1, per_page: 100, status: 'active' } }).catch(() => ({}))
-    warehouses.value = ((whRes as any)?.data?.warehouses ?? (whRes as any)?.warehouses ?? []) as Array<{ id: number, name_ar?: string, name_en?: string }>
+    warehouses.value = (((whRes as any)?.data?.warehouses ?? (whRes as any)?.warehouses ?? []) as WarehouseItem[])
+      .filter(isWarehouseActive)
     await Promise.all([attributesStore.load(), productsStore.loadProductDraft(productId.value)])
   }
   catch (error: unknown) {
@@ -197,29 +369,86 @@ onMounted(async () => {
           </Button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div><label class="text-xs font-medium">{{ t('products_variations.variation_sku') }}</label><Input v-model="row.sku" /></div>
-          <div><label class="text-xs font-medium">{{ t('products_variations.variation_barcode') }}</label><Input v-model="row.barcode" /></div>
-          <div><label class="text-xs font-medium">{{ t('products_variations.variation_price') }}</label><Input v-model.number="row.price" type="number" min="0" /></div>
-          <div><label class="text-xs font-medium">{{ t('products_variations.buying_price') }}</label><Input v-model.number="row.buying_price" type="number" min="0" /></div>
-          <div><label class="text-xs font-medium">{{ t('products_variations.variation_qty') }}</label><Input v-model.number="row.stock_quantity" type="number" min="0" /></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
-            <label class="text-xs font-medium">{{ t('products_page.filter_warehouse') }}</label>
-            <Select :model-value="row.warehouse_id ? String(row.warehouse_id) : ''" @update:model-value="v => row.warehouse_id = Number(v)">
-              <SelectTrigger><SelectValue :placeholder="t('products_page.filter_warehouse')" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="w in warehouses" :key="w.id" :value="String(w.id)">
-                  {{ w.name_en || w.name_ar || `#${w.id}` }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <label class="text-xs font-medium">{{ t('products_variations.variation_sku') }}</label>
+            <Input v-model="row.sku" @input="clearFieldError(rowFieldKey(rowIndex, 'sku'))" />
+            <p v-if="fieldErrors[rowFieldKey(rowIndex, 'sku')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'sku')] }}</p>
           </div>
-          <div><label class="text-xs font-medium">{{ t('warehouse_assignment.col_min_qty') }}</label><Input v-model.number="row.min_quantity" type="number" min="0" /></div>
+          <div>
+            <label class="text-xs font-medium">{{ t('products_variations.variation_barcode') }}</label>
+            <Input v-model="row.barcode" @input="clearFieldError(rowFieldKey(rowIndex, 'barcode'))" />
+            <p v-if="fieldErrors[rowFieldKey(rowIndex, 'barcode')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'barcode')] }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium">{{ t('products_variations.variation_price') }}</label>
+            <Input v-model.number="row.price" type="number" min="0" @input="clearFieldError(rowFieldKey(rowIndex, 'price'))" />
+            <p v-if="fieldErrors[rowFieldKey(rowIndex, 'price')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'price')] }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium">{{ t('products_variations.buying_price') }}</label>
+            <Input v-model.number="row.buying_price" type="number" min="0" @input="clearFieldError(rowFieldKey(rowIndex, 'buying_price'))" />
+            <p v-if="fieldErrors[rowFieldKey(rowIndex, 'buying_price')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'buying_price')] }}</p>
+          </div>
+        </div>
+
+        <div class="rounded-md border p-3 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="font-medium">{{ t('products_page.filter_warehouse') }}</h3>
+            <Button variant="outline" size="sm" @click="addInventoryRow(rowIndex)">
+              <Plus class="size-4 mr-1" />
+              {{ t('warehouse_assignment.add_row') }}
+            </Button>
+          </div>
+
+          <div v-if="!row.inventoryRows.length" class="text-sm text-muted-foreground">
+            {{ t('warehouse_assignment.empty_hint') }}
+          </div>
+
+          <div v-for="(inventoryRow, index) in row.inventoryRows" :key="inventoryRow._key" class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+            <div class="md:col-span-4">
+              <label class="text-xs font-medium">{{ t('warehouse_assignment.col_warehouse') }}</label>
+              <Select
+                :model-value="inventoryRow.warehouse_id ? String(inventoryRow.warehouse_id) : ''"
+                @update:model-value="v => { inventoryRow.warehouse_id = v ? Number(v) : null; clearFieldError(inventoryFieldKey(rowIndex, index, 'warehouse_id')) }"
+              >
+                <SelectTrigger><SelectValue :placeholder="t('products_page.filter_warehouse')" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="w in availableWarehousesForRow(row, inventoryRow._key)" :key="w.id" :value="String(w.id)">
+                    {{ w.name_en || w.name_ar || `#${w.id}` }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p v-if="fieldErrors[inventoryFieldKey(rowIndex, index, 'warehouse_id')]" class="text-xs text-red-600">{{ fieldErrors[inventoryFieldKey(rowIndex, index, 'warehouse_id')] }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-medium">{{ t('warehouse_assignment.col_stock') }}</label>
+              <Input v-model.number="inventoryRow.quantity" type="number" min="0" @input="clearFieldError(inventoryFieldKey(rowIndex, index, 'quantity'))" />
+              <p v-if="fieldErrors[inventoryFieldKey(rowIndex, index, 'quantity')]" class="text-xs text-red-600">{{ fieldErrors[inventoryFieldKey(rowIndex, index, 'quantity')] }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-medium">{{ t('warehouse_assignment.col_min_qty') }}</label>
+              <Input v-model.number="inventoryRow.min_quantity" type="number" min="0" @input="clearFieldError(inventoryFieldKey(rowIndex, index, 'min_quantity'))" />
+              <p v-if="fieldErrors[inventoryFieldKey(rowIndex, index, 'min_quantity')]" class="text-xs text-red-600">{{ fieldErrors[inventoryFieldKey(rowIndex, index, 'min_quantity')] }}</p>
+            </div>
+            <div class="md:col-span-3">
+              <label class="text-xs font-medium block mb-2">{{ t('warehouse_assignment.col_notifications') }}</label>
+              <label class="inline-flex items-center gap-2 text-sm">
+                <Checkbox :model-value="inventoryRow.allow_notification" @update:model-value="v => inventoryRow.allow_notification = Boolean(v)" />
+                <span>{{ t('warehouse_assignment.col_notifications') }}</span>
+              </label>
+            </div>
+            <div class="md:col-span-1">
+              <Button variant="ghost" size="sm" class="w-full" @click="removeInventoryRow(rowIndex, inventoryRow._key)">
+                <Trash2 class="size-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div v-for="attributeId in selectedAttributeIds" :key="`${rowIndex}_${attributeId}`">
-            <Select :model-value="row.selectedValues[attributeId] ? String(row.selectedValues[attributeId]) : ''" @update:model-value="v => row.selectedValues[attributeId] = Number(v)">
+            <Select :model-value="row.selectedValues[attributeId] ? String(row.selectedValues[attributeId]) : ''" @update:model-value="v => { row.selectedValues[attributeId] = Number(v); clearFieldError(attributeFieldKey(rowIndex, attributeId)); clearFieldError(rowFieldKey(rowIndex, 'attribute_value_ids')) }">
               <SelectTrigger><SelectValue :placeholder="attributesStore.attributeName(attributeId)" /></SelectTrigger>
               <SelectContent>
                 <SelectItem
@@ -231,33 +460,41 @@ onMounted(async () => {
                 </SelectItem>
               </SelectContent>
             </Select>
+            <p v-if="fieldErrors[attributeFieldKey(rowIndex, attributeId)]" class="text-xs text-red-600">{{ fieldErrors[attributeFieldKey(rowIndex, attributeId)] }}</p>
           </div>
         </div>
+        <p v-if="fieldErrors[rowFieldKey(rowIndex, 'attribute_value_ids')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'attribute_value_ids')] }}</p>
 
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <h3 class="font-medium">{{ t('products_variations.tiered_prices') }}</h3>
             <Button variant="outline" size="sm" @click="addTierPrice(rowIndex)">{{ t('products_variations.add_tier_price') }}</Button>
           </div>
-          <label class="inline-flex items-center gap-2 text-sm">
-            <Checkbox :model-value="row.allow_notification" @update:model-value="v => row.allow_notification = Boolean(v)" />
-            {{ t('warehouse_assignment.col_notifications') }}
-          </label>
           <div v-for="(tp, idx) in row.tiered_prices" :key="idx" class="grid grid-cols-3 gap-2">
-            <Input v-model.number="tp.quantity_from" type="number" min="0" />
-            <Input v-model.number="tp.quantity_to" type="number" min="0" />
+            <div>
+              <Input v-model.number="tp.quantity_from" type="number" min="0" @input="clearFieldError(tierFieldKey(rowIndex, idx, 'quantity_from'))" />
+              <p v-if="fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_from')]" class="text-xs text-red-600">{{ fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_from')] }}</p>
+            </div>
+            <div>
+              <Input v-model.number="tp.quantity_to" type="number" min="0" @input="clearFieldError(tierFieldKey(rowIndex, idx, 'quantity_to'))" />
+              <p v-if="fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_to')]" class="text-xs text-red-600">{{ fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_to')] }}</p>
+            </div>
             <div class="flex gap-2">
-              <Input v-model.number="tp.price" type="number" min="0" />
+              <Input v-model.number="tp.price" type="number" min="0" @input="clearFieldError(tierFieldKey(rowIndex, idx, 'price'))" />
+              <p v-if="fieldErrors[tierFieldKey(rowIndex, idx, 'price')]" class="text-xs text-red-600">{{ fieldErrors[tierFieldKey(rowIndex, idx, 'price')] }}</p>
               <Button variant="ghost" size="sm" @click="removeTierPrice(rowIndex, idx)">{{ t('common.delete') }}</Button>
             </div>
           </div>
+          <p v-if="fieldErrors[rowFieldKey(rowIndex, 'tiered_prices')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'tiered_prices')] }}</p>
         </div>
       </div>
 
-      <Button variant="outline" class="w-full" @click="addVariationRow">
-        <Plus class="size-4 mr-1" />
-        {{ t('products_variations.add_variation') }}
-      </Button>
+      <div class="pt-4 border-t">
+        <Button variant="outline" class="w-full" @click="addVariationRow">
+          <Plus class="size-4 mr-1" />
+          {{ t('products_variations.add_variation') }}
+        </Button>
+      </div>
     </div>
 
     <div v-if="canCreateVariation" class="flex justify-end gap-2">

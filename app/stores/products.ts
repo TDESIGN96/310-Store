@@ -133,7 +133,7 @@ export const useProductsStore = defineStore('products', () => {
         stock_quantity: v.stock_quantity,
         is_active: v.is_active,
         attribute_value_ids: v.attribute_value_ids,
-        tiered_prices: v.tiered_prices,
+        tiered_prices: v.tiered_prices?.length ? v.tiered_prices : [],
         inventory: buildVariationInventory(v.warehouse_id, v.stock_quantity, v.min_quantity, v.allow_notification),
       }))
       : undefined,

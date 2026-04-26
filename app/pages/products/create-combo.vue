@@ -126,7 +126,7 @@ async function handleSave() {
       is_combo: true,
       combo_items: bundleItems,
       price: Number(pricing.price),
-      tiered_prices: pricing.tiered_prices,
+      tiered_prices: pricing.tiered_prices?.length ? pricing.tiered_prices : null,
     }
 
     const inventory = payload.inventory as Array<Record<string, unknown>>

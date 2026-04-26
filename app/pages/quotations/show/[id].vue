@@ -47,6 +47,18 @@ const productLabel = (row: Record<string, unknown>) => {
   const nameEn = String(product.name_en ?? '')
   return locale.value === 'ar' ? (nameAr || nameEn || '—') : (nameEn || nameAr || '—')
 }
+const productImageUrl = (row: Record<string, unknown>) => {
+  const product = (row.product && typeof row.product === 'object' ? row.product : null) as Record<string, unknown> | null
+  if (!product) return ''
+  const url = String(
+    product.main_image_url
+    ?? product.main_image
+    ?? product.image_url
+    ?? product.image
+    ?? '',
+  ).trim()
+  return url
+}
 const variationLabel = (row: Record<string, unknown>) => {
   const variation = (row.variation && typeof row.variation === 'object' ? row.variation : null) as Record<string, unknown> | null
   if (!variation) return '—'
@@ -169,7 +181,18 @@ onMounted(async () => {
                 </TableHeader>
                 <TableBody>
                   <TableRow v-for="(item, idx) in items" :key="String(item.id ?? idx)">
-                    <TableCell>{{ productLabel(item) }}</TableCell>
+                    <TableCell>
+                      <div class="flex items-center gap-2">
+                        <img
+                          v-if="productImageUrl(item)"
+                          :src="productImageUrl(item)"
+                          :alt="productLabel(item)"
+                          class="size-10 shrink-0 rounded-md border object-cover"
+                          loading="lazy"
+                        >
+                        <span>{{ productLabel(item) }}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{{ variationLabel(item) }}</TableCell>
                     <TableCell class="text-end tabular-nums">{{ asNumber(item.qty) }}</TableCell>
                     <TableCell class="text-end tabular-nums">{{ money(item.unit_price) }}</TableCell>

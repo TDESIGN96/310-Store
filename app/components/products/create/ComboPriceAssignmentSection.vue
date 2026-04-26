@@ -120,7 +120,7 @@ function getPricingPayload() {
   return {
     pricing_type: 'standard' as const,
     price: Number(standardPrice.value),
-    tiered_prices: mapped,
+    tiered_prices: mapped.length ? mapped : null,
   }
 }
 

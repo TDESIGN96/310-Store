@@ -10,6 +10,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Pencil,
   Trash2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -340,18 +341,23 @@ onMounted(() => {
             <TableCell class="text-sm tabular-nums">{{ row.products_count ?? 0 }}</TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ formatDate(row.created_at) }}</TableCell>
             <TableCell>
-              <div class="flex items-center justify-end gap-1">
-                <Button variant="ghost" size="icon" @click="navigateTo(`/attributes/edit/${row.id}`)">
-                  <ChevronRight class="size-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="text-red-600 hover:text-red-700 hover:bg-red-50"
+              <div class="flex flex-wrap items-center justify-end gap-3 text-sm">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
+                  @click="navigateTo(`/attributes/edit/${row.id}`)"
+                >
+                  <Pencil class="size-3.5" />
+                  {{ t('common.edit') }}
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 text-red-500 hover:underline"
                   @click="openDelete(row)"
                 >
-                  <Trash2 class="size-4" />
-                </Button>
+                  <Trash2 class="size-3.5" />
+                  {{ t('common.delete') }}
+                </button>
               </div>
             </TableCell>
           </TableRow>

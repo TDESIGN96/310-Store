@@ -64,7 +64,14 @@ const inventorySummary = (row: Record<string, unknown>) => {
   return inv
     .map((item) => {
       const warehouse = item.warehouse as Record<string, unknown> | undefined
-      return `#${item.warehouse_id ?? warehouse?.id ?? '—'}: ${item.quantity ?? 0}`
+      const warehouseName = String(
+        warehouse?.name_en
+        ?? warehouse?.name_ar
+        ?? warehouse?.name
+        ?? item.warehouse_name
+        ?? `#${item.warehouse_id ?? warehouse?.id ?? '—'}`,
+      )
+      return `${warehouseName}: ${item.quantity ?? 0}`
     })
     .join(', ')
 }
@@ -177,14 +184,14 @@ onMounted(() => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40">
-            <TableHead>{{ t('products_variations.variation_sku') }}</TableHead>
-            <TableHead>{{ t('products_variations.variation_barcode') }}</TableHead>
-            <TableHead>{{ t('products_variations.variation_price') }}</TableHead>
-            <TableHead>{{ t('products_variations.variation_qty') }}</TableHead>
-            <TableHead>{{ t('products_variations.tiered_prices') }}</TableHead>
-            <TableHead>{{ t('products_page.col_warehouse') }}</TableHead>
-            <TableHead>{{ t('common.status') }}</TableHead>
-            <TableHead>{{ t('common.actions') }}</TableHead>
+            <TableHead class="text-start">{{ t('products_variations.variation_sku') }}</TableHead>
+            <TableHead class="text-start">{{ t('products_variations.variation_barcode') }}</TableHead>
+            <TableHead class="text-center">{{ t('products_variations.variation_price') }}</TableHead>
+            <TableHead class="text-center">{{ t('products_variations.variation_qty') }}</TableHead>
+            <TableHead class="text-center">{{ t('products_variations.tiered_prices') }}</TableHead>
+            <TableHead class="text-start">{{ t('products_page.col_warehouse') }}</TableHead>
+            <TableHead class="text-start">{{ t('common.status') }}</TableHead>
+            <TableHead class="text-end">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -200,14 +207,14 @@ onMounted(() => {
             </TableCell>
           </TableRow>
           <TableRow v-for="row in rows" :key="String(row.id)" v-else>
-            <TableCell>{{ row.sku || '—' }}</TableCell>
-            <TableCell>{{ row.barcode || '—' }}</TableCell>
-            <TableCell>{{ row.price || '—' }}</TableCell>
-            <TableCell>{{ row.stock_quantity ?? 0 }}</TableCell>
-            <TableCell>{{ tieredCount(row) }}</TableCell>
-            <TableCell class="max-w-[220px] truncate">{{ inventorySummary(row) }}</TableCell>
-            <TableCell>{{ isActive(row) ? t('common.active') : t('common.inactive') }}</TableCell>
-            <TableCell>
+            <TableCell class="text-start">{{ row.sku || '—' }}</TableCell>
+            <TableCell class="text-start">{{ row.barcode || '—' }}</TableCell>
+            <TableCell class="text-center">{{ row.price || '—' }}</TableCell>
+            <TableCell class="text-center">{{ row.stock_quantity ?? 0 }}</TableCell>
+            <TableCell class="text-center">{{ tieredCount(row) }}</TableCell>
+            <TableCell class="max-w-[220px] truncate text-start">{{ inventorySummary(row) }}</TableCell>
+            <TableCell class="text-start">{{ isActive(row) ? t('common.active') : t('common.inactive') }}</TableCell>
+            <TableCell class="text-end">
               <div class="flex flex-wrap gap-1 justify-end">
                 <Button v-if="canShowVariation" variant="outline" size="sm" as-child>
                   <NuxtLink :to="`/products/variations/${productId}/show/${row.id}`"><Eye class="size-3.5" /></NuxtLink>

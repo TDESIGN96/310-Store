@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ArrowRight, Loader2, ShieldAlert, Trash2, Pencil } from 'lucide-vue-next'
+import { ArrowRight, Loader2, ShieldAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -12,16 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
 
@@ -65,10 +55,6 @@ const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFou
   'error',
 )
 
-const deleteDialogOpen = ref(false)
-const deleteValueTarget = ref<AttributeValue | null>(null)
-const deletingValue = ref(false)
-
 const loadAttribute = async () => {
   loading.value = true
   clearLoadError()
@@ -90,38 +76,13 @@ const loadAttribute = async () => {
   }
 }
 
-const openDeleteValue = (value: AttributeValue) => {
-  deleteValueTarget.value = value
-  deleteDialogOpen.value = true
-}
-
-const confirmDeleteValue = async () => {
-  if (!attribute.value || !deleteValueTarget.value) return
-  deletingValue.value = true
-  try {
-    await $api(`/attributes/${attribute.value.id}/values/${deleteValueTarget.value.id}`, {
-      method: 'DELETE',
-    })
-    toast.success(t('attributes_show.delete_value_success'))
-    deleteDialogOpen.value = false
-    deleteValueTarget.value = null
-    await loadAttribute()
-  }
-  catch {
-    toast.error(t('attributes_show.delete_value_error'))
-  }
-  finally {
-    deletingValue.value = false
-  }
-}
-
 onMounted(() => {
   loadAttribute()
 })
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-5xl flex flex-col gap-5">
+  <div class="mx-auto w-full  flex flex-col gap-5">
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div class="flex items-center gap-3">
         <Button variant="ghost" size="icon" class="size-8" as-child>
@@ -134,12 +95,6 @@ onMounted(() => {
           <p class="text-sm text-muted-foreground mt-1">{{ t('attributes_show.subtitle') }}</p>
         </div>
       </div>
-      <Button variant="outline" class="gap-2" as-child>
-        <NuxtLink :to="`/attributes/edit/${attributeId}`">
-          <Pencil class="size-4" />
-          {{ t('attributes_show.edit_attribute') }}
-        </NuxtLink>
-      </Button>
     </div>
 
     <div
@@ -185,14 +140,11 @@ onMounted(() => {
               <TableRow class="bg-muted/40 hover:bg-muted/40">
                 <TableHead class="rtl:text-right font-medium">{{ t('attributes_show.col_sort_order') }}</TableHead>
                 <TableHead class="rtl:text-right font-medium">{{ t('attributes_show.col_name') }}</TableHead>
-                <TableHead class="rtl:text-right font-medium w-[1%] whitespace-nowrap">
-                  {{ t('attributes_show.col_actions') }}
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow v-if="!attribute.values?.length">
-                <TableCell :colspan="3" class="py-12 text-center text-sm text-muted-foreground">
+                <TableCell :colspan="2" class="py-12 text-center text-sm text-muted-foreground">
                   {{ t('attributes_show.no_values') }}
                 </TableCell>
               </TableRow>
@@ -206,52 +158,11 @@ onMounted(() => {
                   <Input :model-value="String(value.sort_order ?? 0)" disabled class="h-8 max-w-[110px]" />
                 </TableCell>
                 <TableCell class="font-medium">{{ value.name || '—' }}</TableCell>
-                <TableCell>
-                  <div class="flex items-center justify-end gap-2">
-                    <Button variant="outline" size="sm" class="h-8 gap-1" as-child>
-                      <NuxtLink :to="`/attributes/edit/${attribute.id}`">
-                        <Pencil class="size-3.5" />
-                        {{ t('common.edit') }}
-                      </NuxtLink>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      class="h-8 gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                      @click="openDeleteValue(value)"
-                    >
-                      <Trash2 class="size-3.5" />
-                      {{ t('common.delete') }}
-                    </Button>
-                  </div>
-                </TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </div>
       </div>
     </template>
-
-    <AlertDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{{ t('attributes_show.delete_value_title') }}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {{ t('attributes_show.delete_value_body', { name: deleteValueTarget?.name ?? '' }) }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="deletingValue">{{ t('common.cancel') }}</AlertDialogCancel>
-          <Button
-            class="bg-red-600 hover:bg-red-700 text-white"
-            :disabled="deletingValue"
-            @click="confirmDeleteValue"
-          >
-            <Loader2 v-if="deletingValue" class="size-4 animate-spin ml-2" />
-            {{ deletingValue ? t('common.loading') : t('attributes_show.confirm_yes_delete') }}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   </div>
 </template>

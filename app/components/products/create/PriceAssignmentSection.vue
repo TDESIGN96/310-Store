@@ -107,9 +107,7 @@ function getPricing() {
 
   return {
     standard_price: standard,
-    tiered_prices: mappedTiered.length
-      ? mappedTiered
-      : [{ quantity_from: 1, quantity_to: 2, price: standard }],
+    tiered_prices: mappedTiered.length ? mappedTiered : null,
   }
 }
 
