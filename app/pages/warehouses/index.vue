@@ -35,6 +35,7 @@ import { toast } from 'vue-sonner'
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
+const { getErrorMessage } = useApiError()
 
 interface WarehouseManager {
   id: number
@@ -188,6 +189,12 @@ const warehouseDisplayName = (w: WarehouseItem) => {
   return w.name_en?.trim() || w.name_ar?.trim() || '—'
 }
 
+const shouldHandleErrorLocally = (error: unknown) => {
+  const e = error as { response?: { status?: number }, statusCode?: number, status?: number }
+  const status = e?.response?.status ?? e?.statusCode ?? e?.status
+  return status === 404 || status === 422
+}
+
 const truncateWarehouseName = (name: string, maxLength = 30) => {
   if (name.length <= maxLength) return name
   return `${name.slice(0, maxLength)}...`
@@ -277,11 +284,9 @@ const confirmDelete = async () => {
     await loadWarehouses(currentPage.value)
   }
   catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      t('warehouses_page.delete_error')
-    toast.error(msg)
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || t('warehouses_page.delete_error'))
+    }
   }
   finally {
     deletingId.value = null
@@ -302,11 +307,9 @@ const confirmDeactivate = async () => {
     await loadWarehouses(currentPage.value)
   }
   catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      t('warehouses_page.deactivate_error')
-    toast.error(msg)
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || t('warehouses_page.deactivate_error'))
+    }
   }
   finally {
     togglingId.value = null
@@ -327,11 +330,9 @@ const confirmActivate = async () => {
     await loadWarehouses(currentPage.value)
   }
   catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      t('warehouses_page.activate_error')
-    toast.error(msg)
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || t('warehouses_page.activate_error'))
+    }
   }
   finally {
     togglingId.value = null

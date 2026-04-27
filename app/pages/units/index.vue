@@ -39,6 +39,7 @@ import { toast } from 'vue-sonner'
 definePageMeta({ layout: 'default' })
 
 const { t, tm, locale } = useI18n()
+const { getErrorMessage } = useApiError()
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -304,7 +305,9 @@ const confirmDelete = async () => {
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
-    toast.error(error?.data?.message?.ar ?? error?.data?.message ?? t('units_page.delete_error'))
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || t('units_page.delete_error'))
+    }
   }
   finally {
     deletingId.value = null
@@ -330,11 +333,9 @@ const confirmDeactivate = async () => {
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      t('units_page.deactivate_error')
-    toast.error(msg)
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || t('units_page.deactivate_error'))
+    }
   }
   finally {
     togglingId.value = null
@@ -355,11 +356,9 @@ const confirmActivate = async () => {
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      t('units_page.activate_error')
-    toast.error(msg)
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || t('units_page.activate_error'))
+    }
   }
   finally {
     togglingId.value = null
@@ -411,11 +410,9 @@ const confirmBulkAction = async () => {
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      (type === 'activate' ? t('units_page.bulk_activate_failed') : t('units_page.bulk_deactivate_failed'))
-    toast.error(msg)
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || (type === 'activate' ? t('units_page.bulk_activate_failed') : t('units_page.bulk_deactivate_failed')))
+    }
   }
   finally {
     bulkActionLoading.value = false
@@ -434,7 +431,9 @@ const confirmBulkDelete = async () => {
     await loadUnits(currentPage.value)
   }
   catch (error: any) {
-    toast.error(error?.data?.message?.ar ?? error?.data?.message ?? t('units_page.bulk_delete_error'))
+    if (shouldHandleErrorLocally(error)) {
+      toast.error(getErrorMessage(error) || t('units_page.bulk_delete_error'))
+    }
   }
   finally {
     bulkActionLoading.value = false
@@ -475,6 +474,12 @@ const exportCSV = () => {
   link.click()
   URL.revokeObjectURL(link.href)
   toast.success(t('common.export_success'))
+}
+
+const shouldHandleErrorLocally = (error: unknown) => {
+  const e = error as { response?: { status?: number }, statusCode?: number, status?: number }
+  const status = e?.response?.status ?? e?.statusCode ?? e?.status
+  return status === 404 || status === 422
 }
 
 onMounted(() => loadUnits())
