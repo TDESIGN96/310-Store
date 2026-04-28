@@ -208,9 +208,15 @@ async function handleSave() {
       allow_notification: false,
     })
 
-    if (detailsPayload.image_file) {
-      const imageUrl = await uploadFileAndGetUrl(detailsPayload.image_file, token)
+    if (detailsPayload.main_image_file) {
+      const imageUrl = await uploadFileAndGetUrl(detailsPayload.main_image_file, token)
       payload.main_image_url = imageUrl
+    }
+    if (detailsPayload.additional_image_files?.length) {
+      const imageUrls = await Promise.all(
+        detailsPayload.additional_image_files.map((file: File) => uploadFileAndGetUrl(file, token)),
+      )
+      payload.images = imageUrls
     }
 
     const base = config.public.apiBase as string

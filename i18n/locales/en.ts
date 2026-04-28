@@ -44,6 +44,7 @@ export default {
     groups: {
       main: 'Home',
       inventory: 'Inventory',
+      sales: 'Sales',
       administration: 'Administration',
     },
     items: {
@@ -61,6 +62,7 @@ export default {
     submenu: {
       list: 'List',
       create: 'Create new',
+      create_combo: 'Create combo',
     },
   },
 

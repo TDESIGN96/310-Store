@@ -602,7 +602,7 @@ onMounted(() => {
         </CardContent>
       </Card>
 
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+      <!-- <Card class="gap-0 overflow-hidden py-0 shadow-sm">
         <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
           <Warehouse class="size-4 shrink-0 text-muted-foreground" />
           <h2 class="text-base font-semibold tracking-tight">
@@ -662,7 +662,7 @@ onMounted(() => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> -->
     </template>
 
     <div v-else class="rounded-xl border bg-card p-10 text-center text-muted-foreground shadow-sm">

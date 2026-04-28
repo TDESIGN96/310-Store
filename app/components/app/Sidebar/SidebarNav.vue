@@ -40,11 +40,14 @@ const visibleSections = computed(() => {
 })
 
 function isRouteUnderModule(item: NavItem, mode: 'full' | 'create-only' = 'full'): boolean {
-  if (!item.createPath) return false
   const p = route.path.replace(/\/$/, '')
   const list = item.path.replace(/\/$/, '')
-  const create = item.createPath.replace(/\/$/, '')
-  const underCreate = p === create || p.startsWith(`${create}/`)
+  const createLinks = getCreateLinks(item)
+  if (!createLinks.length) return false
+  const underCreate = createLinks.some((link) => {
+    const create = link.path.replace(/\/$/, '')
+    return p === create || p.startsWith(`${create}/`)
+  })
   if (mode === 'create-only') return underCreate
   return p === list || p.startsWith(`${list}/`) || underCreate
 }
@@ -55,11 +58,28 @@ function isListActive(item: NavItem): boolean {
   return p === list || (p.startsWith(`${list}/`) && !p.includes('/create'))
 }
 
-function isCreateActive(item: NavItem): boolean {
-  if (!item.createPath) return false
+function isCreateActive(path: string): boolean {
   const p = route.path.replace(/\/$/, '')
-  const create = item.createPath.replace(/\/$/, '')
+  const create = path.replace(/\/$/, '')
   return p === create || p.startsWith(`${create}/`)
+}
+
+function getCreateLinks(item: NavItem): Array<{ path: string; labelKey: string }> {
+  const links: Array<{ path: string; labelKey: string }> = []
+  if (item.createPath) {
+    links.push({ path: item.createPath, labelKey: 'nav.submenu.create' })
+  }
+  if (item.secondaryCreatePath) {
+    links.push({
+      path: item.secondaryCreatePath,
+      labelKey: item.secondaryCreateLabelKey ?? 'nav.submenu.create',
+    })
+  }
+  return links
+}
+
+function hasCreateLinks(item: NavItem): boolean {
+  return getCreateLinks(item).length > 0
 }
 </script>
 
@@ -89,7 +109,7 @@ function isCreateActive(item: NavItem): boolean {
         <SidebarMenuItem
           v-else-if="
             item.module
-              && item.createPath
+              && hasCreateLinks(item)
               && navVisibility(item.module) === 'dropdown-create-only'
           "
           class="group/collapsible"
@@ -103,14 +123,17 @@ function isCreateActive(item: NavItem): boolean {
               <ChevronDown class="ms-auto size-4 shrink-0 transition-transform group-open/details:rotate-180" />
             </summary>
             <SidebarMenuSub class="mt-1 border-sidebar-border">
-              <SidebarMenuSubItem>
+              <SidebarMenuSubItem
+                v-for="link in getCreateLinks(item)"
+                :key="link.path"
+              >
                 <SidebarMenuSubButton
                   as-child
                   size="sm"
-                  :is-active="isCreateActive(item)"
+                  :is-active="isCreateActive(link.path)"
                 >
-                  <NuxtLink :to="item.createPath">
-                    {{ t('nav.submenu.create') }}
+                  <NuxtLink :to="link.path">
+                    {{ t(link.labelKey) }}
                   </NuxtLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
@@ -120,7 +143,7 @@ function isCreateActive(item: NavItem): boolean {
 
         <!-- Module: dropdown (list + create) -->
         <SidebarMenuItem
-          v-else-if="item.module && item.createPath && navVisibility(item.module) === 'dropdown'"
+          v-else-if="item.module && hasCreateLinks(item) && navVisibility(item.module) === 'dropdown'"
           class="group/collapsible"
         >
           <details class="group/details" :open="isRouteUnderModule(item)">
@@ -143,14 +166,17 @@ function isCreateActive(item: NavItem): boolean {
                   </NuxtLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
-              <SidebarMenuSubItem>
+              <SidebarMenuSubItem
+                v-for="link in getCreateLinks(item)"
+                :key="link.path"
+              >
                 <SidebarMenuSubButton
                   as-child
                   size="sm"
-                  :is-active="isCreateActive(item)"
+                  :is-active="isCreateActive(link.path)"
                 >
-                  <NuxtLink :to="item.createPath">
-                    {{ t('nav.submenu.create') }}
+                  <NuxtLink :to="link.path">
+                    {{ t(link.labelKey) }}
                   </NuxtLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>

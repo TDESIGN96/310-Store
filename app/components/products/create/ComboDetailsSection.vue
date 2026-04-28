@@ -15,6 +15,9 @@ import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryLis
 
 const { t, locale } = useI18n()
 const { $api } = useApi()
+const MAX_IMAGES = 5
+const MAX_ADDITIONAL_IMAGES = 4
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const SKU_RE = /^[A-Za-z0-9\-/]+$/
 
 interface CategoryItem {
@@ -38,13 +41,14 @@ interface UnitsResponse {
   data?: { units?: UnitItem[]; pagination?: UnitsResponse['pagination'] }
 }
 
-const comboNameAr = ref('')
-const comboNameEn = ref('')
+const productNameAr = ref('')
+const productNameEn = ref('')
 const sku = ref(generateRandomSku())
 const categoryId = ref('')
 const unitId = ref('')
 const description = ref('')
-const imageFile = ref<File | null>(null)
+const mainImageFile = ref<File | null>(null)
+const additionalImageFiles = ref<File[]>([])
 
 const categories = ref<CategoryItem[]>([])
 const units = ref<UnitItem[]>([])
@@ -52,7 +56,8 @@ const loadingCategories = ref(false)
 const loadingUnits = ref(false)
 const optionsError = ref('')
 
-const imageInputRef = ref<HTMLInputElement | null>(null)
+const mainImageInputRef = ref<HTMLInputElement | null>(null)
+const additionalImagesInputRef = ref<HTMLInputElement | null>(null)
 
 const fieldErrors = ref({
   name_ar: '',
@@ -60,7 +65,8 @@ const fieldErrors = ref({
   sku: '',
   category_id: '',
   unit_id: '',
-  image: '',
+  main_image: '',
+  images: '',
 })
 
 function generateRandomSku() {
@@ -129,27 +135,72 @@ async function loadUnits() {
   }
 }
 
-function openImagePicker() {
-  imageInputRef.value?.click()
+function openMainImagePicker() {
+  mainImageInputRef.value?.click()
 }
 
-function onImageSelected(e: Event) {
+function openAdditionalImagesPicker() {
+  additionalImagesInputRef.value?.click()
+}
+
+function onMainImageSelected(e: Event) {
   const input = e.target as HTMLInputElement
   const picked = Array.from(input.files ?? [])
   input.value = ''
-  clearField('image')
+  clearField('main_image')
+  clearField('images')
   const file = picked[0]
   if (!file) return
   if (!file.type.startsWith('image/')) {
-    fieldErrors.value.image = t('products_combo.validation_image_type')
+    fieldErrors.value.main_image = t('products_combo.validation_image_type')
     return
   }
-  imageFile.value = file
+  if (file.size > MAX_IMAGE_BYTES) {
+    fieldErrors.value.main_image = t('products_form.validation_image_max_size')
+    return
+  }
+  mainImageFile.value = file
 }
 
-function removeImage() {
-  imageFile.value = null
-  clearField('image')
+function onAdditionalFilesSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const picked = Array.from(input.files ?? [])
+  input.value = ''
+  clearField('images')
+
+  let next = [...additionalImageFiles.value]
+  for (const file of picked) {
+    if (!file.type.startsWith('image/')) {
+      fieldErrors.value.images = t('products_combo.validation_image_type')
+      continue
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      fieldErrors.value.images = t('products_form.validation_image_max_size')
+      continue
+    }
+    if (next.length >= MAX_ADDITIONAL_IMAGES) {
+      fieldErrors.value.images = t('products_form.validation_additional_images_max_count')
+      break
+    }
+    const total = (mainImageFile.value ? 1 : 0) + next.length
+    if (total >= MAX_IMAGES) {
+      fieldErrors.value.images = t('products_form.validation_images_max_count')
+      break
+    }
+    next.push(file)
+  }
+  additionalImageFiles.value = next
+}
+
+function removeMainImage() {
+  mainImageFile.value = null
+  clearField('main_image')
+  clearField('images')
+}
+
+function removeAdditionalImage(index: number) {
+  additionalImageFiles.value = additionalImageFiles.value.filter((_, i) => i !== index)
+  clearField('images')
 }
 
 function validate() {
@@ -159,13 +210,14 @@ function validate() {
     sku: '',
     category_id: '',
     unit_id: '',
-    image: '',
+    main_image: '',
+    images: '',
   }
 
-  if (!comboNameAr.value.trim())
+  if (!productNameAr.value.trim())
     fieldErrors.value.name_ar = t('products_form.validation_name_ar_required')
 
-  if (!comboNameEn.value.trim())
+  if (!productNameEn.value.trim())
     fieldErrors.value.name_en = t('products_form.validation_name_en_required')
 
   const normalizedSku = sku.value.trim()
@@ -180,12 +232,28 @@ function validate() {
   if (!unitId.value)
     fieldErrors.value.unit_id = t('products_form.validation_unit_required')
 
+  const allImages = [
+    ...(mainImageFile.value ? [mainImageFile.value] : []),
+    ...additionalImageFiles.value,
+  ]
+  for (const file of allImages) {
+    if (file.size > MAX_IMAGE_BYTES) {
+      fieldErrors.value.images = t('products_form.validation_image_max_size')
+      break
+    }
+  }
+  if (allImages.length > MAX_IMAGES)
+    fieldErrors.value.images = t('products_form.validation_images_max_count')
+
+  if (additionalImageFiles.value.length > MAX_ADDITIONAL_IMAGES)
+    fieldErrors.value.images = t('products_form.validation_additional_images_max_count')
+
   return !Object.values(fieldErrors.value).some(Boolean)
 }
 
 function getPayload() {
-  const trimmedArName = comboNameAr.value.trim()
-  const trimmedEnName = comboNameEn.value.trim()
+  const trimmedArName = productNameAr.value.trim()
+  const trimmedEnName = productNameEn.value.trim()
   return {
     name_ar: trimmedArName,
     name_en: trimmedEnName,
@@ -193,7 +261,8 @@ function getPayload() {
     category_id: Number(categoryId.value),
     unit_id: Number(unitId.value),
     description: description.value.trim(),
-    image_file: imageFile.value,
+    main_image_file: mainImageFile.value,
+    additional_image_files: [...additionalImageFiles.value],
   }
 }
 
@@ -205,8 +274,8 @@ function setInitialData(data: {
   unit_id?: number | string | null
   description?: string | null
 }) {
-  comboNameAr.value = data.name_ar ?? ''
-  comboNameEn.value = data.name_en ?? ''
+  productNameAr.value = data.name_ar ?? ''
+  productNameEn.value = data.name_en ?? ''
   sku.value = data.sku ?? generateRandomSku()
   categoryId.value = data.category_id != null ? String(data.category_id) : ''
   unitId.value = data.unit_id != null ? String(data.unit_id) : ''
@@ -220,7 +289,8 @@ function applyServerErrors(fe: Record<string, string>) {
     sku: fe.sku ?? '',
     category_id: fe.category_id ?? '',
     unit_id: fe.unit_id ?? '',
-    image: fe.main_image_url ?? fe.main_image ?? fe.image ?? '',
+    main_image: fe.main_image_url ?? fe.main_image ?? '',
+    images: fe.images ?? fe.image ?? '',
   }
 }
 
@@ -265,7 +335,7 @@ onMounted(() => {
         <label class="text-sm font-medium leading-none" for="combo-name-ar">{{ t('products_form.name_ar') }}</label>
         <Input
           id="combo-name-ar"
-          v-model="comboNameAr"
+          v-model="productNameAr"
           class="h-10"
           dir="auto"
           :placeholder="t('products_form.placeholder_name_ar')"
@@ -278,7 +348,7 @@ onMounted(() => {
         <label class="text-sm font-medium leading-none" for="combo-name-en">{{ t('products_form.name_en') }}</label>
         <Input
           id="combo-name-en"
-          v-model="comboNameEn"
+          v-model="productNameEn"
           class="h-10"
           dir="ltr"
           :placeholder="t('products_form.placeholder_name_en')"
@@ -303,7 +373,7 @@ onMounted(() => {
       </div>
 
       <div class="space-y-2">
-        <label class="text-sm font-medium leading-none">{{ t('products_combo.category') }}</label>
+        <label class="text-sm font-medium leading-none">{{ t('products_form.category') }}</label>
         <Select
           :model-value="categoryId || undefined"
           :disabled="loadingCategories"
@@ -349,53 +419,100 @@ onMounted(() => {
       </div>
 
       <div class="space-y-2 sm:col-span-2">
-        <label class="text-sm font-medium leading-none" for="combo-description">{{ t('products_combo.description') }}</label>
+        <label class="text-sm font-medium leading-none" for="combo-description">{{ t('products_form.description') }}</label>
         <textarea
           id="combo-description"
           v-model="description"
           rows="4"
           class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
-          :placeholder="t('products_combo.placeholder_description')"
+          :placeholder="t('products_form.placeholder_description')"
           dir="auto"
         />
       </div>
 
       <div class="space-y-2 sm:col-span-2">
-        <label class="text-sm font-medium leading-none">{{ t('products_combo.image') }}</label>
+        <label class="text-sm font-medium leading-none">{{ t('products_form.images') }}</label>
+        <p class="text-xs text-muted-foreground">{{ t('products_form.hint_images') }}</p>
         <input
-          ref="imageInputRef"
+          ref="mainImageInputRef"
           type="file"
           accept="image/*"
           class="sr-only"
-          @change="onImageSelected"
+          @change="onMainImageSelected"
         >
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          class="h-9 gap-2"
-          @click="openImagePicker"
+        <input
+          ref="additionalImagesInputRef"
+          type="file"
+          accept="image/*"
+          multiple
+          class="sr-only"
+          @change="onAdditionalFilesSelected"
         >
-          <ImagePlus class="size-4" />
-          {{ imageFile ? t('products_combo.replace_image') : t('products_combo.add_image') }}
-        </Button>
-        <ul v-if="imageFile" class="flex flex-wrap gap-3 pt-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            class="h-9 gap-2"
+            @click="openMainImagePicker"
+          >
+            <ImagePlus class="size-4" />
+            {{ mainImageFile ? t('products_form.replace_main_image') : t('products_form.add_main_image') }}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            class="h-9 gap-2"
+            :disabled="additionalImageFiles.length >= MAX_ADDITIONAL_IMAGES"
+            @click="openAdditionalImagesPicker"
+          >
+            <ImagePlus class="size-4" />
+            {{ t('products_form.add_additional_images') }}
+          </Button>
+          <span class="text-xs text-muted-foreground">
+            {{ t('products_form.images_count', { current: (mainImageFile ? 1 : 0) + additionalImageFiles.length, max: MAX_IMAGES }) }}
+          </span>
+        </div>
+        <p v-if="fieldErrors.main_image" class="text-sm text-red-600">{{ fieldErrors.main_image }}</p>
+        <ul v-if="mainImageFile" class="flex flex-wrap gap-3 pt-2">
           <li class="relative group rounded-md border bg-muted/30 p-2 pe-8 max-w-[220px]">
-            <p class="text-xs truncate font-medium" :title="imageFile.name">{{ imageFile.name }}</p>
+            <p class="text-[10px] uppercase tracking-wide text-muted-foreground">{{ t('products_form.main_image') }}</p>
+            <p class="text-xs truncate font-medium" :title="mainImageFile.name">{{ mainImageFile.name }}</p>
             <p class="text-[10px] text-muted-foreground tabular-nums">
-              {{ (imageFile.size / 1024 / 1024).toFixed(1) }} MB
+              {{ (mainImageFile.size / 1024 / 1024).toFixed(1) }} MB
             </p>
             <button
               type="button"
               class="absolute top-1 end-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
               :aria-label="t('products_form.remove_image')"
-              @click="removeImage"
+              @click="removeMainImage"
             >
               <X class="size-3.5" />
             </button>
           </li>
         </ul>
-        <p v-if="fieldErrors.image" class="text-sm text-red-600">{{ fieldErrors.image }}</p>
+        <ul v-if="additionalImageFiles.length" class="flex flex-wrap gap-3 pt-2">
+          <li
+            v-for="(file, idx) in additionalImageFiles"
+            :key="`${file.name}-${idx}`"
+            class="relative group rounded-md border bg-muted/30 p-2 pe-8 max-w-[200px]"
+          >
+            <p class="text-xs truncate font-medium" :title="file.name">{{ file.name }}</p>
+            <p class="text-[10px] text-muted-foreground tabular-nums">
+              {{ (file.size / 1024 / 1024).toFixed(1) }} MB
+            </p>
+            <button
+              type="button"
+              class="absolute top-1 end-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              :aria-label="t('products_form.remove_image')"
+              @click="removeAdditionalImage(idx)"
+            >
+              <X class="size-3.5" />
+            </button>
+          </li>
+        </ul>
+        <p v-if="fieldErrors.images" class="text-sm text-red-600">{{ fieldErrors.images }}</p>
       </div>
     </div>
   </div>

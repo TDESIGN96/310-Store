@@ -31,6 +31,10 @@ export interface NavItem {
   module?: PermissionModule
   /** Create route — required for dropdown state */
   createPath?: string
+  /** Optional secondary create route (e.g. create combo) */
+  secondaryCreatePath?: string
+  /** Optional label key for secondary create route */
+  secondaryCreateLabelKey?: string
 }
 
 export interface NavGroup {
@@ -55,13 +59,8 @@ export const navItems: NavGroup[] = [
         path: '/products',
         module: 'products',
         createPath: '/products/create',
-      },
-      {
-        labelKey: 'nav.items.quotations',
-        icon: FileText,
-        path: '/quotations',
-        module: 'quotations',
-        createPath: '/quotations/create',
+        secondaryCreatePath: '/products/create-combo',
+        secondaryCreateLabelKey: 'nav.submenu.create_combo',
       },
       {
         labelKey: 'nav.items.units',
@@ -90,6 +89,18 @@ export const navItems: NavGroup[] = [
         path: '/warehouses',
         module: 'warehouses',
         createPath: '/warehouses/create',
+      },
+    ],
+  },
+  {
+    groupKey: 'nav.groups.sales',
+    items: [
+      {
+        labelKey: 'nav.items.quotations',
+        icon: FileText,
+        path: '/quotations',
+        module: 'quotations',
+        createPath: '/quotations/create',
       },
     ],
   },

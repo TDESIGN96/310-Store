@@ -44,6 +44,7 @@ export default {
     groups: {
       main: 'الرئيسية',
       inventory: 'المخزون',
+      sales: 'المبيعات',
       administration: 'الإدارة',
     },
     items: {
@@ -61,6 +62,7 @@ export default {
     submenu: {
       list: 'القائمة',
       create: 'إنشاء جديد',
+      create_combo: 'إنشاء عرض مجمع',
     },
   },
 
