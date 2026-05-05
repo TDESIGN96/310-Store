@@ -1,11 +1,13 @@
 export interface QuotationLineMathInput {
   qty: string | number | undefined
   unitPrice: string | number | undefined
-  discountPercent: string | number | undefined
+  discountMode: 'fixed' | 'percentage' | undefined
+  discountValue: string | number | undefined
 }
 
 export interface QuotationLineMathResult {
   gross: number
+  discount: number
   lineDiscount: number
   rowTotal: number
 }
@@ -17,17 +19,28 @@ const toNumber = (value: string | number | undefined | null, fallback = 0): numb
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value))
 
+export const roundTo2 = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
+
+export const formatTo2DecimalString = (value: number): string => roundTo2(value).toFixed(2)
+
 export const calculateLineTotals = (line: QuotationLineMathInput): QuotationLineMathResult => {
   const qty = Math.max(0, toNumber(line.qty, 0))
   const unitPrice = Math.max(0, toNumber(line.unitPrice, 0))
-  const discountPercent = clamp(toNumber(line.discountPercent, 0), 0, 100)
+  const discountMode = line.discountMode === 'fixed' ? 'fixed' : 'percentage'
+  const rawDiscountValue = Math.max(0, toNumber(line.discountValue, 0))
+  const discountPercent = clamp(rawDiscountValue, 0, 100)
+  const discountPerUnit = discountMode === 'fixed'
+    ? Math.min(rawDiscountValue, unitPrice)
+    : unitPrice * (discountPercent / 100)
   const gross = qty * unitPrice
-  const lineDiscount = gross * (discountPercent / 100)
+  const lineDiscountRaw = discountPerUnit * qty
+  const lineDiscount = Math.min(gross, lineDiscountRaw)
   const rowTotal = gross - lineDiscount
   return {
-    gross,
-    lineDiscount,
-    rowTotal,
+    gross: roundTo2(gross),
+    discount: roundTo2(discountPerUnit),
+    lineDiscount: roundTo2(lineDiscount),
+    rowTotal: roundTo2(rowTotal),
   }
 }
 

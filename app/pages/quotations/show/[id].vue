@@ -65,6 +65,36 @@ const variationLabel = (row: Record<string, unknown>) => {
   return String(variation.label ?? variation.sku ?? '—')
 }
 
+const itemDiscount = (row: Record<string, unknown>) => {
+  const direct = asNumber(row.discount)
+  if (direct > 0) return direct
+
+  const qty = asNumber(row.qty)
+  const lineDiscount = asNumber(row.line_discount)
+  if (qty > 0 && lineDiscount > 0) return lineDiscount / qty
+
+  const unitPrice = asNumber(row.unit_price)
+  const percentage = asNumber(row.discount_percentage ?? row.discount_percent)
+  if (unitPrice > 0 && percentage > 0) return (unitPrice * percentage) / 100
+
+  return 0
+}
+
+const itemDiscountPercentage = (row: Record<string, unknown>) => {
+  const direct = asNumber(row.discount_percentage ?? row.discount_percent)
+  if (direct > 0) return direct
+
+  const unitPrice = asNumber(row.unit_price)
+  if (unitPrice <= 0) return 0
+  return (itemDiscount(row) / unitPrice) * 100
+}
+
+const itemLineDiscount = (row: Record<string, unknown>) => {
+  const direct = asNumber(row.line_discount)
+  if (direct > 0) return direct
+  return itemDiscount(row) * asNumber(row.qty)
+}
+
 onMounted(async () => {
   if (!canViewQuotations.value) return
   loading.value = true
@@ -175,7 +205,8 @@ onMounted(async () => {
                     <TableHead>{{ t('quotations_page.variation') }}</TableHead>
                     <TableHead class="text-end">{{ t('quotations_page.qty') }}</TableHead>
                     <TableHead class="text-end">{{ t('quotations_page.unit_price') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.discount_percent') }}</TableHead>
+                    <TableHead class="text-end">{{ t('quotations_page.discount_percentage') }}</TableHead>
+                    <TableHead class="text-end">{{ t('quotations_page.line_discount') }}</TableHead>
                     <TableHead class="text-end">{{ t('quotations_page.row_total') }}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -196,7 +227,8 @@ onMounted(async () => {
                     <TableCell>{{ variationLabel(item) }}</TableCell>
                     <TableCell class="text-end tabular-nums">{{ asNumber(item.qty) }}</TableCell>
                     <TableCell class="text-end tabular-nums">{{ money(item.unit_price) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(item.discount_percent) }}</TableCell>
+                    <TableCell class="text-end tabular-nums">{{ money(itemDiscountPercentage(item)) }}</TableCell>
+                    <TableCell class="text-end tabular-nums">{{ money(itemLineDiscount(item)) }}</TableCell>
                     <TableCell class="text-end tabular-nums">{{ money(item.row_total) }}</TableCell>
                   </TableRow>
                 </TableBody>

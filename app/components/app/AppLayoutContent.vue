@@ -17,7 +17,7 @@ const cards = computed(() => [
     color: 'text-emerald-600',
     bg: 'bg-emerald-500/10',
     roles: ['admin', 'manager', 'sales', 'agent'],
-    link: '/sales/invoices',
+    link: '/invoices',
   },
   {
     id: 'pending_invoices',
@@ -31,7 +31,7 @@ const cards = computed(() => [
     color: 'text-red-500',
     bg: 'bg-red-500/10',
     roles: ['admin', 'manager', 'accountant'],
-    link: '/sales/invoices',
+    link: '/invoices',
   },
 ])
 </script>

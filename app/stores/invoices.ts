@@ -10,29 +10,31 @@ import {
 } from '@/utils/quotationMath'
 import { getTieredUnitPrice } from '@/utils/tieredUnitPrice'
 
-export interface QuotationPagination {
+export interface InvoicePagination {
   current_page: number
   last_page: number
   per_page: number
   total: number
 }
 
-export type QuotationStatus = 'active' | 'expired' | string
+export type InvoiceStatus = 'issued' | 'paid' | 'partially_returned' | 'returned' | string
 
-export interface QuotationListItem {
+export interface InvoiceListItem {
   id: number
   reference_number: string
-  status: QuotationStatus
-  issue_date: string
-  expiry_date: string
+  warehouse_id: number | null
+  warehouse_name_ar: string
+  warehouse_name_en: string
   customer_name: string
+  invoice_date: string
+  supply_date: string
+  status: InvoiceStatus
   total_discount: number
   grand_total: number
-  created_at: string
-  updated_at: string
+  return_reference_number: string
 }
 
-export interface QuotationDraftItem {
+export interface InvoiceDraftItem {
   key: string
   product_id: number | null
   variation_id: number | null
@@ -45,19 +47,20 @@ export interface QuotationDraftItem {
   unit_price_manual: boolean
 }
 
-export interface QuotationDraft {
+export interface InvoiceDraft {
   id: number | null
   reference_number: string
+  warehouse_id: number | null
   description: string
   customer_name: string
-  customer_phone: string
+  customer_mobile: string
   customer_email: string
-  issue_date: string
-  expiry_date: string
+  invoice_date: string
+  supply_date: string
   terms: string
   notes: string
   delivery_fees: number
-  items: QuotationDraftItem[]
+  items: InvoiceDraftItem[]
 }
 
 const todayIso = (): string => new Date().toISOString().slice(0, 10)
@@ -72,7 +75,7 @@ const normalizeNonNegative = (value: number, fallback = 0): number => {
   return Math.max(0, value)
 }
 
-const createEmptyItem = (): QuotationDraftItem => ({
+const createEmptyItem = (): InvoiceDraftItem => ({
   key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   product_id: null,
   variation_id: null,
@@ -85,7 +88,23 @@ const createEmptyItem = (): QuotationDraftItem => ({
   unit_price_manual: false,
 })
 
-const getVariationPrice = (item: QuotationDraftItem): number => {
+const createEmptyDraft = (): InvoiceDraft => ({
+  id: null,
+  reference_number: '',
+  warehouse_id: null,
+  description: '',
+  customer_name: '',
+  customer_mobile: '',
+  customer_email: '',
+  invoice_date: todayIso(),
+  supply_date: todayIso(),
+  terms: '',
+  notes: '',
+  delivery_fees: 0,
+  items: [createEmptyItem()],
+})
+
+const getVariationPrice = (item: InvoiceDraftItem): number => {
   if (!item.product) return 0
   if (!item.variation_id) return item.product.price
   const variation = item.product.variations.find(v => v.id === item.variation_id)
@@ -97,47 +116,33 @@ const getVariationPrice = (item: QuotationDraftItem): number => {
   )
 }
 
-const createEmptyDraft = (): QuotationDraft => ({
-  id: null,
-  reference_number: '',
-  description: '',
-  customer_name: '',
-  customer_phone: '',
-  customer_email: '',
-  issue_date: todayIso(),
-  expiry_date: todayIso(),
-  terms: '',
-  notes: '',
-  delivery_fees: 0,
-  items: [createEmptyItem()],
-})
-
-export const useQuotationsStore = defineStore('quotations', () => {
+export const useInvoicesStore = defineStore('invoices', () => {
   const { $api } = useApi()
-  const draft = ref<QuotationDraft>(createEmptyDraft())
+  const INVOICES_ENDPOINT = '/v1/invoices'
+  const draft = ref<InvoiceDraft>(createEmptyDraft())
   const submitting = ref(false)
-  const list = ref<QuotationListItem[]>([])
+  const list = ref<InvoiceListItem[]>([])
   const listLoading = ref(false)
-  const pagination = ref<QuotationPagination>({
+  const pagination = ref<InvoicePagination>({
     current_page: 1,
     last_page: 1,
     per_page: 15,
     total: 0,
   })
-  const currentQuotation = ref<Record<string, unknown> | null>(null)
+  const currentInvoice = ref<Record<string, unknown> | null>(null)
 
   const toNumber = (value: unknown, fallback = 0): number => {
     const num = Number(value)
     return Number.isFinite(num) ? num : fallback
   }
 
-  const normalizeStatus = (value: unknown): QuotationStatus => {
+  const normalizeStatus = (value: unknown): InvoiceStatus => {
     const status = String(value ?? '').toLowerCase()
-    if (status === 'active' || status === 'expired') return status
-    return status || 'active'
+    if (status === 'issued' || status === 'paid' || status === 'partially_returned' || status === 'returned') return status
+    return status || 'issued'
   }
 
-  const extractPagination = (payload: unknown): QuotationPagination | null => {
+  const extractPagination = (payload: unknown): InvoicePagination | null => {
     if (!payload || typeof payload !== 'object') return null
     const root = payload as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
@@ -151,36 +156,41 @@ export const useQuotationsStore = defineStore('quotations', () => {
     }
   }
 
-  const normalizeListItem = (payload: Record<string, unknown>): QuotationListItem => ({
-    id: toNumber(payload.id, 0),
-    reference_number: String(payload.reference_number ?? ''),
-    status: normalizeStatus(payload.status),
-    issue_date: String(payload.issue_date ?? ''),
-    expiry_date: String(payload.expiry_date ?? ''),
-    customer_name: String(payload.customer_name ?? ''),
-    total_discount: toNumber(payload.total_discount, 0),
-    grand_total: toNumber(payload.grand_total, 0),
-    created_at: String(payload.created_at ?? ''),
-    updated_at: String(payload.updated_at ?? ''),
-  })
+  const normalizeListItem = (payload: Record<string, unknown>): InvoiceListItem => {
+    const warehouse = (payload.warehouse && typeof payload.warehouse === 'object' ? payload.warehouse : null) as Record<string, unknown> | null
+    return {
+      id: toNumber(payload.id, 0),
+      reference_number: String(payload.reference_number ?? ''),
+      warehouse_id: toNumber(payload.warehouse_id ?? warehouse?.id, 0) || null,
+      warehouse_name_ar: String(warehouse?.name_ar ?? ''),
+      warehouse_name_en: String(warehouse?.name_en ?? ''),
+      customer_name: String(payload.customer_name ?? ''),
+      invoice_date: String(payload.invoice_date ?? ''),
+      supply_date: String(payload.supply_date ?? ''),
+      status: normalizeStatus(payload.status),
+      total_discount: toNumber(payload.total_discount, 0),
+      grand_total: toNumber(payload.grand_total, 0),
+      return_reference_number: String(payload.return_reference_number ?? payload.return_ref_id ?? ''),
+    }
+  }
 
-  const extractList = (payload: unknown): QuotationListItem[] => {
+  const extractList = (payload: unknown): InvoiceListItem[] => {
     if (!payload || typeof payload !== 'object') return []
     const root = payload as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
-    const rows = (nested?.quotations ?? root.quotations ?? []) as unknown[]
+    const rows = (nested?.invoices ?? root.invoices ?? []) as unknown[]
     if (!Array.isArray(rows)) return []
     return rows
       .map(row => normalizeListItem((row ?? {}) as Record<string, unknown>))
       .filter(row => row.id > 0)
   }
 
-  const extractQuotation = (payload: unknown): Record<string, unknown> | null => {
+  const extractInvoice = (payload: unknown): Record<string, unknown> | null => {
     if (!payload || typeof payload !== 'object') return null
     const root = payload as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
-    const quotation = (nested?.quotation ?? root.quotation ?? null) as Record<string, unknown> | null
-    return quotation && typeof quotation === 'object' ? quotation : null
+    const invoice = (nested?.invoice ?? root.invoice ?? null) as Record<string, unknown> | null
+    return invoice && typeof invoice === 'object' ? invoice : null
   }
 
   const resolveHydratedDiscount = (
@@ -192,7 +202,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
       return { mode: 'fixed', value: perUnitDiscount }
     }
 
-    const discountPercent = toNumber(item.discount_percent, NaN)
+    const discountPercent = toNumber(item.discount_percentage ?? item.discount_percent, NaN)
     if (Number.isFinite(discountPercent)) {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
@@ -205,7 +215,81 @@ export const useQuotationsStore = defineStore('quotations', () => {
     return { mode: 'percentage', value: 0 }
   }
 
-  const hydrateDraftFromQuotation = (quotation: Record<string, unknown>) => {
+  const hydrateDraftFromInvoice = (invoice: Record<string, unknown>) => {
+    const items = (Array.isArray(invoice.items) ? invoice.items : [])
+      .map((rawItem) => {
+        const item = rawItem as Record<string, unknown>
+        const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
+        const variationRaw = (item.variation && typeof item.variation === 'object' ? item.variation : null) as Record<string, unknown> | null
+        const product: QuotationProductOption | null = productRaw
+          ? {
+              id: toNumber(productRaw.id, 0),
+              name_ar: String(productRaw.name_ar ?? ''),
+              name_en: String(productRaw.name_en ?? ''),
+              barcode: String(productRaw.barcode ?? ''),
+              price: toNumber(productRaw.price, 0),
+              is_available: true,
+              is_combo: Boolean(productRaw.is_combo),
+              variations: (Array.isArray(productRaw.variations) ? productRaw.variations : [])
+                .map((rawVariation) => {
+                  const variation = rawVariation as Record<string, unknown>
+                  return {
+                    id: toNumber(variation.id, 0),
+                    sku: String(variation.sku ?? ''),
+                    barcode: String(variation.barcode ?? ''),
+                    price: toNumber(variation.price, 0),
+                    resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
+                    is_active: true,
+                    label: String(variation.label ?? variation.sku ?? ''),
+                    tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
+                      const tier = tierRaw as Record<string, unknown>
+                      return {
+                        quantity_from: toNumber(tier.quantity_from, 0),
+                        quantity_to: toNumber(tier.quantity_to, 0),
+                        price: toNumber(tier.price, 0),
+                      }
+                    }),
+                  }
+                })
+                .filter(v => v.id > 0),
+            }
+          : null
+
+        const qty = Math.max(1, toNumber(item.qty, 1))
+        const hydratedDiscount = resolveHydratedDiscount(item, qty)
+        return {
+          key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          product_id: toNumber(item.product_id ?? product?.id, 0) || null,
+          variation_id: toNumber(item.variation_id ?? variationRaw?.id, 0) || null,
+          product,
+          description: String(item.description ?? ''),
+          qty,
+          unit_price: Math.max(0, toNumber(item.unit_price, 0)),
+          discount_mode: hydratedDiscount.mode,
+          discount_value: hydratedDiscount.value,
+          unit_price_manual: true,
+        }
+      })
+      .filter(item => item.product_id)
+
+    draft.value = {
+      id: toNumber(invoice.id, 0) || null,
+      reference_number: String(invoice.reference_number ?? ''),
+      warehouse_id: toNumber(invoice.warehouse_id ?? ((invoice.warehouse as Record<string, unknown> | null)?.id), 0) || null,
+      description: String(invoice.description ?? ''),
+      customer_name: String(invoice.customer_name ?? ''),
+      customer_mobile: String(invoice.customer_mobile ?? ''),
+      customer_email: String(invoice.customer_email ?? ''),
+      invoice_date: String(invoice.invoice_date ?? todayIso()),
+      supply_date: String(invoice.supply_date ?? todayIso()),
+      terms: String(invoice.terms ?? ''),
+      notes: String(invoice.notes ?? ''),
+      delivery_fees: Math.max(0, toNumber(invoice.delivery_fees, 0)),
+      items: items.length ? items : [createEmptyItem()],
+    }
+  }
+
+  const hydrateDraftFromQuotationForConvert = (quotation: Record<string, unknown>) => {
     const items = (Array.isArray(quotation.items) ? quotation.items : [])
       .map((rawItem) => {
         const item = rawItem as Record<string, unknown>
@@ -247,7 +331,6 @@ export const useQuotationsStore = defineStore('quotations', () => {
 
         const qty = Math.max(1, toNumber(item.qty, 1))
         const hydratedDiscount = resolveHydratedDiscount(item, qty)
-
         return {
           key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           product_id: toNumber(item.product_id ?? product?.id, 0) || null,
@@ -264,28 +347,23 @@ export const useQuotationsStore = defineStore('quotations', () => {
       .filter(item => item.product_id)
 
     draft.value = {
-      id: toNumber(quotation.id, 0) || null,
-      reference_number: String(quotation.reference_number ?? ''),
+      id: null,
+      reference_number: '',
+      warehouse_id: null,
       description: String(quotation.description ?? ''),
       customer_name: String(quotation.customer_name ?? ''),
-      customer_phone: String(quotation.customer_phone ?? ''),
+      customer_mobile: String(quotation.customer_phone ?? ''),
       customer_email: String(quotation.customer_email ?? ''),
-      issue_date: String(quotation.issue_date ?? todayIso()),
-      expiry_date: String(quotation.expiry_date ?? todayIso()),
+      invoice_date: String(quotation.issue_date ?? todayIso()),
+      supply_date: String(quotation.expiry_date ?? todayIso()),
       terms: String(quotation.terms ?? ''),
       notes: String(quotation.notes ?? ''),
-      delivery_fees: Math.max(
-        0,
-        toNumber(
-          quotation.delivery_fees,
-          Math.max(0, toNumber(quotation.grand_total, 0) - toNumber(quotation.subtotal, 0) + toNumber(quotation.total_discount, 0)),
-        ),
-      ),
+      delivery_fees: Math.max(0, toNumber(quotation.delivery_fees, 0)),
       items: items.length ? items : [createEmptyItem()],
     }
   }
 
-  const rowMath = (item: QuotationDraftItem) => calculateLineTotals({
+  const rowMath = (item: InvoiceDraftItem) => calculateLineTotals({
     qty: item.qty,
     unitPrice: item.unit_price,
     discountMode: item.discount_mode,
@@ -394,12 +472,13 @@ export const useQuotationsStore = defineStore('quotations', () => {
 
   const buildPayload = () => ({
     reference_number: draft.value.reference_number || undefined,
+    warehouse_id: draft.value.warehouse_id,
     description: draft.value.description || undefined,
     customer_name: draft.value.customer_name || undefined,
-    customer_phone: draft.value.customer_phone || undefined,
+    customer_mobile: draft.value.customer_mobile || undefined,
     customer_email: draft.value.customer_email || undefined,
-    issue_date: draft.value.issue_date,
-    expiry_date: draft.value.expiry_date,
+    invoice_date: draft.value.invoice_date,
+    supply_date: draft.value.supply_date || undefined,
     terms: draft.value.terms || undefined,
     notes: draft.value.notes || undefined,
     delivery_fees: draft.value.delivery_fees || 0,
@@ -408,22 +487,26 @@ export const useQuotationsStore = defineStore('quotations', () => {
     grand_total: summary.value.grandTotal,
     items: draft.value.items
       .filter(item => item.product_id)
-      .map(item => ({
-        product_id: item.product_id,
-        variation_id: item.variation_id,
-        description: item.description || undefined,
-        qty: item.qty,
-        unit_price: item.unit_price,
-        discount: formatTo2DecimalString(rowMath(item).discount),
-        line_discount: formatTo2DecimalString(rowMath(item).lineDiscount),
-        row_total: rowMath(item).rowTotal,
-      })),
+      .map((item) => {
+        const totals = rowMath(item)
+        return {
+          product_id: item.product_id,
+          variation_id: item.variation_id,
+          description: item.description || undefined,
+          qty: item.qty,
+          unit_price: item.unit_price,
+          discount: formatTo2DecimalString(totals.discount),
+          line_discount: formatTo2DecimalString(totals.lineDiscount),
+          discount_percentage: formatTo2DecimalString(item.unit_price > 0 ? (totals.discount / item.unit_price) * 100 : 0),
+          row_total: formatTo2DecimalString(totals.rowTotal),
+        }
+      }),
   })
 
   const loadList = async (params: Record<string, string | number | undefined> = {}) => {
     listLoading.value = true
     try {
-      const response = await $api('/quotations', { params })
+      const response = await $api(INVOICES_ENDPOINT, { params })
       list.value = extractList(response)
       const nextPagination = extractPagination(response)
       if (nextPagination) pagination.value = nextPagination
@@ -435,31 +518,31 @@ export const useQuotationsStore = defineStore('quotations', () => {
   }
 
   const loadById = async (id: string | number) => {
-    const response = await $api(`/quotations/${id}`)
-    const quotation = extractQuotation(response)
-    currentQuotation.value = quotation
-    return quotation
+    const response = await $api(`${INVOICES_ENDPOINT}/${id}`)
+    const invoice = extractInvoice(response)
+    currentInvoice.value = invoice
+    return invoice
   }
 
   const loadDraftById = async (id: string | number) => {
-    const quotation = await loadById(id)
-    if (!quotation) return null
-    hydrateDraftFromQuotation(quotation)
-    return quotation
+    const invoice = await loadById(id)
+    if (!invoice) return null
+    hydrateDraftFromInvoice(invoice)
+    return invoice
   }
 
-  const createQuotation = async () => {
+  const createInvoice = async () => {
     const payload = buildPayload()
-    return await $api('/quotations', { method: 'POST', body: payload })
+    return await $api(INVOICES_ENDPOINT, { method: 'POST', body: payload })
   }
 
-  const updateQuotation = async (id: string | number) => {
+  const updateInvoice = async (id: string | number) => {
     const payload = buildPayload()
-    return await $api(`/quotations/${id}`, { method: 'PUT', body: payload })
+    return await $api(`${INVOICES_ENDPOINT}/${id}`, { method: 'PUT', body: payload })
   }
 
-  const deleteQuotation = async (id: string | number) => {
-    return await $api(`/quotations/${id}`, { method: 'DELETE' })
+  const deleteInvoice = async (id: string | number) => {
+    return await $api(`${INVOICES_ENDPOINT}/${id}`, { method: 'DELETE' })
   }
 
   return {
@@ -468,7 +551,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
     list,
     listLoading,
     pagination,
-    currentQuotation,
+    currentInvoice,
     summary,
     rowMath,
     resetDraft,
@@ -484,12 +567,13 @@ export const useQuotationsStore = defineStore('quotations', () => {
     setRowDiscountMode,
     setRowDiscountValue,
     buildPayload,
-    hydrateDraftFromQuotation,
+    hydrateDraftFromInvoice,
+    hydrateDraftFromQuotationForConvert,
     loadList,
     loadById,
     loadDraftById,
-    createQuotation,
-    updateQuotation,
-    deleteQuotation,
+    createInvoice,
+    updateInvoice,
+    deleteInvoice,
   }
 })

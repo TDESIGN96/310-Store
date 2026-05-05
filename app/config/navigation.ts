@@ -102,6 +102,13 @@ export const navItems: NavGroup[] = [
         module: 'quotations',
         createPath: '/quotations/create',
       },
+      {
+        labelKey: 'nav.items.invoices',
+        icon: FileText,
+        path: '/invoices',
+        module: 'invoices',
+        createPath: '/invoices/create',
+      },
     ],
   },
   {

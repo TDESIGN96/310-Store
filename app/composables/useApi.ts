@@ -22,6 +22,7 @@ export const useApi = () => {
       }
 
       options.headers = headers
+
     },
 
     onResponseError({ response }) {

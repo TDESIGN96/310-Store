@@ -25,8 +25,12 @@ export function validateQuotationDraft(
     if (!Number.isFinite(item.unit_price) || item.unit_price < 0) {
       errors[`row_${idx}_unit_price`] = t('quotations_page.unit_price_invalid')
     }
-    const d = item.discount_percent
-    if (!Number.isFinite(d) || d < 0 || d > 100) {
+    const d = item.discount_value
+    if (!Number.isFinite(d) || d < 0) {
+      errors[`row_${idx}_discount`] = t('quotations_page.discount_percent_invalid')
+      return
+    }
+    if (item.discount_mode === 'percentage' && d > 100) {
       errors[`row_${idx}_discount`] = t('quotations_page.discount_percent_invalid')
     }
   })

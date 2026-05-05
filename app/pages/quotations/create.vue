@@ -338,7 +338,7 @@ onMounted(() => {
                     <TableHead class="min-w-[180px] text-start">{{ t('quotations_page.row_description') }}</TableHead>
                     <TableHead class="w-24 text-start">{{ t('quotations_page.qty') }}</TableHead>
                     <TableHead class="w-32 text-start">{{ t('quotations_page.unit_price') }}</TableHead>
-                    <TableHead class="w-28 text-start">{{ t('quotations_page.discount_percent') }}</TableHead>
+                    <TableHead class="w-44 text-start">{{ t('quotations_page.discount_percent') }}</TableHead>
                     <TableHead class="w-32 text-start">{{ t('quotations_page.row_total') }}</TableHead>
                     <TableHead class="w-12 text-start">{{ t('quotations_page.col_actions') }}</TableHead>
                   </TableRow>
@@ -412,13 +412,23 @@ onMounted(() => {
                       </div>
                     </TableCell>
                     <TableCell class="align-top py-3">
-                      <div class="ms-auto w-full max-w-28">
+                      <div class="ms-auto w-full max-w-44 space-y-2">
+                        <Select
+                          :model-value="item.discount_mode"
+                          @update:model-value="value => quotationsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))"
+                        >
+                          <SelectTrigger class="h-9 w-full"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fixed">{{ t('quotations_page.discount_mode_fixed') }}</SelectItem>
+                            <SelectItem value="percentage">{{ t('quotations_page.discount_mode_percentage') }}</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Input
-                          :model-value="item.discount_percent"
+                          :model-value="item.discount_value"
                           type="number"
                           step="0.01"
                           class="h-9 w-full text-start tabular-nums"
-                          @update:model-value="value => quotationsStore.setRowDiscount(idx, Number(value))"
+                          @update:model-value="value => quotationsStore.setRowDiscountValue(idx, Number(value))"
                         />
                         <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600">
                           {{ formErrors[`row_${idx}_discount`] }}

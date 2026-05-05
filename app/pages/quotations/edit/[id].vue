@@ -389,13 +389,25 @@ onMounted(async () => {
                     <TableCell class="min-w-[120px] text-end">
                       <Input :model-value="item.unit_price" type="number" min="0" class="text-end tabular-nums" @update:model-value="value => quotationsStore.setRowUnitPrice(idx, Number(value))" />
                     </TableCell>
-                    <TableCell class="min-w-[120px] text-end">
+                    <TableCell class="min-w-[220px] text-end">
+                      <Select
+                        :model-value="item.discount_mode"
+                        @update:model-value="value => quotationsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))"
+                      >
+                        <SelectTrigger class="h-9 w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fixed">{{ t('quotations_page.discount_mode_fixed') }}</SelectItem>
+                          <SelectItem value="percentage">{{ t('quotations_page.discount_mode_percentage') }}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Input
-                        :model-value="item.discount_percent"
+                        :model-value="item.discount_value"
                         type="number"
                         step="0.01"
-                        class="text-end tabular-nums"
-                        @update:model-value="value => quotationsStore.setRowDiscount(idx, Number(value))"
+                        class="mt-2 text-end tabular-nums"
+                        @update:model-value="value => quotationsStore.setRowDiscountValue(idx, Number(value))"
                       />
                       <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600">
                         {{ formErrors[`row_${idx}_discount`] }}

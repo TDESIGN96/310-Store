@@ -51,6 +51,7 @@ const { t } = useI18n()
 const { $api } = useApi()
 const { canAccess, canCreate, canEdit, canDelete } = usePermissions()
 const quotationsStore = useQuotationsStore()
+const invoicesStore = useInvoicesStore()
 
 const canViewQuotations = computed(() => canAccess('quotations'))
 const canCreateQuotation = computed(() => canCreate('quotations'))
@@ -68,6 +69,7 @@ const deleteTarget = ref<QuotationListItem | null>(null)
 const deleteDialogOpen = ref(false)
 const deleting = ref(false)
 const copyingId = ref<number | null>(null)
+const convertingId = ref<number | null>(null)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
@@ -158,11 +160,6 @@ const confirmDelete = async () => {
   }
 }
 
-const showUnavailableToast = (key: 'copy' | 'convert') => {
-  const message = key === 'copy' ? t('quotations_page.copy_unavailable') : t('quotations_page.convert_unavailable')
-  toast.info(message)
-}
-
 const extractCreatedQuotationId = (response: unknown): number | null => {
   if (!response || typeof response !== 'object') return null
   const root = response as Record<string, unknown>
@@ -218,6 +215,33 @@ const cloneQuotation = async (row: QuotationListItem) => {
   }
   finally {
     copyingId.value = null
+  }
+}
+
+const convertToInvoice = async (row: QuotationListItem) => {
+  convertingId.value = row.id
+  try {
+    const source = await quotationsStore.loadById(row.id)
+    if (!source) {
+      toast.error(t('quotations_page.convert_error'))
+      return
+    }
+
+    invoicesStore.hydrateDraftFromQuotationForConvert(source)
+    toast.success(t('quotations_page.convert_success'))
+    await navigateTo({
+      path: '/invoices/create',
+      query: {
+        source: 'quotation',
+        source_id: String(row.id),
+      },
+    })
+  }
+  catch {
+    toast.error(t('quotations_page.convert_error'))
+  }
+  finally {
+    convertingId.value = null
   }
 }
 
@@ -440,8 +464,9 @@ const goToPage = (page: number) => {
                     <Copy v-else class="size-3.5" />
                     {{ t('common.copy') }}
                   </Button>
-                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2" @click="showUnavailableToast('convert')">
-                    <FilePlus2 class="size-3.5" />
+                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2" :disabled="convertingId === row.id || loading" @click="convertToInvoice(row)">
+                    <Loader2 v-if="convertingId === row.id" class="size-3.5 animate-spin" />
+                    <FilePlus2 v-else class="size-3.5" />
                     {{ t('quotations_page.action_convert') }}
                   </Button>
                   <Button

@@ -39,6 +39,12 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/warehouses\/show\/[^/]+\/?$/, permission: 'warehouses.show' },
   { pattern: /^\/warehouses\/?$/, permission: ['warehouses.index', 'warehouses.show'] },
 
+  // Invoices
+  { pattern: /^\/invoices\/create\/?$/, permission: 'invoices.store' },
+  { pattern: /^\/invoices\/edit\/[^/]+\/?$/, permission: 'invoices.update' },
+  { pattern: /^\/invoices\/show\/[^/]+\/?$/, permission: 'invoices.show' },
+  { pattern: /^\/invoices\/?$/, permission: ['invoices.index', 'invoices.show'] },
+
   // Activity log
   { pattern: /^\/activities\/?$/, permission: ['activities.index', 'activities.show'] },
 ]
