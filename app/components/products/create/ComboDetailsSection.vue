@@ -336,7 +336,7 @@ onMounted(() => {
         <Input
           id="combo-name-ar"
           v-model="productNameAr"
-          class="h-10"
+          class="h-10 rtl:text-right"
           dir="auto"
           :placeholder="t('products_form.placeholder_name_ar')"
           @update:model-value="clearField('name_ar')"
@@ -349,7 +349,7 @@ onMounted(() => {
         <Input
           id="combo-name-en"
           v-model="productNameEn"
-          class="h-10"
+          class="h-10 rtl:text-right"
           dir="ltr"
           :placeholder="t('products_form.placeholder_name_en')"
           @update:model-value="clearField('name_en')"

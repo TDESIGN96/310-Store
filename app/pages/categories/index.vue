@@ -2,11 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Search, Plus, Pencil, Trash2, Loader2, ShieldAlert,
-  ChevronRight, ChevronLeft, LoaderCircle, Filter,
+  LoaderCircle, Filter,
   Download, ArrowUp, ArrowDown, ArrowUpDown,
   UserX, UserCheck, X, Tag,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -710,7 +712,7 @@ onMounted(() => {
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <!-- Bulk Checkbox -->
-            <TableHead class="w-10 rtl:text-right">
+            <TableHead class="w-10 text-center">
               <Checkbox
                 :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
                 class="mt-0.5 mx-4"
@@ -720,7 +722,7 @@ onMounted(() => {
 
             <!-- Sortable: Arabic Name -->
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSortName"
             >
               <div class="flex items-center gap-1.5">
@@ -731,12 +733,12 @@ onMounted(() => {
               </div>
             </TableHead>
 
-            <TableHead class="rtl:text-right font-medium">{{ t('categories_page.col_parent') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('categories_page.col_description') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('categories_page.col_parent') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('categories_page.col_description') }}</TableHead>
 
             <!-- Sortable: Status -->
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('status')"
             >
               <div class="flex items-center gap-1.5">
@@ -747,11 +749,11 @@ onMounted(() => {
               </div>
             </TableHead>
 
-            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('common.added_by') }}</TableHead>
 
             <!-- Sortable: Created At -->
             <TableHead
-              class="text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('created_at')"
             >
               <div class="flex items-center gap-1.5">
@@ -762,7 +764,7 @@ onMounted(() => {
               </div>
             </TableHead>
 
-            <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
+            <TableHead class="text-end font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -826,7 +828,7 @@ onMounted(() => {
               <button
                 v-if="canShow"
                 type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-right"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start"
                 @click="handleView(cat)"
               >
                 {{ categoryPrimaryName(cat) }}
@@ -860,63 +862,21 @@ onMounted(() => {
             </TableCell>
 
             <!-- Created At -->
-            <TableCell class="text-sm text-muted-foreground">
+            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">
               {{ formatDate(cat.created_at) }}
             </TableCell>
 
             <!-- Actions -->
-            <TableCell>
-              <div class="flex flex-wrap items-center gap-3 text-sm">
-                <!-- Edit -->
-                <button
-                  v-if="canUpdate"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
-                  @click="handleEdit(cat)"
-                >
-                  <Pencil class="size-3.5" />
-                  {{ t('common.edit') }}
-                </button>
-
-                <!-- Deactivate -->
-                <button
-                  v-if="canUpdate && cat.status === 'active'"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingId === cat.id || deletingId === cat.id"
-                  @click="categoryToDeactivate = cat"
-                >
-                  <LoaderCircle v-if="togglingId === cat.id" class="size-3.5 animate-spin" />
-                  <UserX v-else class="size-3.5" />
-                  {{ t('common.deactivate') }}
-                </button>
-
-                <!-- Activate -->
-                <button
-                  v-else-if="canUpdate && cat.status === 'inactive'"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-green-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingId === cat.id || deletingId === cat.id"
-                  @click="categoryToActivate = cat"
-                >
-                  <LoaderCircle v-if="togglingId === cat.id" class="size-3.5 animate-spin" />
-                  <UserCheck v-else class="size-3.5" />
-                  {{ t('common.activate') }}
-                </button>
-
-                <!-- Delete -->
-                <button
-                  v-if="canDestroy && cat.status !== 'deleted'"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="deletingId === cat.id || togglingId === cat.id"
-                  @click="categoryToDelete = cat"
-                >
-                  <LoaderCircle v-if="deletingId === cat.id" class="size-3.5 animate-spin" />
-                  <Trash2 v-else class="size-3.5" />
-                  {{ t('common.delete') }}
-                </button>
-              </div>
+            <TableCell class="text-end">
+              <TableRowActions
+                :actions="[
+                  { key: `edit-${cat.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canUpdate, onClick: () => handleEdit(cat) },
+                  { key: `deactivate-${cat.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canUpdate && cat.status === 'active', disabled: togglingId === cat.id || deletingId === cat.id, loading: togglingId === cat.id, onClick: () => { categoryToDeactivate = cat } },
+                  { key: `activate-${cat.id}`, label: t('common.activate'), type: 'button', icon: UserCheck, tone: 'success', visible: canUpdate && cat.status === 'inactive', disabled: togglingId === cat.id || deletingId === cat.id, loading: togglingId === cat.id, onClick: () => { categoryToActivate = cat } },
+                  { key: `delete-${cat.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDestroy && cat.status !== 'deleted', disabled: deletingId === cat.id || togglingId === cat.id, loading: deletingId === cat.id, onClick: () => { categoryToDelete = cat } },
+                ]"
+                variant="link"
+              />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -933,16 +893,13 @@ onMounted(() => {
             })
           }}
         </p>
-        <div class="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage <= 1 || loading"
-            @click="goToPage(currentPage - 1)"
-          >
-            <ChevronRight class="size-4" />
-          </Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
           <template v-for="page in pagination.last_page" :key="page">
             <Button
               v-if="page === 1 || page === pagination.last_page || Math.abs(page - currentPage) <= 1"
@@ -963,16 +920,7 @@ onMounted(() => {
               class="px-1 text-muted-foreground text-sm"
             >...</span>
           </template>
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage >= pagination.last_page || loading"
-            @click="goToPage(currentPage + 1)"
-          >
-            <ChevronLeft class="size-4" />
-          </Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
       <div v-else-if="pagination" class="border-t px-4 py-3">
         <p class="text-xs text-muted-foreground">{{ t('categories_page.total', { total: pagination.total }) }}</p>

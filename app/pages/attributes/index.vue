@@ -5,8 +5,6 @@ import {
   Plus,
   Loader2,
   ShieldAlert,
-  ChevronRight,
-  ChevronLeft,
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
@@ -14,6 +12,8 @@ import {
   Trash2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -240,7 +240,7 @@ onMounted(() => {
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('name')"
             >
               <div class="inline-flex items-center gap-1.5">
@@ -248,9 +248,9 @@ onMounted(() => {
                 <component :is="sortIcon('name')" class="size-3.5 text-muted-foreground/70" />
               </div>
             </TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('attributes_page.col_values') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('attributes_page.col_values') }}</TableHead>
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('products_count')"
             >
               <div class="inline-flex items-center gap-1.5">
@@ -259,7 +259,7 @@ onMounted(() => {
               </div>
             </TableHead>
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('created_at')"
             >
               <div class="inline-flex items-center gap-1.5">
@@ -267,7 +267,7 @@ onMounted(() => {
                 <component :is="sortIcon('created_at')" class="size-3.5 text-muted-foreground/70" />
               </div>
             </TableHead>
-            <TableHead class="rtl:text-right font-medium w-[1%] whitespace-nowrap">
+            <TableHead class="text-end font-medium w-[1%] whitespace-nowrap">
               {{ t('attributes_page.col_actions') }}
             </TableHead>
           </TableRow>
@@ -338,27 +338,17 @@ onMounted(() => {
                 <span v-if="!row.values || row.values.length === 0" class="text-sm text-muted-foreground">—</span>
               </div>
             </TableCell>
-            <TableCell class="text-sm tabular-nums">{{ row.products_count ?? 0 }}</TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ formatDate(row.created_at) }}</TableCell>
-            <TableCell>
-              <div class="flex flex-wrap items-center justify-end gap-3 text-sm">
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
-                  @click="navigateTo(`/attributes/edit/${row.id}`)"
-                >
-                  <Pencil class="size-3.5" />
-                  {{ t('common.edit') }}
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-1 text-red-500 hover:underline"
-                  @click="openDelete(row)"
-                >
-                  <Trash2 class="size-3.5" />
-                  {{ t('common.delete') }}
-                </button>
-              </div>
+            <TableCell class="text-end text-sm tabular-nums">{{ row.products_count ?? 0 }}</TableCell>
+            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ formatDate(row.created_at) }}</TableCell>
+            <TableCell class="text-end">
+              <TableRowActions
+                :actions="[
+                  { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', onClick: () => navigateTo(`/attributes/edit/${row.id}`) },
+                  { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', onClick: () => openDelete(row) },
+                ]"
+                variant="link"
+                align="end"
+              />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -377,16 +367,13 @@ onMounted(() => {
             })
           }}
         </p>
-        <div class="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage <= 1 || loading"
-            @click="goToPage(currentPage - 1)"
-          >
-            <ChevronRight class="size-4" />
-          </Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
           <template v-for="page in pagination.last_page" :key="page">
             <Button
               v-if="page === 1 || page === pagination.last_page || Math.abs(page - currentPage) <= 1"
@@ -404,16 +391,7 @@ onMounted(() => {
               class="px-1 text-muted-foreground text-sm"
             >...</span>
           </template>
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage >= pagination.last_page || loading"
-            @click="goToPage(currentPage + 1)"
-          >
-            <ChevronLeft class="size-4" />
-          </Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
       <div v-else-if="pagination" class="border-t px-4 py-3">
         <p class="text-xs text-muted-foreground">{{ t('attributes_page.total', { total: pagination.total }) }}</p>

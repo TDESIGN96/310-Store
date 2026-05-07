@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import TieredPriceTableSection from '@/components/products/shared/TieredPriceTableSection.vue'
 import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
@@ -177,6 +178,55 @@ const addTierPrice = () => {
 
 const removeTierPrice = (index: number) => {
   form.value.tiered_prices.splice(index, 1)
+}
+
+const tieredRows = computed(() =>
+  form.value.tiered_prices.map((tp, idx) => ({
+    key: idx,
+    minQty: tp.quantity_from,
+    maxQty: tp.quantity_to,
+    price: tp.price,
+  })),
+)
+
+const tieredFieldErrors = computed(() =>
+  Object.fromEntries(
+    form.value.tiered_prices.map((_, idx) => [
+      String(idx),
+      {
+        minQty: fieldErrors.value[`tiered_prices.${idx}.quantity_from`],
+        maxQty: fieldErrors.value[`tiered_prices.${idx}.quantity_to`],
+        price: fieldErrors.value[`tiered_prices.${idx}.price`],
+      },
+    ]),
+  ),
+)
+
+const updateTieredMin = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = form.value.tiered_prices[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tier.quantity_from = cleaned === '' ? 0 : Number(cleaned)
+  clearFieldError(`tiered_prices.${idx}.quantity_from`)
+}
+
+const updateTieredMax = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = form.value.tiered_prices[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tier.quantity_to = cleaned === '' ? 0 : Number(cleaned)
+  clearFieldError(`tiered_prices.${idx}.quantity_to`)
+}
+
+const updateTieredPrice = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = form.value.tiered_prices[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9.]/g, '')
+  tier.price = cleaned === '' ? 0 : Number(cleaned)
+  clearFieldError(`tiered_prices.${idx}.price`)
 }
 
 const saveVariation = async () => {
@@ -405,28 +455,26 @@ onMounted(async () => {
       </div>
       <p v-if="fieldErrors.attribute_value_ids" class="text-xs text-red-600">{{ fieldErrors.attribute_value_ids }}</p>
 
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <h2 class="font-medium">{{ t('products_variations.tiered_prices') }}</h2>
-          <Button variant="outline" size="sm" @click="addTierPrice">{{ t('products_variations.add_tier_price') }}</Button>
-        </div>
-        <div v-for="(tp, idx) in form.tiered_prices" :key="idx" class="grid grid-cols-3 gap-2">
-          <div>
-            <Input v-model.number="tp.quantity_from" type="number" min="0" @input="clearFieldError(`tiered_prices.${idx}.quantity_from`)" />
-            <p v-if="fieldErrors[`tiered_prices.${idx}.quantity_from`]" class="text-xs text-red-600">{{ fieldErrors[`tiered_prices.${idx}.quantity_from`] }}</p>
-          </div>
-          <div>
-            <Input v-model.number="tp.quantity_to" type="number" min="0" @input="clearFieldError(`tiered_prices.${idx}.quantity_to`)" />
-            <p v-if="fieldErrors[`tiered_prices.${idx}.quantity_to`]" class="text-xs text-red-600">{{ fieldErrors[`tiered_prices.${idx}.quantity_to`] }}</p>
-          </div>
-          <div class="flex gap-2">
-            <Input v-model.number="tp.price" type="number" min="0" @input="clearFieldError(`tiered_prices.${idx}.price`)" />
-            <p v-if="fieldErrors[`tiered_prices.${idx}.price`]" class="text-xs text-red-600">{{ fieldErrors[`tiered_prices.${idx}.price`] }}</p>
-            <Button variant="ghost" size="sm" @click="removeTierPrice(idx)">{{ t('common.delete') }}</Button>
-          </div>
-        </div>
-        <p v-if="fieldErrors.tiered_prices" class="text-xs text-red-600">{{ fieldErrors.tiered_prices }}</p>
-      </div>
+      <TieredPriceTableSection
+        :table-title="t('products_variations.tiered_prices')"
+        :min-qty-label="t('price_assignment.col_min_qty')"
+        :max-qty-label="t('price_assignment.col_max_qty')"
+        :price-label="t('price_assignment.col_price_per_unit')"
+        :actions-label="t('price_assignment.col_actions')"
+        :add-row-label="t('products_variations.add_tier_price')"
+        :clear-all-label="t('price_assignment.clear_all')"
+        :empty-hint="t('price_assignment.empty_hint')"
+        :price-placeholder="t('price_assignment.placeholder_price')"
+        :rows="tieredRows"
+        :field-error-by-key="tieredFieldErrors"
+        @add-row="addTierPrice"
+        @remove-row="(key) => removeTierPrice(Number(key))"
+        @clear-rows="form.tiered_prices = []"
+        @update-min-qty="updateTieredMin"
+        @update-max-qty="updateTieredMax"
+        @update-price="updateTieredPrice"
+      />
+      <p v-if="fieldErrors.tiered_prices" class="text-xs text-red-600">{{ fieldErrors.tiered_prices }}</p>
     </div>
 
     <div v-if="canEditVariation" class="flex justify-end gap-2">

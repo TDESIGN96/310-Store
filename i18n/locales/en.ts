@@ -124,6 +124,8 @@ export default {
       store: 'Create product variation',
       update: 'Edit product variation',
       destroy: 'Delete product variation',
+      activate: 'Activate product variation',
+      deactivate: 'Deactivate product variation',
     },
     variation: {
       index: 'View variations list',

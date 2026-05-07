@@ -6,14 +6,13 @@ import {
   Search,
   Loader2,
   ShieldAlert,
-  ChevronRight,
-  ChevronLeft,
   History,
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -339,7 +338,7 @@ onMounted(() => {
           <TableHeader>
             <TableRow class="bg-muted/40 hover:bg-muted/40">
               <TableHead
-                class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+                class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
                 @click="toggleSort('user_name')"
               >
                 <div class="flex items-center gap-1.5">
@@ -349,9 +348,9 @@ onMounted(() => {
                   <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
                 </div>
               </TableHead>
-              <TableHead class="rtl:text-right font-medium">{{ t('activities_page.col_activity') }}</TableHead>
+              <TableHead class="text-start font-medium">{{ t('activities_page.col_activity') }}</TableHead>
               <TableHead
-                class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+                class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors"
                 @click="toggleSort('created_at')"
               >
                 <div class="flex items-center gap-1.5">
@@ -412,13 +411,13 @@ onMounted(() => {
                   <NuxtLink
                     v-if="row.subjectLink"
                     :to="row.subjectLink"
-                    class="text-[#2563eb] hover:underline"
+                    class="text-[#2563eb] hover:underline text-start"
                   >
                     {{ row.activityLabel }}
                   </NuxtLink>
                   <span v-else class="text-muted-foreground">{{ row.activityLabel }}</span>
                 </TableCell>
-                <TableCell class="text-sm text-muted-foreground whitespace-nowrap">
+                <TableCell class="text-end text-sm text-muted-foreground tabular-nums whitespace-nowrap">
                   {{ formatActivityDate(row.createdAt) }}
                 </TableCell>
               </TableRow>
@@ -436,26 +435,13 @@ onMounted(() => {
               })
             }}
           </p>
-          <div class="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              class="size-8"
-              :disabled="currentPage <= 1 || loading"
-              @click="goToPage(currentPage - 1)"
-            >
-              <ChevronRight class="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              class="size-8"
-              :disabled="currentPage >= pagination.last_page || loading"
-              @click="goToPage(currentPage + 1)"
-            >
-              <ChevronLeft class="size-4" />
-            </Button>
-          </div>
+          <PaginationArrowButtons
+            :current-page="currentPage"
+            :last-page="pagination.last_page"
+            :loading="loading"
+            @prev="goToPage(currentPage - 1)"
+            @next="goToPage(currentPage + 1)"
+          />
         </div>
       </div>
     </template>

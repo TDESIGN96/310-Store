@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
-  Search, Plus, Pencil, Trash2, Eye, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle,
+  Search, Plus, Pencil, Trash2, Eye, Loader2, ShieldAlert, LoaderCircle,
   Filter, UserX, UserCheck, ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -397,7 +399,7 @@ onMounted(() => loadWarehouses())
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSortName"
             >
               <div class="flex items-center gap-1.5">
@@ -408,7 +410,7 @@ onMounted(() => loadWarehouses())
               </div>
             </TableHead>
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('location')"
             >
               <div class="flex items-center gap-1.5">
@@ -418,9 +420,9 @@ onMounted(() => loadWarehouses())
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('warehouses_page.col_manager') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('warehouses_page.col_manager') }}</TableHead>
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('status')"
             >
               <div class="flex items-center gap-1.5">
@@ -430,10 +432,10 @@ onMounted(() => loadWarehouses())
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('common.created_at') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="text-end font-medium">{{ t('common.created_at') }}</TableHead>
             
-            <TableHead class="rtl:text-right font-medium">{{ t('warehouses_page.col_actions') }}</TableHead>
+            <TableHead class="text-end font-medium">{{ t('warehouses_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -478,7 +480,7 @@ onMounted(() => loadWarehouses())
               <button
                 v-if="canShowWarehouse"
                 type="button"
-                class="inline-flex items-center gap-1.5 max-w-full min-w-0 text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start rtl:flex-row-reverse rtl:text-right"
+                class="inline-flex items-center gap-1.5 max-w-full min-w-0 text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start rtl:flex-row-reverse"
                 :aria-label="`${t('common.view')}: ${warehouseDisplayName(wh)}`"
                 @click="handleView(wh)"
               >
@@ -504,57 +506,20 @@ onMounted(() => loadWarehouses())
             <TableCell class="text-sm text-muted-foreground">
               {{ createdByDisplay(wh.created_by) }}
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">
+            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">
               {{ formatDate(wh.created_at) }}
             </TableCell>
             
-            <TableCell>
-              <div class="flex flex-wrap items-center gap-3 text-sm">
-                <button
-                  v-if="canEditWarehouse"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
-                  :disabled="deletingId === wh.id"
-                  @click="handleEdit(wh)"
-                >
-                  <Pencil class="size-3.5" />
-                  {{ t('common.edit') }}
-                </button>
-                <button
-                  v-if="canEditWarehouse && isActiveStatus(wh.status)"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingId === wh.id || deletingId === wh.id"
-                  @click="warehouseToDeactivate = wh"
-                >
-                  <LoaderCircle v-if="togglingId === wh.id" class="size-3.5 animate-spin" />
-                  <UserX v-else class="size-3.5" />
-                  {{ t('common.deactivate') }}
-                </button>
-                <button
-                  v-else-if="canEditWarehouse && !isActiveStatus(wh.status)"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-green-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingId === wh.id || deletingId === wh.id"
-                  @click="warehouseToActivate = wh"
-                >
-                  <LoaderCircle v-if="togglingId === wh.id" class="size-3.5 animate-spin" />
-                  <UserCheck v-else class="size-3.5" />
-                  {{ t('common.activate') }}
-                </button>
-
-                <button
-                  v-if="canDeleteWarehouse"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="deletingId === wh.id || togglingId === wh.id"
-                  @click="warehouseToDelete = wh"
-                >
-                  <LoaderCircle v-if="deletingId === wh.id" class="size-3.5 animate-spin" />
-                  <Trash2 v-else class="size-3.5" />
-                  {{ t('common.delete') }}
-                </button>
-              </div>
+            <TableCell class="text-end">
+              <TableRowActions
+                :actions="[
+                  { key: `edit-${wh.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditWarehouse, disabled: deletingId === wh.id, onClick: () => handleEdit(wh) },
+                  { key: `deactivate-${wh.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditWarehouse && isActiveStatus(wh.status), disabled: togglingId === wh.id || deletingId === wh.id, loading: togglingId === wh.id, onClick: () => { warehouseToDeactivate = wh } },
+                  { key: `activate-${wh.id}`, label: t('common.activate'), type: 'button', icon: UserCheck, tone: 'success', visible: canEditWarehouse && !isActiveStatus(wh.status), disabled: togglingId === wh.id || deletingId === wh.id, loading: togglingId === wh.id, onClick: () => { warehouseToActivate = wh } },
+                  { key: `delete-${wh.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteWarehouse, disabled: deletingId === wh.id || togglingId === wh.id, loading: deletingId === wh.id, onClick: () => { warehouseToDelete = wh } },
+                ]"
+                variant="link"
+              />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -571,16 +536,13 @@ onMounted(() => loadWarehouses())
           }}
         </p>
 
-        <div class="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage <= 1 || loading"
-            @click="goToPage(currentPage - 1)"
-          >
-            <ChevronRight class="size-4" />
-          </Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
 
           <template v-for="page in pagination.last_page" :key="page">
             <Button
@@ -603,16 +565,7 @@ onMounted(() => loadWarehouses())
             >...</span>
           </template>
 
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage >= pagination.last_page || loading"
-            @click="goToPage(currentPage + 1)"
-          >
-            <ChevronLeft class="size-4" />
-          </Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
 
       <div v-else-if="pagination" class="border-t px-4 py-3">

@@ -2,11 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Search, Plus, Pencil, Trash2, Loader2, ShieldAlert,
-  ChevronRight, ChevronLeft, LoaderCircle, Filter,
+  LoaderCircle, Filter,
   Eye, Download, ArrowUp, ArrowDown, ArrowUpDown,
   UserX, UserCheck, X,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -623,7 +625,7 @@ onMounted(() => loadUnits())
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40 ">
             <!-- Bulk Checkbox -->
-            <TableHead class="w-10 rtl:text-right ">
+            <TableHead class="w-10 text-center ">
               <Checkbox
                 :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
                 class="mt-0.5 mx-4"
@@ -633,7 +635,7 @@ onMounted(() => loadUnits())
 
             <!-- Sortable Columns -->
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSortName"
             >
               <div class="flex items-center gap-1.5">
@@ -645,7 +647,7 @@ onMounted(() => loadUnits())
             </TableHead>
 
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('symbol')"
             >
               <div class="flex items-center gap-1.5">
@@ -657,7 +659,7 @@ onMounted(() => loadUnits())
             </TableHead>
 
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('status')"
             >
               <div class="flex items-center gap-1.5">
@@ -668,10 +670,10 @@ onMounted(() => loadUnits())
               </div>
             </TableHead>
 
-            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('common.added_by') }}</TableHead>
 
             <TableHead
-              class="rtl:text-right font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSort('created_at')"
             >
               <div class="flex items-center gap-1.5">
@@ -682,7 +684,7 @@ onMounted(() => loadUnits())
               </div>
             </TableHead>
 
-            <TableHead class="rtl:text-right font-medium">{{ t('units_page.col_actions') }}</TableHead>
+            <TableHead class="text-end font-medium">{{ t('units_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -746,7 +748,7 @@ onMounted(() => loadUnits())
               <button
                 v-if="canShowUnit"
                 type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-right"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start"
                 @click="handleView(unit)"
               >
                 {{ unitDisplayName(unit) }}
@@ -777,64 +779,21 @@ onMounted(() => loadUnits())
             </TableCell>
 
             <!-- Created At -->
-            <TableCell class="text-sm text-muted-foreground">
+            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">
               {{ formatDate(unit.created_at) }}
             </TableCell>
 
             <!-- Actions -->
-            <TableCell>
-              <div class="flex flex-wrap items-center gap-3 text-sm">
-               
-                <!-- Edit -->
-                <button
-                  v-if="canEditUnit"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
-                  @click="handleEdit(unit)"
-                >
-                  <Pencil class="size-3.5" />
-                  {{ t('common.edit') }}
-                </button>
-
-                <!-- Deactivate -->
-                <button
-                  v-if="canEditUnit && unit.status === 'active'"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingId === unit.id || deletingId === unit.id"
-                  @click="unitToDeactivate = unit"
-                >
-                  <LoaderCircle v-if="togglingId === unit.id" class="size-3.5 animate-spin" />
-                  <UserX v-else class="size-3.5" />
-                  {{ t('common.deactivate') }}
-                </button>
-
-                <!-- Activate -->
-                <button
-                  v-else-if="canEditUnit && unit.status === 'inactive'"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-green-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingId === unit.id || deletingId === unit.id"
-                  @click="unitToActivate = unit"
-                >
-                  <LoaderCircle v-if="togglingId === unit.id" class="size-3.5 animate-spin" />
-                  <UserCheck v-else class="size-3.5" />
-                  {{ t('common.activate') }}
-                </button>
-
-                <!-- Delete -->
-                <button
-                  v-if="canDeleteUnit && unit.status !== 'deleted'"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="deletingId === unit.id || togglingId === unit.id"
-                  @click="unitToDelete = unit"
-                >
-                  <LoaderCircle v-if="deletingId === unit.id" class="size-3.5 animate-spin" />
-                  <Trash2 v-else class="size-3.5" />
-                  {{ t('common.delete') }}
-                </button>
-              </div>
+            <TableCell class="text-end">
+              <TableRowActions
+                :actions="[
+                  { key: `edit-${unit.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditUnit, onClick: () => handleEdit(unit) },
+                  { key: `deactivate-${unit.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditUnit && unit.status === 'active', disabled: togglingId === unit.id || deletingId === unit.id, loading: togglingId === unit.id, onClick: () => { unitToDeactivate = unit } },
+                  { key: `activate-${unit.id}`, label: t('common.activate'), type: 'button', icon: UserCheck, tone: 'success', visible: canEditUnit && unit.status === 'inactive', disabled: togglingId === unit.id || deletingId === unit.id, loading: togglingId === unit.id, onClick: () => { unitToActivate = unit } },
+                  { key: `delete-${unit.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteUnit && unit.status !== 'deleted', disabled: deletingId === unit.id || togglingId === unit.id, loading: deletingId === unit.id, onClick: () => { unitToDelete = unit } },
+                ]"
+                variant="link"
+              />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -852,16 +811,13 @@ onMounted(() => loadUnits())
           }}
         </p>
 
-        <div class="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage <= 1 || loading"
-            @click="goToPage(currentPage - 1)"
-          >
-            <ChevronRight class="size-4" />
-          </Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
 
           <template v-for="page in pagination.last_page" :key="page">
             <Button
@@ -884,16 +840,7 @@ onMounted(() => loadUnits())
             >...</span>
           </template>
 
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage >= pagination.last_page || loading"
-            @click="goToPage(currentPage + 1)"
-          >
-            <ChevronLeft class="size-4" />
-          </Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
 
       <div v-else-if="pagination" class="border-t px-4 py-3">

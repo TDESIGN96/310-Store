@@ -4,14 +4,7 @@ import { ArrowRight, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -240,29 +233,18 @@ onMounted(() => {
 
 <template>
    <div class="flex flex-col gap-4">
-    <div class="flex items-center justify-between gap-3">
- 
-      <div class="flex items-center gap-3">
-        <Button variant="ghost" size="icon" class="size-8" as-child>
-          <NuxtLink to="/attributes">
-            <ArrowRight class="size-4" />
-          </NuxtLink>
-        </Button>
-        <div class="space-y-1">
-          <p class="text-sm text-muted-foreground">
-            {{ t('attributes_edit.breadcrumb') }}
-          </p>
-          <h1 class="text-2xl font-bold tracking-tight">{{ t('attributes_edit.title') }}</h1>
-        </div>
-      </div>
-      <Button
-        class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
-        :disabled="saving || loading || !attribute"
-        @click="saveChanges"
-      >
-        <Loader2 v-if="saving" class="size-4 animate-spin ml-2" />
-        {{ saving ? t('common.saving') : t('attributes_edit.submit_save') }}
+    <div class="flex items-center gap-3">
+      <Button variant="ghost" size="icon" class="size-8" as-child>
+        <NuxtLink to="/attributes">
+          <ArrowRight class="size-4" />
+        </NuxtLink>
       </Button>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('attributes_edit.title') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1">
+          {{ t('attributes_form.create_subtitle') }}
+        </p>
+      </div>
     </div>
 
     <div
@@ -287,38 +269,47 @@ onMounted(() => {
     </div>
 
     <template v-else-if="attribute">
-      <div class="rounded-lg border p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="space-y-2">
-          <p class="text-sm text-muted-foreground">{{ t('attributes_edit.products_count') }}</p>
-          <Badge variant="secondary" class="w-fit">
-            {{ t('attributes_edit.used_by_products', { count: attribute.products_count ?? 0 }) }}
-          </Badge>
-        </div>
-        <div class="space-y-2">
-          <label class="text-sm font-medium">
-            {{ t('attributes_edit.name') }} <span class="text-red-500">*</span>
-          </label>
-          <Input
-            v-model="attributeName"
-            :placeholder="t('attributes_edit.placeholder_name')"
-          />
-        </div>
-      </div>
-
       <div class="rounded-lg border overflow-hidden">
-        <div class="p-4 border-b">
-          <h2 class="text-xl font-semibold">{{ t('attributes_edit.values_title') }}</h2>
+        <div class="p-5 border-b">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <div class="space-y-2">
+              <p class="text-sm text-muted-foreground">{{ t('attributes_edit.products_count') }}</p>
+              <Badge variant="secondary" class="w-fit">
+                {{ t('attributes_edit.used_by_products', { count: attribute.products_count ?? 0 }) }}
+              </Badge>
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium">
+                {{ t('attributes_edit.name') }} <span class="text-red-500">*</span>
+              </label>
+              <Input
+                v-model="attributeName"
+                :placeholder="t('attributes_edit.placeholder_name')"
+              />
+            </div>
+          </div>
         </div>
 
-        <div class="p-4 border-b space-y-2">
-          <div class="grid grid-cols-12 gap-2">
-            <div class="col-span-7 md:col-span-8">
+        <div class="p-5 space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold">{{ t('attributes_edit.values_title') }}</h2>
+            <p class="text-xs text-muted-foreground">{{ t('attributes_form.values_hint') }}</p>
+          </div>
+
+          <div class="grid grid-cols-12 gap-2 items-start rounded-md border p-3">
+            <div class="col-span-7 md:col-span-8 space-y-1">
+              <label class="text-xs font-medium">
+                {{ t('attributes_edit.col_name') }}
+              </label>
               <Input
                 v-model="newValueName"
                 :placeholder="t('attributes_edit.placeholder_value_name')"
               />
             </div>
-            <div class="col-span-3 md:col-span-2">
+            <div class="col-span-4 md:col-span-3">
+              <label class="text-xs font-medium">
+                {{ t('attributes_edit.col_sort_order') }}
+              </label>
               <Input
                 v-model.number="newValueSortOrder"
                 type="number"
@@ -326,38 +317,60 @@ onMounted(() => {
                 :placeholder="t('attributes_edit.sort_order')"
               />
             </div>
-            <div class="col-span-2 md:col-span-2">
+            <div class="col-span-1 flex justify-end pt-1">
               <Button
-                variant="outline"
-                class="w-full gap-1"
+                variant="ghost"
+                size="icon"
+                class="text-[#215260] hover:text-[#215260] hover:bg-muted"
                 :disabled="addingValue"
                 @click="addValue"
               >
                 <Loader2 v-if="addingValue" class="size-4 animate-spin" />
                 <Plus v-else class="size-4" />
-                {{ t('attributes_edit.add_value') }}
               </Button>
             </div>
+            <p v-if="newValueError" class="col-span-12 text-xs text-red-500">{{ newValueError }}</p>
           </div>
-          <p v-if="newValueError" class="text-xs text-red-500">{{ newValueError }}</p>
-        </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow class="bg-muted/40 hover:bg-muted/40">
-              <TableHead class="rtl:text-right font-medium">{{ t('attributes_edit.col_actions') }}</TableHead>
-              <TableHead class="rtl:text-right font-medium">{{ t('attributes_edit.col_sort_order') }}</TableHead>
-              <TableHead class="rtl:text-right font-medium">{{ t('attributes_edit.col_name') }}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-if="!hasValues">
-              <TableCell :colspan="3" class="py-10 text-center text-sm text-muted-foreground">
-                {{ t('attributes_edit.no_values') }}
-              </TableCell>
-            </TableRow>
-            <TableRow v-for="row in values" :key="row.id" v-else>
-              <TableCell class="w-[140px]">
+          <div v-if="!hasValues" class="py-10 text-center text-sm text-muted-foreground rounded-md border">
+            {{ t('attributes_edit.no_values') }}
+          </div>
+
+          <div v-else class="space-y-2">
+            <div class="grid grid-cols-12 gap-2 px-2">
+              <div class="col-span-7 md:col-span-8 text-xs font-medium text-muted-foreground">
+                {{ t('attributes_edit.col_name') }}
+              </div>
+              <div class="col-span-4 md:col-span-3 text-xs font-medium text-muted-foreground">
+                {{ t('attributes_edit.col_sort_order') }}
+              </div>
+              <div class="col-span-1 text-xs font-medium text-muted-foreground text-end">
+                {{ t('common.actions') }}
+              </div>
+            </div>
+            <div
+              v-for="row in values"
+              :key="row.id"
+              class="grid grid-cols-12 gap-2 items-start rounded-md border p-2"
+            >
+              <div class="col-span-7 md:col-span-8 space-y-1">
+                <Input
+                  v-model="row.name"
+                  :placeholder="t('attributes_edit.placeholder_value_name')"
+                  class="h-9"
+                />
+              </div>
+              <div class="col-span-4 md:col-span-3">
+                <Input
+                  v-model.number="row.sort_order"
+                  type="number"
+                  min="1"
+                  :placeholder="t('attributes_edit.sort_order')"
+                  class="h-9"
+                  @blur="normalizeSortOrder(row)"
+                />
+              </div>
+              <div class="col-span-1 flex justify-end pt-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -368,22 +381,15 @@ onMounted(() => {
                   <Loader2 v-if="deletingValueId === row.id" class="size-4 animate-spin" />
                   <Trash2 v-else class="size-4" />
                 </Button>
-              </TableCell>
-              <TableCell class="w-[180px]">
-                <Input
-                  v-model.number="row.sort_order"
-                  type="number"
-                  min="1"
-                  class="h-8"
-                  @blur="normalizeSortOrder(row)"
-                />
-              </TableCell>
-              <TableCell>
-                <Input v-model="row.name" class="h-8" />
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+              </div>
+            </div>
+          </div>
+
+          <Button variant="outline" class="w-full gap-2" :disabled="addingValue" @click="addValue">
+            <Plus class="size-4" />
+            {{ t('attributes_edit.add_value') }}
+          </Button>
+        </div>
       </div>
 
       <div
@@ -392,6 +398,22 @@ onMounted(() => {
       >
         <span class="mt-0.5 shrink-0">⚠</span>
         <span>{{ errorMessage }}</span>
+      </div>
+
+      <Separator />
+
+      <div class="flex items-center justify-end gap-2">
+        <Button variant="outline" :disabled="saving || loading" as-child>
+          <NuxtLink to="/attributes">{{ t('common.cancel') }}</NuxtLink>
+        </Button>
+        <Button
+          class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+          :disabled="saving || loading || !attribute"
+          @click="saveChanges"
+        >
+          <Loader2 v-if="saving" class="size-4 animate-spin ml-2" />
+          {{ saving ? t('common.saving') : t('attributes_edit.submit_save') }}
+        </Button>
       </div>
     </template>
 

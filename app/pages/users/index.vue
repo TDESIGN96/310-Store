@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search, Plus, Pencil, Trash2, Copy, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle, Filter, UserX, UserCheck } from 'lucide-vue-next'
+import { Search, Plus, Pencil, Trash2, Copy, Loader2, ShieldAlert, LoaderCircle, Filter, UserX, UserCheck } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -442,14 +444,14 @@ onMounted(() => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_name') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_email') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_phone') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_roles') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_active') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_added_by') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('users_page.col_created') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('users_page.col_name') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('users_page.col_email') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('users_page.col_phone') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('users_page.col_roles') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('users_page.col_active') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('users_page.col_added_by') }}</TableHead>
+            <TableHead class="text-end font-medium tabular-nums">{{ t('users_page.col_created') }}</TableHead>
+            <TableHead class="text-end font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -514,60 +516,18 @@ onMounted(() => {
               </span>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(user.created_by) }}</TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ formatDate(user.created_at) }}</TableCell>
-            <TableCell>
-              <div class="flex flex-wrap items-center gap-3 text-sm">
-                <button
-                  v-if="canEditUser && user.is_active && !cannotToggleUserActivation(user)"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-amber-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingActiveId === user.id || deletingId === user.id"
-                  @click="openDeactivateConfirm(user)"
-                >
-                  <LoaderCircle v-if="togglingActiveId === user.id" class="size-3.5 animate-spin" />
-                  <UserX v-else class="size-3.5" />
-                  {{ t('common.deactivate') }}
-                </button>
-                <button
-                  v-else-if="canEditUser && !user.is_active && !cannotToggleUserActivation(user)"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-green-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="togglingActiveId === user.id || deletingId === user.id"
-                  @click="reactivateUser(user)"
-                >
-                  <LoaderCircle v-if="togglingActiveId === user.id" class="size-3.5 animate-spin" />
-                  <UserCheck v-else class="size-3.5" />
-                  {{ t('common.activate') }}
-                </button>
-                <button
-                  v-if="canEditUser"
-                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
-                  @click="handleEdit(user)"
-                >
-                  <Pencil class="size-3.5" />
-                  {{ t('common.edit') }}
-                </button>
-                <button
-                  v-if="canCreateUser"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="deletingId === user.id || togglingActiveId === user.id"
-                  @click="cloneUser(user)"
-                >
-                  <Copy class="size-3.5" />
-                  {{ t('users_page.clone') }}
-                </button>
-                <button
-                  v-if="canDestroyUserPerm && canDeleteUserRow(user)"
-                  class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="deletingId === user.id"
-                  @click="userToDelete = user"
-                >
-                  <LoaderCircle v-if="deletingId === user.id" class="size-3.5 animate-spin" />
-                  <Trash2 v-else class="size-3.5" />
-                  {{ t('common.delete') }}
-                </button>
-              </div>
+            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ formatDate(user.created_at) }}</TableCell>
+            <TableCell class="text-end">
+              <TableRowActions
+                :actions="[
+                  { key: `deactivate-${user.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditUser && user.is_active && !cannotToggleUserActivation(user), disabled: togglingActiveId === user.id || deletingId === user.id, loading: togglingActiveId === user.id, onClick: () => openDeactivateConfirm(user) },
+                  { key: `activate-${user.id}`, label: t('common.activate'), type: 'button', icon: UserCheck, tone: 'success', visible: canEditUser && !user.is_active && !cannotToggleUserActivation(user), disabled: togglingActiveId === user.id || deletingId === user.id, loading: togglingActiveId === user.id, onClick: () => reactivateUser(user) },
+                  { key: `edit-${user.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditUser, onClick: () => handleEdit(user) },
+                  { key: `clone-${user.id}`, label: t('users_page.clone'), type: 'button', icon: Copy, tone: 'muted', visible: canCreateUser, disabled: deletingId === user.id || togglingActiveId === user.id, onClick: () => cloneUser(user) },
+                  { key: `delete-${user.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDestroyUserPerm && canDeleteUserRow(user), disabled: deletingId === user.id, loading: deletingId === user.id, onClick: () => { userToDelete = user } },
+                ]"
+                variant="link"
+              />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -584,16 +544,13 @@ onMounted(() => {
           }}
         </p>
 
-        <div class="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage <= 1 || loading"
-            @click="goToPage(currentPage - 1)"
-          >
-            <ChevronRight class="size-4" />
-          </Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
 
           <template v-for="page in pagination.last_page" :key="page">
             <Button
@@ -616,16 +573,7 @@ onMounted(() => {
             >...</span>
           </template>
 
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage >= pagination.last_page || loading"
-            @click="goToPage(currentPage + 1)"
-          >
-            <ChevronLeft class="size-4" />
-          </Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
 
       <div v-else-if="pagination" class="border-t px-4 py-3">

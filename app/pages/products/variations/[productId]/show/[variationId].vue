@@ -8,7 +8,7 @@ definePageMeta({ layout: 'default' })
 const route = useRoute()
 const productId = computed(() => String(route.params.productId))
 const variationId = computed(() => String(route.params.variationId))
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const productsStore = useProductsStore()
 const { getErrorMessage } = useApiError()
 const { can } = usePermissions()
@@ -17,6 +17,24 @@ const canShowVariation = computed(() => can('product_variations.show'))
 const loading = ref(false)
 const errorMessage = ref('')
 const variation = ref<Record<string, unknown> | null>(null)
+
+const warehouseDisplayName = (inventoryRow: any) => {
+  const warehouse = inventoryRow?.warehouse
+  if (warehouse && typeof warehouse === 'object') {
+    const nameAr = warehouse?.name_ar
+    const nameEn = warehouse?.name_en
+    if (locale.value === 'ar') {
+      if (nameAr) return nameAr
+      if (nameEn) return nameEn
+    }
+    else {
+      if (nameEn) return nameEn
+      if (nameAr) return nameAr
+    }
+  }
+  const warehouseId = inventoryRow?.warehouse_id ?? warehouse?.id
+  return warehouseId != null ? `#${warehouseId}` : '—'
+}
 
 const loadVariation = async () => {
   if (!canShowVariation.value) return
@@ -103,7 +121,7 @@ onMounted(() => {
         <div class="space-y-1 text-sm">
           <p v-if="!(variation.inventory as any[])?.length">—</p>
           <p v-for="(inv, idx) in (variation.inventory as any[] || [])" :key="idx">
-            #{{ inv.warehouse_id ?? inv.warehouse?.id ?? '—' }} - {{ inv.quantity ?? 0 }}
+            {{ warehouseDisplayName(inv) }} - {{ inv.quantity ?? 0 }}
           </p>
         </div>
       </div>

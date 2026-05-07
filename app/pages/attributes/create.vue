@@ -199,6 +199,17 @@ const createAttribute = async () => {
         </div>
 
         <div class="space-y-2">
+          <div class="grid grid-cols-12 gap-2 px-2">
+            <div class="col-span-7 md:col-span-8 text-xs font-medium text-muted-foreground">
+              {{ t('attributes_form.placeholder_value_name') }}
+            </div>
+            <div class="col-span-4 md:col-span-3 text-xs font-medium text-muted-foreground">
+              {{ t('attributes_form.sort_order') }}
+            </div>
+            <div class="col-span-1 text-xs font-medium text-muted-foreground text-end">
+              {{ t('common.actions') }}
+            </div>
+          </div>
           <div
             v-for="row in values"
             :key="row.key"

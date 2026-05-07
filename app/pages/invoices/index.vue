@@ -11,11 +11,11 @@ import {
   Loader2,
   Filter,
   X,
-  ChevronRight,
-  ChevronLeft,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -245,15 +245,15 @@ const goToPage = (page: number) => {
         <Table>
           <TableHeader>
             <TableRow class="bg-muted/40 hover:bg-muted/40">
-              <TableHead class="font-medium min-w-[120px]">{{ t('invoices_page.col_ref_id') }}</TableHead>
-              <TableHead class="font-medium min-w-[140px]">{{ t('invoices_page.col_customer') }}</TableHead>
-              <TableHead class="font-medium whitespace-nowrap">{{ t('invoices_page.col_invoice_date') }}</TableHead>
-              <TableHead class="font-medium whitespace-nowrap">{{ t('invoices_page.col_supply_date') }}</TableHead>
-              <TableHead class="font-medium whitespace-nowrap">{{ t('invoices_page.warehouse') }}</TableHead>
-              <TableHead class="font-medium whitespace-nowrap">{{ t('invoices_page.col_status') }}</TableHead>
-              <TableHead class="font-medium whitespace-nowrap text-end">{{ t('invoices_page.col_discount_amount') }}</TableHead>
-              <TableHead class="font-medium whitespace-nowrap text-end">{{ t('invoices_page.col_total') }}</TableHead>
-              <TableHead class="font-medium whitespace-nowrap">{{ t('invoices_page.col_return_id') }}</TableHead>
+              <TableHead class="text-start font-medium min-w-[120px]">{{ t('invoices_page.col_ref_id') }}</TableHead>
+              <TableHead class="text-start font-medium min-w-[140px]">{{ t('invoices_page.col_customer') }}</TableHead>
+              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_invoice_date') }}</TableHead>
+              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_supply_date') }}</TableHead>
+              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.warehouse') }}</TableHead>
+              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_status') }}</TableHead>
+              <TableHead class="text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_discount_amount') }}</TableHead>
+              <TableHead class="text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_total') }}</TableHead>
+              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_return_id') }}</TableHead>
               <TableHead class="font-medium min-w-[220px] text-end">{{ t('invoices_page.col_actions') }}</TableHead>
             </TableRow>
           </TableHeader>
@@ -270,14 +270,18 @@ const goToPage = (page: number) => {
               <TableCell class="text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
               <TableCell class="text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
               <TableCell class="text-sm">{{ row.return_reference_number || '—' }}</TableCell>
-              <TableCell class="text-right">
-                <div class="flex flex-wrap items-center gap-1 justify-end">
-                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child><NuxtLink :to="`/invoices/show/${row.id}`"><Eye class="size-3.5" />{{ t('common.view') }}</NuxtLink></Button>
-                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2" :disabled="!canEditInvoice" as-child><NuxtLink :to="`/invoices/edit/${row.id}`"><Pencil class="size-3.5" />{{ t('invoices_page.action_edit') }}</NuxtLink></Button>
-                  <Button v-if="canCreateInvoice" variant="outline" size="sm" class="h-8 gap-1 px-2" :disabled="copyingId === row.id || loading" @click="cloneInvoice(row)"><Loader2 v-if="copyingId === row.id" class="size-3.5 animate-spin" /><Copy v-else class="size-3.5" />{{ t('invoices_page.action_copy') }}</Button>
-                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2" @click="showReturnStub"><RotateCcw class="size-3.5" />{{ t('invoices_page.action_return') }}</Button>
-                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30" :disabled="!canDeleteInvoice" @click="requestDelete(row)"><Trash2 class="size-3.5" />{{ t('invoices_page.action_delete') }}</Button>
-                </div>
+              <TableCell class="text-end">
+                <TableRowActions
+                  :actions="[
+                    { key: `view-${row.id}`, label: t('common.view'), type: 'link', to: `/invoices/show/${row.id}`, icon: Eye, tone: 'default' },
+                    { key: `edit-${row.id}`, label: t('invoices_page.action_edit'), type: 'link', to: `/invoices/edit/${row.id}`, icon: Pencil, tone: 'default', disabled: !canEditInvoice },
+                    { key: `copy-${row.id}`, label: t('invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateInvoice, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
+                    { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', onClick: showReturnStub },
+                    { key: `delete-${row.id}`, label: t('invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteInvoice, onClick: () => requestDelete(row) },
+                  ]"
+                  variant="invoice"
+                  align="end"
+                />
               </TableCell>
             </TableRow>
           </TableBody>
@@ -286,11 +290,15 @@ const goToPage = (page: number) => {
 
       <div v-if="pagination.last_page > 1" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border rounded-lg px-4 py-3">
         <p class="text-xs text-muted-foreground">{{ t('common.showing_range', { from: pagination.total ? (currentPage - 1) * pagination.per_page + 1 : 0, to: pagination.total ? Math.min(currentPage * pagination.per_page, pagination.total) : 0, total: pagination.total }) }}</p>
-        <div class="flex items-center gap-1">
-          <Button variant="outline" size="icon" class="size-8" :disabled="currentPage <= 1 || loading" @click="goToPage(currentPage - 1)"><ChevronRight class="size-4" /></Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
           <span class="text-sm text-muted-foreground px-2 tabular-nums">{{ t('common.page_of', { current: currentPage, total: pagination.last_page }) }}</span>
-          <Button variant="outline" size="icon" class="size-8" :disabled="currentPage >= pagination.last_page || loading" @click="goToPage(currentPage + 1)"><ChevronLeft class="size-4" /></Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
     </template>
 

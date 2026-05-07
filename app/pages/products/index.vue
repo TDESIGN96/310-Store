@@ -5,8 +5,6 @@ import {
   Plus,
   Loader2,
   ShieldAlert,
-  ChevronRight,
-  ChevronLeft,
   Package,
   Eye,
   Pencil,
@@ -15,6 +13,8 @@ import {
   X,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
@@ -587,22 +587,22 @@ onMounted(async () => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="rtl:text-right font-medium min-w-[220px]">
+            <TableHead class="text-start font-medium min-w-[220px]">
               {{ t('products_page.col_name') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium min-w-[150px]">
+            <TableHead class="text-start font-medium min-w-[150px]">
               {{ t('products_page.col_category') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium whitespace-nowrap text-center">
+            <TableHead class="text-center font-medium whitespace-nowrap">
               {{ t('products_page.col_qty') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium whitespace-nowrap text-center">
+            <TableHead class="text-center font-medium whitespace-nowrap">
               {{ t('products_page.variations_col') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium whitespace-nowrap min-w-[120px]">
+            <TableHead class="text-start font-medium whitespace-nowrap min-w-[120px]">
               {{ t('common.added_by') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium min-w-[260px] text-right">
+            <TableHead class="text-end font-medium min-w-[260px]">
               {{ t('products_page.col_actions') }}
             </TableHead>
           </TableRow>
@@ -672,36 +672,17 @@ onMounted(async () => {
             <TableCell class="text-sm text-muted-foreground">
               {{ createdByDisplay(row.createdBy) }}
             </TableCell>
-            <TableCell class="text-right">
-              <div class="flex flex-wrap items-center gap-1 justify-end">
-                <Button v-if="canShowProduct" variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
-                  <NuxtLink :to="row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`">
-                    <Eye class="size-3.5" />
-                    {{ t('common.view') }}
-                  </NuxtLink>
-                </Button>
-                <Button v-if="canEditProduct" variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
-                  <NuxtLink :to="row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`">
-                    <Pencil class="size-3.5" />
-                    {{ t('common.edit') }}
-                  </NuxtLink>
-                </Button>
-                <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
-                  <NuxtLink :to="`/products/variations/${row.id}`">
-                    {{ t('products_page.manage_variations') }}
-                  </NuxtLink>
-                </Button>
-                <Button
-                  v-if="canDeleteProduct"
-                  variant="outline"
-                  size="sm"
-                  class="h-8 gap-1 px-2 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30"
-                  @click="openDelete(row)"
-                >
-                  <Trash2 class="size-3.5" />
-                  {{ t('common.delete') }}
-                </Button>
-              </div>
+            <TableCell class="text-end">
+              <TableRowActions
+                :actions="[
+                  { key: `view-${row.id}`, label: t('common.view'), type: 'link', to: row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`, icon: Eye, tone: 'default', visible: canShowProduct },
+                  { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditProduct },
+                  { key: `variations-${row.id}`, label: t('products_page.manage_variations'), type: 'link', to: `/products/variations/${row.id}`, tone: 'default', visible: row.productType !== 'combo' },
+                  { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteProduct, onClick: () => openDelete(row) },
+                ]"
+                variant="invoice"
+                align="end"
+              />
             </TableCell>
             </TableRow>
           </template>
@@ -722,16 +703,13 @@ onMounted(async () => {
           })
         }}
       </p>
-      <div class="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="icon"
-          class="size-8"
-          :disabled="currentPage <= 1 || loading"
-          @click="goToPage(currentPage - 1)"
-        >
-          <ChevronRight class="size-4" />
-        </Button>
+      <PaginationArrowButtons
+        :current-page="currentPage"
+        :last-page="pagination.last_page"
+        :loading="loading"
+        @prev="goToPage(currentPage - 1)"
+        @next="goToPage(currentPage + 1)"
+      >
         <span class="text-sm text-muted-foreground px-2 tabular-nums">
           {{
             t('common.page_of', {
@@ -740,16 +718,7 @@ onMounted(async () => {
             })
           }}
         </span>
-        <Button
-          variant="outline"
-          size="icon"
-          class="size-8"
-          :disabled="currentPage >= pagination.last_page || loading"
-          @click="goToPage(currentPage + 1)"
-        >
-          <ChevronLeft class="size-4" />
-        </Button>
-      </div>
+      </PaginationArrowButtons>
     </div>
 
     <AlertDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event">

@@ -124,6 +124,8 @@ export default {
       store: 'إنشاء متغير منتج',
       update: 'تعديل متغير المنتج',
       destroy: 'حذف متغير المنتج',
+      activate: 'تفعيل متغير المنتج',
+      deactivate: 'إلغاء تفعيل متغير المنتج',
     },
     variation: {
       index: 'عرض قائمة المتغيرات',

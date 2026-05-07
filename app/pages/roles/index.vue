@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search, Plus, Pencil, Copy, Trash2, Loader2, ShieldAlert, ChevronRight, ChevronLeft, LoaderCircle } from 'lucide-vue-next'
+import { Search, Plus, Pencil, Copy, Trash2, Loader2, ShieldAlert, LoaderCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -198,11 +200,11 @@ onMounted(loadRoles)
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="rtl:text-right font-medium">
+            <TableHead class="text-start font-medium">
               {{ locale === 'ar' ? t('roles_page.col_name_ar') : t('roles_page.col_name_en') }}
             </TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('common.added_by') }}</TableHead>
-            <TableHead class="rtl:text-right font-medium">{{ t('common.actions') }}</TableHead>
+            <TableHead class="text-start font-medium">{{ t('common.added_by') }}</TableHead>
+            <TableHead class="text-end font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -243,37 +245,15 @@ onMounted(loadRoles)
           >
             <TableCell class="font-medium">{{ rolePrimaryName(role) }}</TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(role.created_by) }}</TableCell>
-            <TableCell>
-              <div class="flex items-center gap-3 text-sm">
-                <button
-                  v-if="canEditRole"
-                  class="inline-flex items-center gap-1 text-[#2563eb] hover:underline"
-                  @click="handleEdit(role)"
-                >
-                  <Pencil class="size-3.5" />
-                  {{ t('common.edit') }}
-                </button>
-                <button
-                  v-if="canCreateRole"
-                  type="button"
-                  class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="deletingId === String(role.id)"
-                  @click="handleClone(role)"
-                >
-                  <Copy class="size-3.5" />
-                  {{ t('common.copy') }}
-                </button>
-                <button
-                  v-if="canDeleteRole"
-                  class="inline-flex items-center gap-1 text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="deletingId === String(role.id)"
-                  @click="roleToDelete = role"
-                >
-                  <LoaderCircle v-if="deletingId === String(role.id)" class="size-3.5 animate-spin" />
-                  <Trash2 v-else class="size-3.5" />
-                  {{ t('common.delete') }}
-                </button>
-              </div>
+            <TableCell class="text-end">
+              <TableRowActions
+                :actions="[
+                  { key: `edit-${role.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditRole, onClick: () => handleEdit(role) },
+                  { key: `copy-${role.id}`, label: t('common.copy'), type: 'button', icon: Copy, tone: 'muted', visible: canCreateRole, disabled: deletingId === String(role.id), onClick: () => handleClone(role) },
+                  { key: `delete-${role.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteRole, disabled: deletingId === String(role.id), loading: deletingId === String(role.id), onClick: () => { roleToDelete = role } },
+                ]"
+                variant="link"
+              />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -290,16 +270,13 @@ onMounted(loadRoles)
           }}
         </p>
 
-        <div class="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage <= 1 || loading"
-            @click="goToPage(currentPage - 1)"
-          >
-            <ChevronRight class="size-4" />
-          </Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
 
           <template v-for="page in pagination.last_page" :key="page">
             <Button
@@ -322,16 +299,7 @@ onMounted(loadRoles)
             >...</span>
           </template>
 
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage >= pagination.last_page || loading"
-            @click="goToPage(currentPage + 1)"
-          >
-            <ChevronLeft class="size-4" />
-          </Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
 
       <div v-else-if="pagination" class="border-t px-4 py-3">

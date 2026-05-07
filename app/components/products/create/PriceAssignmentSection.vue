@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Trash2, Plus } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import TieredPriceTableSection from '@/components/products/shared/TieredPriceTableSection.vue'
 
 const { t } = useI18n()
 
@@ -28,20 +20,6 @@ let _keyCounter = 0
 
 const sectionError = ref('')
 const rowError = ref('')
-
-function onNumberInput(e: Event, obj: Record<string, string>, field: string) {
-  const el = e.target as HTMLInputElement
-  const digits = el.value.replace(/[^0-9.]/g, '')
-  obj[field] = digits
-  el.value = digits
-}
-
-function onIntInput(e: Event, obj: Record<string, string>, field: string) {
-  const el = e.target as HTMLInputElement
-  const digits = el.value.replace(/[^0-9]/g, '')
-  obj[field] = digits
-  el.value = digits
-}
 
 function onStandardPriceInput(e: Event) {
   const el = e.target as HTMLInputElement
@@ -70,6 +48,35 @@ function removeTieredRow(key: number) {
 function clearTieredRows() {
   tieredRows.value = []
   rowError.value = ''
+}
+
+const findRowByKey = (key: string | number) => tieredRows.value.find(row => row._key === Number(key))
+
+const updateMinQty = ({ key, value }: { key: string | number; value: string }) => {
+  const row = findRowByKey(key)
+  if (!row) return
+  const cleaned = value.replace(/[^0-9]/g, '')
+  row.minQty = cleaned
+  rowError.value = ''
+  sectionError.value = ''
+}
+
+const updateMaxQty = ({ key, value }: { key: string | number; value: string }) => {
+  const row = findRowByKey(key)
+  if (!row) return
+  const cleaned = value.replace(/[^0-9]/g, '')
+  row.maxQty = cleaned
+  rowError.value = ''
+  sectionError.value = ''
+}
+
+const updatePrice = ({ key, value }: { key: string | number; value: string }) => {
+  const row = findRowByKey(key)
+  if (!row) return
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  row.pricePerUnit = cleaned
+  rowError.value = ''
+  sectionError.value = ''
 }
 
 function validate(): boolean {
@@ -163,111 +170,25 @@ defineExpose({ validate, getPricing, setPricing })
       <p class="text-xs text-muted-foreground">{{ t('price_assignment.tiered_optional_hint') }}</p>
     </div>
 
-    <div class="rounded-md border overflow-auto">
-      <Table>
-        <TableHeader>
-          <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="rtl:text-right font-medium min-w-[130px]">
-              {{ t('price_assignment.col_min_qty') }}
-            </TableHead>
-            <TableHead class="rtl:text-right font-medium min-w-[130px]">
-              {{ t('price_assignment.col_max_qty') }}
-            </TableHead>
-            <TableHead class="rtl:text-right font-medium min-w-[150px]">
-              {{ t('price_assignment.col_price_per_unit') }}
-            </TableHead>
-            <TableHead class="font-medium w-[80px] text-center">
-              {{ t('price_assignment.col_actions') }}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow v-if="tieredRows.length === 0">
-            <TableCell :colspan="4" class="py-10 text-center text-sm text-muted-foreground">
-              {{ t('price_assignment.empty_hint') }}
-            </TableCell>
-          </TableRow>
-          <TableRow
-            v-for="row in tieredRows"
-            v-else
-            :key="row._key"
-            class="hover:bg-muted/20 transition-colors"
-          >
-            <TableCell class="py-2.5">
-              <Input
-                :model-value="row.minQty"
-                type="text"
-                inputmode="numeric"
-                class="h-9 w-full font-mono"
-                dir="ltr"
-                placeholder="0"
-                @input="(e: Event) => onIntInput(e, row as unknown as Record<string, string>, 'minQty')"
-              />
-            </TableCell>
-            <TableCell class="py-2.5">
-              <Input
-                :model-value="row.maxQty"
-                type="text"
-                inputmode="numeric"
-                class="h-9 w-full font-mono"
-                dir="ltr"
-                placeholder="0"
-                @input="(e: Event) => onIntInput(e, row as unknown as Record<string, string>, 'maxQty')"
-              />
-            </TableCell>
-            <TableCell class="py-2.5">
-              <Input
-                :model-value="row.pricePerUnit"
-                type="text"
-                inputmode="decimal"
-                class="h-9 w-full font-mono"
-                dir="ltr"
-                :placeholder="t('price_assignment.placeholder_price')"
-                @input="(e: Event) => onNumberInput(e, row as unknown as Record<string, string>, 'pricePerUnit')"
-              />
-            </TableCell>
-            <TableCell class="py-2.5 text-center">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                :aria-label="t('price_assignment.delete_row')"
-                @click="removeTieredRow(row._key)"
-              >
-                <Trash2 class="size-4" />
-              </Button>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
-
-    <p v-if="rowError" class="text-sm text-red-600">{{ rowError }}</p>
-    <p v-if="sectionError" class="text-sm text-red-600">{{ sectionError }}</p>
-
-    <div class="flex flex-wrap items-center gap-2">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        class="h-9 gap-2"
-        @click="addTieredRow"
-      >
-        <Plus class="size-4" />
-        {{ t('price_assignment.add_row') }}
-      </Button>
-
-      <Button
-        v-if="tieredRows.length > 0"
-        type="button"
-        variant="ghost"
-        size="sm"
-        class="h-9 text-muted-foreground hover:text-red-600"
-        @click="clearTieredRows"
-      >
-        {{ t('price_assignment.clear_all') }}
-      </Button>
-    </div>
+    <TieredPriceTableSection
+      :table-title="t('products_variations.tiered_prices')"
+      :min-qty-label="t('price_assignment.col_min_qty')"
+      :max-qty-label="t('price_assignment.col_max_qty')"
+      :price-label="t('price_assignment.col_price_per_unit')"
+      :actions-label="t('price_assignment.col_actions')"
+      :add-row-label="t('price_assignment.add_row')"
+      :clear-all-label="t('price_assignment.clear_all')"
+      :empty-hint="t('price_assignment.empty_hint')"
+      :price-placeholder="t('price_assignment.placeholder_price')"
+      :rows="tieredRows.map(row => ({ key: row._key, minQty: row.minQty, maxQty: row.maxQty, price: row.pricePerUnit }))"
+      :row-error="rowError"
+      :section-error="sectionError"
+      @add-row="addTieredRow"
+      @clear-rows="clearTieredRows"
+      @remove-row="(key) => removeTieredRow(Number(key))"
+      @update-min-qty="updateMinQty"
+      @update-max-qty="updateMaxQty"
+      @update-price="updatePrice"
+    />
   </div>
 </template>

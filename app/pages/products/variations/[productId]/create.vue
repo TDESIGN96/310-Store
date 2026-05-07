@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import TieredPriceTableSection from '@/components/products/shared/TieredPriceTableSection.vue'
 import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
@@ -150,6 +151,53 @@ const addTierPrice = (rowIndex: number) => {
 
 const removeTierPrice = (rowIndex: number, tierIndex: number) => {
   variations.value[rowIndex]?.tiered_prices.splice(tierIndex, 1)
+}
+
+const tieredRowsForVariation = (row: VariationForm) =>
+  row.tiered_prices.map((tp, idx) => ({
+    key: idx,
+    minQty: tp.quantity_from,
+    maxQty: tp.quantity_to,
+    price: tp.price,
+  }))
+
+const tieredFieldErrorsForVariation = (rowIndex: number) =>
+  Object.fromEntries(
+    (variations.value[rowIndex]?.tiered_prices ?? []).map((_, tierIndex) => [
+      String(tierIndex),
+      {
+        minQty: fieldErrors.value[tierFieldKey(rowIndex, tierIndex, 'quantity_from')],
+        maxQty: fieldErrors.value[tierFieldKey(rowIndex, tierIndex, 'quantity_to')],
+        price: fieldErrors.value[tierFieldKey(rowIndex, tierIndex, 'price')],
+      },
+    ]),
+  )
+
+const updateTieredMin = (rowIndex: number, payload: { key: string | number; value: string }) => {
+  const tierIndex = Number(payload.key)
+  const tierRow = variations.value[rowIndex]?.tiered_prices[tierIndex]
+  if (!tierRow) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tierRow.quantity_from = cleaned === '' ? 0 : Number(cleaned)
+  clearFieldError(tierFieldKey(rowIndex, tierIndex, 'quantity_from'))
+}
+
+const updateTieredMax = (rowIndex: number, payload: { key: string | number; value: string }) => {
+  const tierIndex = Number(payload.key)
+  const tierRow = variations.value[rowIndex]?.tiered_prices[tierIndex]
+  if (!tierRow) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tierRow.quantity_to = cleaned === '' ? 0 : Number(cleaned)
+  clearFieldError(tierFieldKey(rowIndex, tierIndex, 'quantity_to'))
+}
+
+const updateTieredPrice = (rowIndex: number, payload: { key: string | number; value: string }) => {
+  const tierIndex = Number(payload.key)
+  const tierRow = variations.value[rowIndex]?.tiered_prices[tierIndex]
+  if (!tierRow) return
+  const cleaned = payload.value.replace(/[^0-9.]/g, '')
+  tierRow.price = cleaned === '' ? 0 : Number(cleaned)
+  clearFieldError(tierFieldKey(rowIndex, tierIndex, 'price'))
 }
 
 const createVariationPayload = (row: VariationForm) => {
@@ -465,28 +513,26 @@ onMounted(async () => {
         </div>
         <p v-if="fieldErrors[rowFieldKey(rowIndex, 'attribute_value_ids')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'attribute_value_ids')] }}</p>
 
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <h3 class="font-medium">{{ t('products_variations.tiered_prices') }}</h3>
-            <Button variant="outline" size="sm" @click="addTierPrice(rowIndex)">{{ t('products_variations.add_tier_price') }}</Button>
-          </div>
-          <div v-for="(tp, idx) in row.tiered_prices" :key="idx" class="grid grid-cols-3 gap-2">
-            <div>
-              <Input v-model.number="tp.quantity_from" type="number" min="0" @input="clearFieldError(tierFieldKey(rowIndex, idx, 'quantity_from'))" />
-              <p v-if="fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_from')]" class="text-xs text-red-600">{{ fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_from')] }}</p>
-            </div>
-            <div>
-              <Input v-model.number="tp.quantity_to" type="number" min="0" @input="clearFieldError(tierFieldKey(rowIndex, idx, 'quantity_to'))" />
-              <p v-if="fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_to')]" class="text-xs text-red-600">{{ fieldErrors[tierFieldKey(rowIndex, idx, 'quantity_to')] }}</p>
-            </div>
-            <div class="flex gap-2">
-              <Input v-model.number="tp.price" type="number" min="0" @input="clearFieldError(tierFieldKey(rowIndex, idx, 'price'))" />
-              <p v-if="fieldErrors[tierFieldKey(rowIndex, idx, 'price')]" class="text-xs text-red-600">{{ fieldErrors[tierFieldKey(rowIndex, idx, 'price')] }}</p>
-              <Button variant="ghost" size="sm" @click="removeTierPrice(rowIndex, idx)">{{ t('common.delete') }}</Button>
-            </div>
-          </div>
-          <p v-if="fieldErrors[rowFieldKey(rowIndex, 'tiered_prices')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'tiered_prices')] }}</p>
-        </div>
+        <TieredPriceTableSection
+          :table-title="t('products_variations.tiered_prices')"
+          :min-qty-label="t('price_assignment.col_min_qty')"
+          :max-qty-label="t('price_assignment.col_max_qty')"
+          :price-label="t('price_assignment.col_price_per_unit')"
+          :actions-label="t('price_assignment.col_actions')"
+          :add-row-label="t('products_variations.add_tier_price')"
+          :clear-all-label="t('price_assignment.clear_all')"
+          :empty-hint="t('price_assignment.empty_hint')"
+          :price-placeholder="t('price_assignment.placeholder_price')"
+          :rows="tieredRowsForVariation(row)"
+          :field-error-by-key="tieredFieldErrorsForVariation(rowIndex)"
+          @add-row="addTierPrice(rowIndex)"
+          @remove-row="(key) => removeTierPrice(rowIndex, Number(key))"
+          @clear-rows="variations[rowIndex] && (variations[rowIndex].tiered_prices = [])"
+          @update-min-qty="(payload) => updateTieredMin(rowIndex, payload)"
+          @update-max-qty="(payload) => updateTieredMax(rowIndex, payload)"
+          @update-price="(payload) => updateTieredPrice(rowIndex, payload)"
+        />
+        <p v-if="fieldErrors[rowFieldKey(rowIndex, 'tiered_prices')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'tiered_prices')] }}</p>
       </div>
 
       <div class="pt-4 border-t">

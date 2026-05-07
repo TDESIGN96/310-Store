@@ -11,11 +11,11 @@ import {
   Loader2,
   Filter,
   X,
-  ChevronRight,
-  ChevronLeft,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/app/table/TableRowActions.vue'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -372,28 +372,28 @@ const goToPage = (page: number) => {
         <Table>
           <TableHeader>
             <TableRow class="bg-muted/40 hover:bg-muted/40">
-              <TableHead class="rtl:text-right font-medium min-w-[120px]">
+              <TableHead class="text-start font-medium min-w-[120px]">
                 {{ t('quotations_page.col_ref_id') }}
               </TableHead>
-              <TableHead class="rtl:text-right font-medium min-w-[140px]">
+              <TableHead class="text-start font-medium min-w-[140px]">
                 {{ t('quotations_page.col_customer') }}
               </TableHead>
-              <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+              <TableHead class="text-start font-medium whitespace-nowrap">
                 {{ t('quotations_page.col_issue_date') }}
               </TableHead>
-              <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+              <TableHead class="text-start font-medium whitespace-nowrap">
                 {{ t('quotations_page.col_due_date') }}
               </TableHead>
-              <TableHead class="rtl:text-right font-medium whitespace-nowrap">
+              <TableHead class="text-start font-medium whitespace-nowrap">
                 {{ t('quotations_page.col_status') }}
               </TableHead>
-              <TableHead class="rtl:text-right font-medium whitespace-nowrap text-end">
+              <TableHead class="text-end font-medium whitespace-nowrap">
                 {{ t('quotations_page.col_discount_amount') }}
               </TableHead>
-              <TableHead class="rtl:text-right font-medium whitespace-nowrap text-end">
+              <TableHead class="text-end font-medium whitespace-nowrap">
                 {{ t('quotations_page.col_total') }}
               </TableHead>
-              <TableHead class="rtl:text-right font-medium min-w-[200px] text-end">
+              <TableHead class="text-end font-medium min-w-[200px]">
                 {{ t('quotations_page.col_actions') }}
               </TableHead>
             </TableRow>
@@ -428,58 +428,18 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
               <TableCell class="text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
-              <TableCell class="text-right">
-                <div class="flex flex-wrap items-center gap-1 justify-end">
-                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2" as-child>
-                    <NuxtLink :to="`/quotations/show/${row.id}`">
-                      <Eye class="size-3.5" />
-                      {{ t('common.view') }}
-                    </NuxtLink>
-                  </Button>
-                  <Button
-                    v-if="canEditRow(row)"
-                    variant="outline"
-                    size="sm"
-                    class="h-8 gap-1 px-2"
-                    as-child
-                  >
-                    <NuxtLink :to="`/quotations/edit/${row.id}`">
-                      <Pencil class="size-3.5" />
-                      {{ t('common.edit') }}
-                    </NuxtLink>
-                  </Button>
-                  <Button v-else variant="outline" size="sm" class="h-8 gap-1 px-2" disabled>
-                    <Pencil class="size-3.5" />
-                    {{ t('common.edit') }}
-                  </Button>
-                  <Button
-                    v-if="canCreateQuotation"
-                    variant="outline"
-                    size="sm"
-                    class="h-8 gap-1 px-2"
-                    :disabled="copyingId === row.id || loading"
-                    @click="cloneQuotation(row)"
-                  >
-                    <Loader2 v-if="copyingId === row.id" class="size-3.5 animate-spin" />
-                    <Copy v-else class="size-3.5" />
-                    {{ t('common.copy') }}
-                  </Button>
-                  <Button variant="outline" size="sm" class="h-8 gap-1 px-2" :disabled="convertingId === row.id || loading" @click="convertToInvoice(row)">
-                    <Loader2 v-if="convertingId === row.id" class="size-3.5 animate-spin" />
-                    <FilePlus2 v-else class="size-3.5" />
-                    {{ t('quotations_page.action_convert') }}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="h-8 gap-1 px-2 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30"
-                    :disabled="!canDeleteQuotation || !isDeletable(row)"
-                    @click="requestDelete(row)"
-                  >
-                    <Trash2 class="size-3.5" />
-                    {{ t('common.delete') }}
-                  </Button>
-                </div>
+              <TableCell class="text-end">
+                <TableRowActions
+                  :actions="[
+                    { key: `view-${row.id}`, label: t('common.view'), type: 'link', to: `/quotations/show/${row.id}`, icon: Eye, tone: 'default' },
+                    { key: `edit-${row.id}`, label: t('common.edit'), type: canEditRow(row) ? 'link' : 'button', to: canEditRow(row) ? `/quotations/edit/${row.id}` : undefined, icon: Pencil, tone: 'default', disabled: !canEditRow(row) },
+                    { key: `copy-${row.id}`, label: t('common.copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateQuotation, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneQuotation(row) },
+                    { key: `convert-${row.id}`, label: t('quotations_page.action_convert'), type: 'button', icon: FilePlus2, tone: 'default', disabled: convertingId === row.id || loading, loading: convertingId === row.id, onClick: () => convertToInvoice(row) },
+                    { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteQuotation || !isDeletable(row), onClick: () => requestDelete(row) },
+                  ]"
+                  variant="invoice"
+                  align="end"
+                />
               </TableCell>
             </TableRow>
           </TableBody>
@@ -499,16 +459,13 @@ const goToPage = (page: number) => {
             })
           }}
         </p>
-        <div class="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage <= 1 || loading"
-            @click="goToPage(currentPage - 1)"
-          >
-            <ChevronRight class="size-4" />
-          </Button>
+        <PaginationArrowButtons
+          :current-page="currentPage"
+          :last-page="pagination.last_page"
+          :loading="loading"
+          @prev="goToPage(currentPage - 1)"
+          @next="goToPage(currentPage + 1)"
+        >
           <span class="text-sm text-muted-foreground px-2 tabular-nums">
             {{
               t('common.page_of', {
@@ -517,16 +474,7 @@ const goToPage = (page: number) => {
               })
             }}
           </span>
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-8"
-            :disabled="currentPage >= pagination.last_page || loading"
-            @click="goToPage(currentPage + 1)"
-          >
-            <ChevronLeft class="size-4" />
-          </Button>
-        </div>
+        </PaginationArrowButtons>
       </div>
     </template>
 

@@ -151,6 +151,20 @@ export function getBreadcrumbForPath(path: string): {
   item: NavItem
   groupPath: string
 } | null {
+  // Profile is reachable from header menu, not sidebar nav items.
+  // Keep breadcrumb localized instead of falling back to raw route path.
+  if (path === '/profile' || path.startsWith('/profile/')) {
+    return {
+      groupKey: 'nav.groups.main',
+      groupPath: '/mainCards',
+      item: {
+        labelKey: 'header.profile',
+        icon: LayoutDashboard,
+        path: '/profile',
+      },
+    }
+  }
+
   for (const section of navItems) {
     const matches = section.items.filter(
       (item) => path === item.path || path.startsWith(item.path + '/'),

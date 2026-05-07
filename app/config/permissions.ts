@@ -141,9 +141,6 @@ export const permissionGroups: PermissionGroup[] = [
     permissions: [
       { id: 'activities.index' },
       { id: 'activities.show' },
-      { id: 'activities.store' },
-      { id: 'activities.update' },
-      { id: 'activities.destroy' },
     ],
   },
 ]
