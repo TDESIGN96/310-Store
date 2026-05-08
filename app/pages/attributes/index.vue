@@ -230,34 +230,34 @@ onMounted(() => {
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead
-              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors min-w-[220px]"
               @click="toggleSort('name')"
             >
-              <div class="inline-flex items-center gap-1.5">
+              <div class="flex items-center gap-1.5">
                 {{ t('attributes_page.col_name') }}
                 <component :is="sortIcon('name')" class="size-3.5 text-muted-foreground/70" />
               </div>
             </TableHead>
-            <TableHead class="text-start font-medium">{{ t('attributes_page.col_values') }}</TableHead>
+            <TableHead class="text-start font-medium min-w-[240px]">{{ t('attributes_page.col_values') }}</TableHead>
             <TableHead
-              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap"
               @click="toggleSort('products_count')"
             >
-              <div class="inline-flex items-center gap-1.5">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
                 {{ t('attributes_page.col_products_count') }}
                 <component :is="sortIcon('products_count')" class="size-3.5 text-muted-foreground/70" />
               </div>
             </TableHead>
             <TableHead
-              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors"
+              class="text-end font-medium cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap"
               @click="toggleSort('created_at')"
             >
-              <div class="inline-flex items-center gap-1.5">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
                 {{ t('attributes_page.col_created_at') }}
                 <component :is="sortIcon('created_at')" class="size-3.5 text-muted-foreground/70" />
               </div>
             </TableHead>
-            <TableHead class="text-end font-medium w-[1%] whitespace-nowrap">
+            <TableHead class="text-end font-medium min-w-[170px] whitespace-nowrap">
               {{ t('attributes_page.col_actions') }}
             </TableHead>
           </TableRow>
@@ -297,18 +297,18 @@ onMounted(() => {
             v-for="row in rows"
             v-else
             :key="row.id"
-            class="hover:bg-muted/30 transition-colors"
+            class="hover:bg-muted/30 transition-colors align-middle"
           >
             <TableCell class="font-medium">
               <button
                 type="button"
-                class="text-[#2563eb] hover:underline"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start"
                 @click="navigateTo(`/attributes/show/${row.id}`)"
               >
                 {{ row.name || '—' }}
               </button>
             </TableCell>
-            <TableCell>
+            <TableCell class="text-sm text-muted-foreground">
               <div class="flex flex-wrap items-center gap-1.5">
                 <Badge
                   v-for="value in valuePreview(row.values || [])"
@@ -328,8 +328,8 @@ onMounted(() => {
                 <span v-if="!row.values || row.values.length === 0" class="text-sm text-muted-foreground">—</span>
               </div>
             </TableCell>
-            <TableCell class="text-end text-sm tabular-nums">{{ row.products_count ?? 0 }}</TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ formatDate(row.created_at) }}</TableCell>
+            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ row.products_count ?? 0 }}</TableCell>
+            <TableCell class="text-end text-sm text-muted-foreground tabular-nums whitespace-nowrap">{{ formatDate(row.created_at) }}</TableCell>
             <TableCell class="text-end">
               <TableRowActions
                 :actions="[

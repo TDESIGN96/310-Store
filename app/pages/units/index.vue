@@ -674,7 +674,7 @@ onMounted(() => loadUnits())
               </div>
             </TableHead>
 
-            <TableHead class="text-end font-medium">{{ t('units_page.col_actions') }}</TableHead>
+            <TableHead class=" font-medium">{{ t('units_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -769,12 +769,12 @@ onMounted(() => loadUnits())
             </TableCell>
 
             <!-- Created At -->
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">
+            <TableCell class=" text-sm text-muted-foreground tabular-nums">
               {{ formatDate(unit.created_at) }}
             </TableCell>
 
             <!-- Actions -->
-            <TableCell class="text-end">
+            <TableCell class="">
               <TableRowActions
                 :actions="[
                   { key: `edit-${unit.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditUnit, onClick: () => handleEdit(unit) },

@@ -292,8 +292,8 @@ onMounted(() => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{{ t('products_combo.col_product') }}</TableHead>
-                  <TableHead>{{ t('products_combo.col_quantity') }}</TableHead>
+                  <TableHead class="rtl:text-right ltr:text-left">{{ t('products_combo.col_product') }}</TableHead>
+                  <TableHead class="rtl:text-right ltr:text-left">{{ t('products_combo.col_quantity') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -321,9 +321,9 @@ onMounted(() => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{{ t('price_assignment.col_min_qty') }}</TableHead>
-                  <TableHead>{{ t('price_assignment.col_max_qty') }}</TableHead>
-                  <TableHead>{{ t('price_assignment.col_price') }}</TableHead>
+                  <TableHead class="rtl:text-right ltr:text-left">{{ t('price_assignment.col_min_qty') }}</TableHead>
+                  <TableHead class="rtl:text-right ltr:text-left">{{ t('price_assignment.col_max_qty') }}</TableHead>
+                  <TableHead class="rtl:text-right ltr:text-left">{{ t('price_assignment.col_price') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -852,7 +852,7 @@ onMounted(() => {
             </TableCell>
 
             <!-- Created At -->
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">
+            <TableCell class=" text-sm text-muted-foreground tabular-nums">
               {{ formatDate(cat.created_at) }}
             </TableCell>
 
