@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, Loader2, ShieldAlert, Building2, Pencil, Calendar } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -74,20 +75,7 @@ const parseWarehouse = (res: WarehouseShowResponse): WarehouseDetail | null => {
 }
 
 const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return '—'
-  try {
-    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
-    return new Date(dateStr).toLocaleDateString(loc, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-  catch {
-    return dateStr
-  }
+  return formatDisplayDate(dateStr)
 }
 
 const authorDisplay = (value?: WarehouseAuthor | number | null) => {

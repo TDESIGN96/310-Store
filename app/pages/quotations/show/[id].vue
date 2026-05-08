@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -35,10 +36,7 @@ const asNumber = (value: unknown) => {
 }
 const money = (value: unknown) => asNumber(value).toFixed(2)
 const fmtDate = (value: unknown) => {
-  const text = String(value ?? '')
-  if (!text) return '—'
-  const date = new Date(text)
-  return Number.isNaN(date.getTime()) ? text : date.toLocaleDateString(locale.value === 'ar' ? 'ar-EG' : 'en-US')
+  return formatDisplayDate(value)
 }
 const productLabel = (row: Record<string, unknown>) => {
   const product = (row.product && typeof row.product === 'object' ? row.product : null) as Record<string, unknown> | null

@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -176,20 +177,7 @@ const variationAttributesSummary = (variation: ProductVariation) => {
 const variationName = (variation: ProductVariation) => variation.label || `#${variation.id}`
 
 const formatDate = (value?: string) => {
-  if (!value) return '—'
-  try {
-    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
-    return new Date(value).toLocaleDateString(loc, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-  catch {
-    return value
-  }
+  return formatDisplayDate(value, { withTime: true })
 }
 
 const boolLabel = (value: unknown) => {

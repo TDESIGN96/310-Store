@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -333,13 +334,7 @@ const confirmDelete = async () => {
 }
 
 const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return '—'
-  try {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-  } catch {
-    return dateStr
-  }
+  return formatDisplayDate(dateStr)
 }
 
 const statusConfig = (isActive: boolean) =>

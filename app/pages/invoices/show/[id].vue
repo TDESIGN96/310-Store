@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useInvoicesStore } from '@/stores/invoices'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -29,10 +30,7 @@ const asNumber = (value: unknown) => {
 }
 const money = (value: unknown) => asNumber(value).toFixed(2)
 const fmtDate = (value: unknown) => {
-  const text = String(value ?? '')
-  if (!text) return '—'
-  const date = new Date(text)
-  return Number.isNaN(date.getTime()) ? text : date.toLocaleDateString(locale.value === 'ar' ? 'ar-EG' : 'en-US')
+  return formatDisplayDate(value)
 }
 const warehouseName = computed(() => {
   const warehouse = (invoice.value?.warehouse && typeof invoice.value.warehouse === 'object' ? invoice.value.warehouse : null) as Record<string, unknown> | null

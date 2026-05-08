@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import type { QuotationListItem } from '@/stores/quotations'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -94,9 +95,7 @@ const pagination = computed(() => quotationsStore.pagination)
 const loading = computed(() => quotationsStore.listLoading)
 
 const fmtDate = (value?: string) => {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString()
+  return formatDisplayDate(value)
 }
 
 const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)

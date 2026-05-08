@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -80,20 +81,7 @@ const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFou
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return '—'
-  try {
-    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
-    return new Date(dateStr).toLocaleDateString(loc, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-  catch {
-    return dateStr
-  }
+  return formatDisplayDate(dateStr)
 }
 
 const authorDisplay = (value?: CategoryAuthor | number | null) => {

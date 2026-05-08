@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import type { InvoiceListItem } from '@/stores/invoices'
 import { useInvoicesStore } from '@/stores/invoices'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -62,9 +63,7 @@ const pagination = computed(() => invoicesStore.pagination)
 const loading = computed(() => invoicesStore.listLoading)
 
 const fmtDate = (value?: string) => {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString()
+  return formatDisplayDate(value)
 }
 const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
 const warehouseLabel = (row: InvoiceListItem) => {

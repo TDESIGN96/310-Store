@@ -29,6 +29,7 @@ import {
   extractActivitiesPagination,
   parseActivityTableRow,
 } from '@/utils/activitiesResponse'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -246,7 +247,7 @@ function clearDateRange(): void {
 
 /** Formats an ISO-ish datetime string for the current UI locale. */
 function formatActivityDate(iso: string): string {
-  return iso.replace('T', ' ').replace(/\.\d+Z$/, '');
+  return formatDisplayDate(iso, { withTime: true })
 }
 
 const emptyMessage = computed(() => {

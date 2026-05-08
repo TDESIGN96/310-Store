@@ -14,6 +14,7 @@ import {
   Pencil,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -144,21 +145,7 @@ const roleLabelKey = (role: string | undefined) => {
 }
 
 const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return '—'
-  try {
-    const d = new Date(dateStr)
-    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
-    return d.toLocaleDateString(loc, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-  catch {
-    return dateStr
-  }
+  return formatDisplayDate(dateStr, { withTime: true })
 }
 
 const loadRoles = async () => {

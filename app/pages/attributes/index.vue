@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -159,18 +160,7 @@ const sortIcon = (field: SortField) => {
 }
 
 const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return '—'
-  try {
-    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
-    return new Date(dateStr).toLocaleDateString(loc, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-  catch {
-    return dateStr
-  }
+  return formatDisplayDate(dateStr)
 }
 
 const valuePreview = (values: AttributeValue[]) => values.slice(0, 5)

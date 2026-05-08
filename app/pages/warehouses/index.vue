@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -228,19 +229,7 @@ const createdByDisplay = (value?: WarehouseItem['created_by']) => {
 }
 
 const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return '—'
-  try {
-    const d = new Date(dateStr)
-    const loc = locale.value === 'ar' ? 'ar-EG' : 'en-US'
-    return d.toLocaleDateString(loc, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-  catch {
-    return dateStr
-  }
+  return formatDisplayDate(dateStr)
 }
 
 const emptyListMessage = computed(() => {
