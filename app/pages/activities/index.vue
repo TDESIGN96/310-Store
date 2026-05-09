@@ -395,13 +395,13 @@ onMounted(() => {
               <TableRow
                 v-for="row in rows"
                 :key="row.id"
-                class="hover:bg-muted/30 transition-colors"
+                class="hover:bg-muted/30 transition-colors align-middle"
               >
                 <TableCell class="font-medium">
                   <button
                     v-if="row.userId != null && canOpenUserProfile(row.userId)"
                     type="button"
-                    class="text-[#2563eb] hover:underline text-start"
+                    class="text-[#2563eb] hover:underline text-start cursor-pointer"
                     @click="navigateTo(userProfileHref(row.userId!))"
                   >
                     {{ row.userName }}
@@ -412,7 +412,7 @@ onMounted(() => {
                   <NuxtLink
                     v-if="row.subjectLink"
                     :to="row.subjectLink"
-                    class="text-[#2563eb] hover:underline text-start"
+                    class="text-[#2563eb] hover:underline text-start cursor-pointer"
                   >
                     {{ row.activityLabel }}
                   </NuxtLink>

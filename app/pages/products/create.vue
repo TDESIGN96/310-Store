@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, Loader2, Package, ImageIcon, Tag } from 'lucide-vue-next'
+import { ArrowRight, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -167,145 +166,158 @@ onMounted(async () => {
           <ArrowRight class="size-4" />
         </NuxtLink>
       </Button>
-      <div class="min-w-0 space-y-1">
-        <h1 class="text-2xl font-bold tracking-tight">
-          {{ t('products_create.title') }}
-        </h1>
-        <p class="text-sm text-muted-foreground">
-          {{ t('products_variations.create_subtitle') }}
-        </p>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('products_create.title') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1">{{ t('products_variations.create_subtitle') }}</p>
       </div>
     </div>
 
     <div
       v-if="errorMessage"
-      class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
+      class="rounded-md bg-red-500/10 border border-red-200 text-red-600 text-sm px-4 py-3"
     >
       {{ errorMessage }}
     </div>
 
-    <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-      <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-        <Package class="size-4 shrink-0 text-muted-foreground" />
-        <h2 class="text-base font-semibold tracking-tight">
+    <div class="rounded-lg border p-5 space-y-6">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {{ t('products_create.step_badge', { n: 1 }) }}
+        </p>
+        <h2 class="text-lg font-semibold tracking-tight mt-1">
           {{ t('products_variations.product_info') }}
         </h2>
+        <p class="text-sm text-muted-foreground mt-1">
+          {{ t('products_variations.create_subtitle') }}
+        </p>
       </div>
-      <CardContent class="space-y-8 px-4 py-5 sm:px-6 sm:py-6">
-        <div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-          <div class="space-y-2">
-            <label class="text-sm font-medium leading-none">{{ t('products_form.name_ar') }}</label>
-            <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_name_ar') }}</p>
-            <Input v-model="draft.name_ar" class="mt-0.5" />
-            <p v-if="formErrors.name_ar" class="text-xs text-red-600">{{ formErrors.name_ar }}</p>
-          </div>
-          <div class="space-y-2">
-            <label class="text-sm font-medium leading-none">{{ t('products_form.name_en') }}</label>
-            <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_name_en') }}</p>
-            <Input v-model="draft.name_en" class="mt-0.5" />
-            <p v-if="formErrors.name_en" class="text-xs text-red-600">{{ formErrors.name_en }}</p>
-          </div>
-          <div class="space-y-2">
-            <label class="text-sm font-medium leading-none">{{ t('products_form.category') }}</label>
-            <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_category') }}</p>
-            <Select :model-value="draft.category_id ? String(draft.category_id) : ''" @update:model-value="v => draft.category_id = Number(v)">
-              <SelectTrigger class="mt-0.5"><SelectValue :placeholder="t('products_form.select_category')" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
-                  {{ c.name_en || c.name_ar || `#${c.id}` }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p v-if="formErrors.category_id" class="text-xs text-red-600">{{ formErrors.category_id }}</p>
-          </div>
-          <div class="space-y-2">
-            <label class="text-sm font-medium leading-none">{{ t('products_form.unit') }}</label>
-            <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_unit') }}</p>
-            <Select :model-value="draft.unit_id ? String(draft.unit_id) : ''" @update:model-value="v => draft.unit_id = Number(v)">
-              <SelectTrigger class="mt-0.5"><SelectValue :placeholder="t('products_form.select_unit')" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="u in units" :key="u.id" :value="String(u.id)">
-                  {{ u.name_en || u.name_ar || `#${u.id}` }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p v-if="formErrors.unit_id" class="text-xs text-red-600">{{ formErrors.unit_id }}</p>
-          </div>
-          <div class="space-y-2 md:col-span-2">
-            <label class="text-sm font-medium leading-none">{{ t('products_form.description') }}</label>
-            <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_description') }}</p>
-            <textarea
-              v-model="draft.description"
-              rows="4"
-              class="mt-0.5 w-full min-h-[100px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <p v-if="formErrors.description" class="text-xs text-red-600">{{ formErrors.description }}</p>
-          </div>
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+        <div class="space-y-2">
+          <label class="text-sm font-medium leading-none">{{ t('products_form.name_ar') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_name_ar') }}</p>
+          <Input v-model="draft.name_ar" class="mt-0.5" />
+          <p v-if="formErrors.name_ar" class="text-xs text-red-600">{{ formErrors.name_ar }}</p>
         </div>
-
-        <div class="space-y-5 border-t border-border pt-8">
-          <h3 class="flex items-center gap-2 text-sm font-semibold tracking-tight">
-            <ImageIcon class="size-4 text-muted-foreground" />
-            {{ t('products_page.show_images') }}
-          </h3>
-          <div class="grid gap-6 sm:grid-cols-2">
-            <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
-              <label class="text-sm font-medium">{{ t('products_form.main_image') }}</label>
-              <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_main_image') }}</p>
-              <Input type="file" accept="image/*" class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onMainImageChange" />
-              <p v-if="mainImageFile" class="text-xs text-muted-foreground">{{ mainImageFile.name }}</p>
-              <p v-if="formErrors.main_image" class="text-xs text-red-600">{{ formErrors.main_image }}</p>
-            </div>
-            <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
-              <label class="text-sm font-medium">{{ t('products_form.add_additional_images') }}</label>
-              <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_additional_images') }}</p>
-              <Input type="file" accept="image/*" multiple class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onAdditionalImagesChange" />
-              <div
-                v-for="(file, fileIndex) in additionalImageFiles"
-                :key="`${file.name}-${fileIndex}`"
-                class="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2"
-              >
-                <span class="min-w-0 truncate text-xs text-muted-foreground">{{ file.name }}</span>
-                <Button size="sm" variant="ghost" class="shrink-0 text-red-600 hover:text-red-700" @click="removeAdditionalSelectedFile(fileIndex)">
-                  {{ t('common.delete') }}
-                </Button>
-              </div>
-              <p v-if="formErrors.images" class="text-xs text-red-600">{{ formErrors.images }}</p>
-              <p v-if="formErrors.additional_images" class="text-xs text-red-600">{{ formErrors.additional_images }}</p>
-            </div>
-          </div>
+        <div class="space-y-2">
+          <label class="text-sm font-medium leading-none">{{ t('products_form.name_en') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_name_en') }}</p>
+          <Input v-model="draft.name_en" class="mt-0.5" />
+          <p v-if="formErrors.name_en" class="text-xs text-red-600">{{ formErrors.name_en }}</p>
         </div>
-
-        <div class="space-y-3 border-t border-border pt-8">
-          <h3 class="flex items-center gap-2 text-sm font-semibold tracking-tight">
-            <Tag class="size-4 text-muted-foreground" />
-            {{ t('products_variations.attributes') }}
-          </h3>
-          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_attributes') }}</p>
-          <div class="grid grid-cols-1 gap-2 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2 lg:grid-cols-3">
-            <label
-              v-for="a in attributesStore.options"
-              :key="a.id"
-              class="flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2 py-2 text-sm transition-colors hover:border-input hover:bg-background/80"
-            >
-              <Checkbox
-                :model-value="draft.attribute_ids.includes(a.id)"
-                @update:model-value="checked => toggleAttribute(a.id, Boolean(checked))"
-              />
-              <span class="leading-snug">{{ a.name }}</span>
-            </label>
-          </div>
-          <p v-if="formErrors.attribute_ids" class="text-xs text-red-600">{{ formErrors.attribute_ids }}</p>
+        <div class="space-y-2">
+          <label class="text-sm font-medium leading-none">{{ t('products_form.category') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_category') }}</p>
+          <Select :model-value="draft.category_id ? String(draft.category_id) : ''" @update:model-value="v => draft.category_id = Number(v)">
+            <SelectTrigger class="mt-0.5"><SelectValue :placeholder="t('products_form.select_category')" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
+                {{ c.name_en || c.name_ar || `#${c.id}` }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p v-if="formErrors.category_id" class="text-xs text-red-600">{{ formErrors.category_id }}</p>
         </div>
-      </CardContent>
-    </Card>
+        <div class="space-y-2">
+          <label class="text-sm font-medium leading-none">{{ t('products_form.unit') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_unit') }}</p>
+          <Select :model-value="draft.unit_id ? String(draft.unit_id) : ''" @update:model-value="v => draft.unit_id = Number(v)">
+            <SelectTrigger class="mt-0.5"><SelectValue :placeholder="t('products_form.select_unit')" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="u in units" :key="u.id" :value="String(u.id)">
+                {{ u.name_en || u.name_ar || `#${u.id}` }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p v-if="formErrors.unit_id" class="text-xs text-red-600">{{ formErrors.unit_id }}</p>
+        </div>
+        <div class="space-y-2 md:col-span-2">
+          <label class="text-sm font-medium leading-none">{{ t('products_form.description') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_description') }}</p>
+          <textarea
+            v-model="draft.description"
+            rows="4"
+            class="mt-0.5 w-full min-h-[100px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <p v-if="formErrors.description" class="text-xs text-red-600">{{ formErrors.description }}</p>
+        </div>
+      </div>
+    </div>
 
-    <div class="flex flex-col-reverse gap-3 rounded-xl border bg-card/80 px-4 py-4 shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-card/70 sm:flex-row sm:items-center sm:justify-end sm:px-5">
-      <Button variant="outline" class="w-full sm:w-auto" :disabled="submitting" @click="navigateTo('/products')">
+    <div class="rounded-lg border p-5 space-y-6">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {{ t('products_create.step_badge', { n: 2 }) }}
+        </p>
+        <h2 class="text-lg font-semibold tracking-tight mt-1">
+          {{ t('products_page.show_images') }}
+        </h2>
+        <p class="text-sm text-muted-foreground mt-1">
+          {{ t('products_variations.hint_additional_images') }}
+        </p>
+      </div>
+      <div class="grid gap-6 sm:grid-cols-2">
+        <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
+          <label class="text-sm font-medium">{{ t('products_form.main_image') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_main_image') }}</p>
+          <Input type="file" accept="image/*" class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onMainImageChange" />
+          <p v-if="mainImageFile" class="text-xs text-muted-foreground">{{ mainImageFile.name }}</p>
+          <p v-if="formErrors.main_image" class="text-xs text-red-600">{{ formErrors.main_image }}</p>
+        </div>
+        <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
+          <label class="text-sm font-medium">{{ t('products_form.add_additional_images') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_additional_images') }}</p>
+          <Input type="file" accept="image/*" multiple class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onAdditionalImagesChange" />
+          <div
+            v-for="(file, fileIndex) in additionalImageFiles"
+            :key="`${file.name}-${fileIndex}`"
+            class="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2"
+          >
+            <span class="min-w-0 truncate text-xs text-muted-foreground">{{ file.name }}</span>
+            <Button size="sm" variant="ghost" class="shrink-0 text-red-600 hover:text-red-700" @click="removeAdditionalSelectedFile(fileIndex)">
+              {{ t('common.delete') }}
+            </Button>
+          </div>
+          <p v-if="formErrors.images" class="text-xs text-red-600">{{ formErrors.images }}</p>
+          <p v-if="formErrors.additional_images" class="text-xs text-red-600">{{ formErrors.additional_images }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-lg border p-5 space-y-6">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {{ t('products_create.step_badge', { n: 3 }) }}
+        </p>
+        <h2 class="text-lg font-semibold tracking-tight mt-1">
+          {{ t('products_variations.attributes') }}
+        </h2>
+        <p class="text-sm text-muted-foreground mt-1">
+          {{ t('products_variations.hint_attributes') }}
+        </p>
+      </div>
+      <div class="grid grid-cols-1 gap-2 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        <label
+          v-for="a in attributesStore.options"
+          :key="a.id"
+          class="flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2 py-2 text-sm transition-colors hover:border-input hover:bg-background/80"
+        >
+          <Checkbox
+            :model-value="draft.attribute_ids.includes(a.id)"
+            @update:model-value="checked => toggleAttribute(a.id, Boolean(checked))"
+          />
+          <span class="leading-snug">{{ a.name }}</span>
+        </label>
+      </div>
+      <p v-if="formErrors.attribute_ids" class="text-xs text-red-600">{{ formErrors.attribute_ids }}</p>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-end gap-2 pb-6">
+      <Button type="button" variant="outline" :disabled="submitting" @click="navigateTo('/products')">
         {{ t('common.cancel') }}
       </Button>
       <Button
-        class="inline-flex w-full items-center justify-center gap-2 bg-[#215260] text-[#CFE030] hover:bg-[#215260]/90 sm:w-auto sm:min-w-[140px]"
+        type="button"
+        class="inline-flex items-center gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] min-w-[120px]"
         :disabled="submitting"
         @click="saveProduct"
       >

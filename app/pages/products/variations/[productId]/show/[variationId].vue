@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
 
@@ -17,6 +18,28 @@ const canShowVariation = computed(() => can('product_variations.show'))
 const loading = ref(false)
 const errorMessage = ref('')
 const variation = ref<Record<string, unknown> | null>(null)
+
+const createdAtRaw = computed(() => {
+  const value = variation.value?.created_at
+  if (value == null) return ''
+  return String(value).trim()
+})
+
+const updatedAtRaw = computed(() => {
+  const value = variation.value?.updated_at
+  if (value == null) return ''
+  return String(value).trim()
+})
+
+const showUpdatedAt = computed(() => {
+  if (!updatedAtRaw.value) return false
+  if (!createdAtRaw.value) return true
+  return updatedAtRaw.value !== createdAtRaw.value
+})
+
+const formatDateTime = (value: string) => {
+  return formatDisplayDate(value, { withTime: true })
+}
 
 const warehouseDisplayName = (inventoryRow: any) => {
   const warehouse = inventoryRow?.warehouse
@@ -91,6 +114,8 @@ onMounted(() => {
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_barcode') }}</p><p>{{ variation.barcode || '—' }}</p></div>
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_price') }}</p><p>{{ variation.price || '—' }}</p></div>
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_qty') }}</p><p>{{ variation.stock_quantity || 0 }}</p></div>
+        <div v-if="createdAtRaw"><p class="text-xs text-muted-foreground">{{ t('common.created_at') }}</p><p>{{ formatDateTime(createdAtRaw) }}</p></div>
+        <div v-if="showUpdatedAt"><p class="text-xs text-muted-foreground">{{ t('common.updated_at') }}</p><p>{{ formatDateTime(updatedAtRaw) }}</p></div>
       </div>
 
       <div>

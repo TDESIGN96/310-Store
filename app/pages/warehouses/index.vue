@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
-  Search, Plus, Pencil, Trash2, Eye, Loader2, ShieldAlert, LoaderCircle,
+  Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, LoaderCircle,
   Filter, UserX, UserCheck, ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -463,17 +463,15 @@ onMounted(() => loadWarehouses())
             v-for="wh in warehouses"
             v-else
             :key="wh.id"
-            class="hover:bg-muted/30 transition-colors"
+            class="hover:bg-muted/30 transition-colors align-middle"
           >
             <TableCell class="font-medium">
               <button
                 v-if="canShowWarehouse"
                 type="button"
-                class="inline-flex items-center gap-1.5 max-w-full min-w-0 text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start rtl:flex-row-reverse"
-                :aria-label="`${t('common.view')}: ${warehouseDisplayName(wh)}`"
+                class="inline-flex max-w-full min-w-0 text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
                 @click="handleView(wh)"
               >
-                <Eye class="size-3.5 shrink-0" aria-hidden="true" />
                 <span class="min-w-0">{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>
               </button>
               <span v-else>{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>

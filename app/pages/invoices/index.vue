@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   Plus,
   Search,
-  Eye,
   Pencil,
   Copy,
   RotateCcw,
@@ -260,7 +259,14 @@ const goToPage = (page: number) => {
             <TableRow v-if="loading"><TableCell :colspan="10" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
             <TableRow v-else-if="!sortedList.length"><TableCell :colspan="10" class="py-14 text-center text-sm text-muted-foreground">{{ t('invoices_page.empty') }}</TableCell></TableRow>
             <TableRow v-for="row in sortedList" :key="row.id" class="hover:bg-muted/30 transition-colors align-middle">
-              <TableCell class="text-sm font-medium">{{ row.reference_number || `#${row.id}` }}</TableCell>
+              <TableCell class="text-sm font-medium">
+                <NuxtLink
+                  :to="`/invoices/show/${row.id}`"
+                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                >
+                  {{ row.reference_number || `#${row.id}` }}
+                </NuxtLink>
+              </TableCell>
               <TableCell class="text-sm text-muted-foreground">{{ row.customer_name || '—' }}</TableCell>
               <TableCell class="text-sm tabular-nums">{{ fmtDate(row.invoice_date) }}</TableCell>
               <TableCell class="text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
@@ -272,7 +278,6 @@ const goToPage = (page: number) => {
               <TableCell class="text-end">
                 <TableRowActions
                   :actions="[
-                    { key: `view-${row.id}`, label: t('common.view'), type: 'link', to: `/invoices/show/${row.id}`, icon: Eye, tone: 'default' },
                     { key: `edit-${row.id}`, label: t('invoices_page.action_edit'), type: 'link', to: `/invoices/edit/${row.id}`, icon: Pencil, tone: 'default', disabled: !canEditInvoice },
                     { key: `copy-${row.id}`, label: t('invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateInvoice, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
                     { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', onClick: showReturnStub },

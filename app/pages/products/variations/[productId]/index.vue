@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, Loader2, Eye, Pencil, Trash2, Power, PowerOff } from 'lucide-vue-next'
+import { ArrowRight, Loader2, Pencil, Trash2, Power, PowerOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -183,7 +183,7 @@ onMounted(() => {
     <div v-else class="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow class="bg-muted/40">
+          <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead class="text-start">{{ t('products_variations.variation_sku') }}</TableHead>
             <TableHead class="text-start">{{ t('products_variations.variation_barcode') }}</TableHead>
             <TableHead class="text-center">{{ t('products_variations.variation_price') }}</TableHead>
@@ -206,8 +206,17 @@ onMounted(() => {
               {{ t('products_variations.no_variations') }}
             </TableCell>
           </TableRow>
-          <TableRow v-for="row in rows" :key="String(row.id)" v-else>
-            <TableCell class="text-start">{{ row.sku || '—' }}</TableCell>
+          <TableRow v-for="row in rows" :key="String(row.id)" v-else class="hover:bg-muted/30 transition-colors align-middle">
+            <TableCell class="text-start font-medium">
+              <NuxtLink
+                v-if="canShowVariation"
+                :to="`/products/variations/${productId}/show/${row.id}`"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+              >
+                {{ row.sku || '—' }}
+              </NuxtLink>
+              <span v-else>{{ row.sku || '—' }}</span>
+            </TableCell>
             <TableCell class="text-start">{{ row.barcode || '—' }}</TableCell>
             <TableCell class="text-center">{{ row.price || '—' }}</TableCell>
             <TableCell class="text-center">{{ row.stock_quantity ?? 0 }}</TableCell>
@@ -216,9 +225,6 @@ onMounted(() => {
             <TableCell class="text-start">{{ isActive(row) ? t('common.active') : t('common.inactive') }}</TableCell>
             <TableCell class="text-end">
               <div class="flex flex-wrap gap-1 justify-end">
-                <Button v-if="canShowVariation" variant="outline" size="sm" as-child>
-                  <NuxtLink :to="`/products/variations/${productId}/show/${row.id}`"><Eye class="size-3.5" /></NuxtLink>
-                </Button>
                 <Button v-if="canEditVariation" variant="outline" size="sm" as-child>
                   <NuxtLink :to="`/products/variations/${productId}/edit/${row.id}`"><Pencil class="size-3.5" /></NuxtLink>
                 </Button>

@@ -241,7 +241,7 @@ onMounted(loadRoles)
             v-for="role in roles"
             v-else
             :key="role.id"
-            class="hover:bg-muted/30 transition-colors"
+            class="hover:bg-muted/30 transition-colors align-middle"
           >
             <TableCell class="font-medium">{{ rolePrimaryName(role) }}</TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(role.created_by) }}</TableCell>

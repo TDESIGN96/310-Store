@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ImagePlus, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -55,9 +54,6 @@ const units = ref<UnitItem[]>([])
 const loadingCategories = ref(false)
 const loadingUnits = ref(false)
 const optionsError = ref('')
-
-const mainImageInputRef = ref<HTMLInputElement | null>(null)
-const additionalImagesInputRef = ref<HTMLInputElement | null>(null)
 
 const fieldErrors = ref({
   name_ar: '',
@@ -135,14 +131,6 @@ async function loadUnits() {
   }
 }
 
-function openMainImagePicker() {
-  mainImageInputRef.value?.click()
-}
-
-function openAdditionalImagesPicker() {
-  additionalImagesInputRef.value?.click()
-}
-
 function onMainImageSelected(e: Event) {
   const input = e.target as HTMLInputElement
   const picked = Array.from(input.files ?? [])
@@ -190,12 +178,6 @@ function onAdditionalFilesSelected(e: Event) {
     next.push(file)
   }
   additionalImageFiles.value = next
-}
-
-function removeMainImage() {
-  mainImageFile.value = null
-  clearField('main_image')
-  clearField('images')
 }
 
 function removeAdditionalImage(index: number) {
@@ -430,89 +412,46 @@ onMounted(() => {
         />
       </div>
 
-      <div class="space-y-2 sm:col-span-2">
-        <label class="text-sm font-medium leading-none">{{ t('products_form.images') }}</label>
-        <p class="text-xs text-muted-foreground">{{ t('products_form.hint_images') }}</p>
-        <input
-          ref="mainImageInputRef"
-          type="file"
-          accept="image/*"
-          class="sr-only"
-          @change="onMainImageSelected"
-        >
-        <input
-          ref="additionalImagesInputRef"
-          type="file"
-          accept="image/*"
-          multiple
-          class="sr-only"
-          @change="onAdditionalFilesSelected"
-        >
-        <div class="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            class="h-9 gap-2"
-            @click="openMainImagePicker"
-          >
-            <ImagePlus class="size-4" />
-            {{ mainImageFile ? t('products_form.replace_main_image') : t('products_form.add_main_image') }}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            class="h-9 gap-2"
-            :disabled="additionalImageFiles.length >= MAX_ADDITIONAL_IMAGES"
-            @click="openAdditionalImagesPicker"
-          >
-            <ImagePlus class="size-4" />
-            {{ t('products_form.add_additional_images') }}
-          </Button>
-          <span class="text-xs text-muted-foreground">
-            {{ t('products_form.images_count', { current: (mainImageFile ? 1 : 0) + additionalImageFiles.length, max: MAX_IMAGES }) }}
-          </span>
+      <div class="space-y-5 border-t border-border pt-8 sm:col-span-2">
+        <h3 class="text-sm font-semibold tracking-tight">
+          {{ t('products_page.show_images') }}
+        </h3>
+        <div class="grid gap-6 sm:grid-cols-2">
+          <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
+            <label class="text-sm font-medium">{{ t('products_form.main_image') }}</label>
+            <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_main_image') }}</p>
+            <Input
+              type="file"
+              accept="image/*"
+              class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
+              @change="onMainImageSelected"
+            />
+            <p v-if="mainImageFile" class="text-xs text-muted-foreground">{{ mainImageFile.name }}</p>
+            <p v-if="fieldErrors.main_image" class="text-xs text-red-600">{{ fieldErrors.main_image }}</p>
+          </div>
+          <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
+            <label class="text-sm font-medium">{{ t('products_form.add_additional_images') }}</label>
+            <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_additional_images') }}</p>
+            <Input
+              type="file"
+              accept="image/*"
+              multiple
+              class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm"
+              @change="onAdditionalFilesSelected"
+            />
+            <div
+              v-for="(file, idx) in additionalImageFiles"
+              :key="`${file.name}-${idx}`"
+              class="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2"
+            >
+              <span class="min-w-0 truncate text-xs text-muted-foreground">{{ file.name }}</span>
+              <Button size="sm" variant="ghost" class="shrink-0 text-red-600 hover:text-red-700" @click="removeAdditionalImage(idx)">
+                {{ t('common.delete') }}
+              </Button>
+            </div>
+            <p v-if="fieldErrors.images" class="text-xs text-red-600">{{ fieldErrors.images }}</p>
+          </div>
         </div>
-        <p v-if="fieldErrors.main_image" class="text-sm text-red-600">{{ fieldErrors.main_image }}</p>
-        <ul v-if="mainImageFile" class="flex flex-wrap gap-3 pt-2">
-          <li class="relative group rounded-md border bg-muted/30 p-2 pe-8 max-w-[220px]">
-            <p class="text-[10px] uppercase tracking-wide text-muted-foreground">{{ t('products_form.main_image') }}</p>
-            <p class="text-xs truncate font-medium" :title="mainImageFile.name">{{ mainImageFile.name }}</p>
-            <p class="text-[10px] text-muted-foreground tabular-nums">
-              {{ (mainImageFile.size / 1024 / 1024).toFixed(1) }} MB
-            </p>
-            <button
-              type="button"
-              class="absolute top-1 end-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              :aria-label="t('products_form.remove_image')"
-              @click="removeMainImage"
-            >
-              <X class="size-3.5" />
-            </button>
-          </li>
-        </ul>
-        <ul v-if="additionalImageFiles.length" class="flex flex-wrap gap-3 pt-2">
-          <li
-            v-for="(file, idx) in additionalImageFiles"
-            :key="`${file.name}-${idx}`"
-            class="relative group rounded-md border bg-muted/30 p-2 pe-8 max-w-[200px]"
-          >
-            <p class="text-xs truncate font-medium" :title="file.name">{{ file.name }}</p>
-            <p class="text-[10px] text-muted-foreground tabular-nums">
-              {{ (file.size / 1024 / 1024).toFixed(1) }} MB
-            </p>
-            <button
-              type="button"
-              class="absolute top-1 end-1 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              :aria-label="t('products_form.remove_image')"
-              @click="removeAdditionalImage(idx)"
-            >
-              <X class="size-3.5" />
-            </button>
-          </li>
-        </ul>
-        <p v-if="fieldErrors.images" class="text-sm text-red-600">{{ fieldErrors.images }}</p>
       </div>
     </div>
   </div>

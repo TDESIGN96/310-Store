@@ -487,13 +487,13 @@ onMounted(() => {
             v-for="user in users"
             v-else
             :key="user.id"
-            class="hover:bg-muted/30 transition-colors"
+            class="hover:bg-muted/30 transition-colors align-middle"
           >
             <TableCell class="font-medium">
               <NuxtLink
                 v-if="canShowUser"
                 :to="`/users/show/${user.id}`"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
               >
                 {{ user.name }}
               </NuxtLink>

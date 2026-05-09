@@ -302,7 +302,7 @@ onMounted(() => {
             <TableCell class="font-medium">
               <button
                 type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
                 @click="navigateTo(`/attributes/show/${row.id}`)"
               >
                 {{ row.name || '—' }}

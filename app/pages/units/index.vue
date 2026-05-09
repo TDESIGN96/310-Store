@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   Search, Plus, Pencil, Trash2, Loader2, ShieldAlert,
   LoaderCircle, Filter,
-  Eye, Download, ArrowUp, ArrowDown, ArrowUpDown,
+  Download, ArrowUp, ArrowDown, ArrowUpDown,
   UserX, UserCheck, X,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -462,7 +462,7 @@ const exportCSV = () => {
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `units-${new Date().toISOString().slice(0, 10)}.csv`
+  link.download = `units-${formatDisplayDate(new Date())}.csv`
   link.click()
   URL.revokeObjectURL(link.href)
   toast.success(t('common.export_success'))
@@ -721,7 +721,7 @@ onMounted(() => loadUnits())
             v-for="unit in units"
             v-else
             :key="unit.id"
-            class="hover:bg-muted/30 transition-colors "
+            class="hover:bg-muted/30 transition-colors align-middle"
             :class="{ 'bg-muted/20': selectedIds.has(unit.id) }"
           >
             <!-- Checkbox -->
@@ -733,12 +733,12 @@ onMounted(() => loadUnits())
               />
             </TableCell>
 
-            <!-- Arabic Name (clickable → view) -->
+            <!-- Name -->
             <TableCell class="font-medium">
               <button
                 v-if="canShowUnit"
                 type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start"
+                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
                 @click="handleView(unit)"
               >
                 {{ unitDisplayName(unit) }}

@@ -38,7 +38,7 @@ const alignClass = computed(() => (props.align === "start" ? "justify-start" : "
 const visibleActions = computed(() => props.actions.filter(action => action.visible !== false))
 
 const toneClass = (action: TableRowActionItem) => cn(
-  (action.tone === "default" || !action.tone) && "text-[#000]",
+  (action.tone === "default" || !action.tone) && "text-foreground",
   action.tone === "danger" && "text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30",
   action.tone === "warning" && "text-amber-700 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/30",
   action.tone === "success" && "text-green-700 border-green-200 hover:bg-green-50 dark:hover:bg-green-950/30",

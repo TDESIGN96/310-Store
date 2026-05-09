@@ -6,7 +6,6 @@ import {
   Loader2,
   ShieldAlert,
   Package,
-  Eye,
   Pencil,
   Trash2,
   Filter,
@@ -643,7 +642,15 @@ onMounted(async () => {
             >
             <TableCell class="text-sm font-medium">
               <div class="inline-flex items-center gap-2">
-                <span class="max-w-[260px] truncate">{{ row.name }}</span>
+                <button
+                  v-if="canShowProduct"
+                  type="button"
+                  class="max-w-[260px] truncate text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
+                  @click="navigateTo(row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`)"
+                >
+                  {{ row.name }}
+                </button>
+                <span v-else class="max-w-[260px] truncate">{{ row.name }}</span>
                 <Badge
                   v-if="row.productType === 'combo'"
                   variant="secondary"
@@ -675,7 +682,6 @@ onMounted(async () => {
             <TableCell class="text-end">
               <TableRowActions
                 :actions="[
-                  { key: `view-${row.id}`, label: t('common.view'), type: 'link', to: row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`, icon: Eye, tone: 'default', visible: canShowProduct },
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditProduct },
                   { key: `variations-${row.id}`, label: t('products_page.manage_variations'), type: 'link', to: `/products/variations/${row.id}`, tone: 'default', visible: row.productType !== 'combo' },
                   { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteProduct, onClick: () => openDelete(row) },

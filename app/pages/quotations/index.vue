@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   Plus,
   Search,
-  Eye,
   Pencil,
   Copy,
   FilePlus2,
@@ -416,7 +415,14 @@ const goToPage = (page: number) => {
               :key="row.id"
               class="hover:bg-muted/30 transition-colors align-middle"
             >
-              <TableCell class="text-sm font-medium">{{ row.reference_number || `#${row.id}` }}</TableCell>
+              <TableCell class="text-sm font-medium">
+                <NuxtLink
+                  :to="`/quotations/show/${row.id}`"
+                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                >
+                  {{ row.reference_number || `#${row.id}` }}
+                </NuxtLink>
+              </TableCell>
               <TableCell class="text-sm text-muted-foreground">{{ row.customer_name || '—' }}</TableCell>
               <TableCell class="text-sm tabular-nums">{{ fmtDate(row.issue_date) }}</TableCell>
               <TableCell class="text-sm tabular-nums">{{ fmtDate(row.expiry_date) }}</TableCell>
@@ -430,7 +436,6 @@ const goToPage = (page: number) => {
               <TableCell class="text-end">
                 <TableRowActions
                   :actions="[
-                    { key: `view-${row.id}`, label: t('common.view'), type: 'link', to: `/quotations/show/${row.id}`, icon: Eye, tone: 'default' },
                     { key: `edit-${row.id}`, label: t('common.edit'), type: canEditRow(row) ? 'link' : 'button', to: canEditRow(row) ? `/quotations/edit/${row.id}` : undefined, icon: Pencil, tone: 'default', disabled: !canEditRow(row) },
                     { key: `copy-${row.id}`, label: t('common.copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateQuotation, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneQuotation(row) },
                     { key: `convert-${row.id}`, label: t('quotations_page.action_convert'), type: 'button', icon: FilePlus2, tone: 'default', disabled: convertingId === row.id || loading, loading: convertingId === row.id, onClick: () => convertToInvoice(row) },
