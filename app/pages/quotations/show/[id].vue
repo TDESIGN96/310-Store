@@ -25,6 +25,27 @@ const loading = ref(false)
 const errorMessage = ref('')
 
 const quotation = computed(() => quotationsStore.currentQuotation)
+const districtName = computed(() => {
+  const q = quotation.value
+  if (!q) return ''
+  const district = q.district
+  if (district && typeof district === 'object') {
+    return String((district as Record<string, unknown>).district ?? '').trim()
+  }
+  return String(q.district_name ?? '').trim()
+})
+const deliveryFeeValue = computed(() => {
+  const q = quotation.value
+  if (!q) return 0
+  const direct = asNumber(q.delivery_fees)
+  if (direct > 0) return direct
+  const district = q.district
+  if (district && typeof district === 'object') {
+    return asNumber((district as Record<string, unknown>).delivery_fee)
+  }
+  return 0
+})
+const showDeliveryFee = computed(() => deliveryFeeValue.value > 0)
 const items = computed(() => {
   const raw = quotation.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []
@@ -174,6 +195,10 @@ onMounted(async () => {
             <p class="text-sm">{{ quotation.customer_email || '—' }}</p>
           </div>
           <div>
+            <p class="text-xs text-muted-foreground">{{ t('quotations_page.district') }}</p>
+            <p class="text-sm">{{ districtName || t('quotations_page.district_unassigned') }}</p>
+          </div>
+          <div>
             <p class="text-xs text-muted-foreground">{{ t('quotations_page.issue_date') }}</p>
             <p class="text-sm">{{ fmtDate(quotation.issue_date) }}</p>
           </div>
@@ -199,13 +224,13 @@ onMounted(async () => {
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead>{{ t('quotations_page.col_product') }}</TableHead>
-                    <TableHead>{{ t('quotations_page.variation') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.qty') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.unit_price') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.discount_percentage') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.line_discount') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.row_total') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.col_product') }}</TableHead>
+                    <TableHead class="rtl:text-start" >{{ t('quotations_page.variation') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.qty') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.unit_price') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.discount_percentage') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.line_discount') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.row_total') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -223,18 +248,18 @@ onMounted(async () => {
                       </div>
                     </TableCell>
                     <TableCell>{{ variationLabel(item) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ asNumber(item.qty) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(item.unit_price) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(itemDiscountPercentage(item)) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(itemLineDiscount(item)) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(item.row_total) }}</TableCell>
+                    <TableCell class="rtl:text-start left-text-end tabular-nums">{{ asNumber(item.qty) }}</TableCell>
+                    <TableCell class="rtl:text-start left-text-end tabular-nums">{{ money(item.unit_price) }}</TableCell>
+                    <TableCell class="rtl:text-start left-text-end tabular-nums">{{ money(itemDiscountPercentage(item)) }}</TableCell>
+                    <TableCell class="rtl:text-start left-text-end tabular-nums">{{ money(itemLineDiscount(item)) }}</TableCell>
+                    <TableCell class="rtl:text-start left-text-end tabular-nums">{{ money(item.row_total) }}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </div>
           </div>
 
-          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-3">
+          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-4">
             <div>
               <p class="text-xs text-muted-foreground">{{ t('quotations_page.subtotal') }}</p>
               <p class="mt-1 font-semibold tabular-nums">{{ money(quotation.subtotal) }}</p>
@@ -242,6 +267,10 @@ onMounted(async () => {
             <div>
               <p class="text-xs text-muted-foreground">{{ t('quotations_page.total_discount') }}</p>
               <p class="mt-1 font-semibold tabular-nums">{{ money(quotation.total_discount) }}</p>
+            </div>
+            <div v-if="showDeliveryFee">
+              <p class="text-xs text-muted-foreground">{{ t('quotations_page.delivery_fees') }}</p>
+              <p class="mt-1 font-semibold tabular-nums">{{ money(deliveryFeeValue) }}</p>
             </div>
             <div>
               <p class="text-xs text-muted-foreground">{{ t('quotations_page.grand_total') }}</p>

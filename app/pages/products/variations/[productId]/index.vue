@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, Loader2, Pencil, Trash2, Power, PowerOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -36,6 +37,11 @@ const actionLoadingId = ref<number | null>(null)
 const rows = ref<Array<Record<string, unknown>>>([])
 const deleteTarget = ref<Record<string, unknown> | null>(null)
 const productName = ref('')
+const selectedIds = ref<Set<number>>(new Set())
+const bulkActivateConfirmOpen = ref(false)
+const bulkDeactivateConfirmOpen = ref(false)
+const bulkDeleteConfirmOpen = ref(false)
+const bulkActionLoading = ref(false)
 
 interface ProductShowResponse {
   data?: {
@@ -51,6 +57,37 @@ const canEditVariation = computed(() => can('product_variations.update'))
 const canDeleteVariation = computed(() => can('product_variations.destroy'))
 const canActivateVariation = computed(() => can('product_variations.activate'))
 const canDeactivateVariation = computed(() => can('product_variations.deactivate'))
+const selectedRows = computed(() => rows.value.filter(row => selectedIds.value.has(Number(row.id))))
+const selectedCount = computed(() => selectedIds.value.size)
+const isAllSelected = computed(
+  () => rows.value.length > 0 && rows.value.every(row => selectedIds.value.has(Number(row.id))),
+)
+const isIndeterminate = computed(
+  () => rows.value.some(row => selectedIds.value.has(Number(row.id))) && !isAllSelected.value,
+)
+const canActivateSelected = computed(
+  () => canActivateVariation.value && selectedRows.value.some(row => !isActive(row)),
+)
+const canDeactivateSelected = computed(
+  () => canDeactivateVariation.value && selectedRows.value.some(row => isActive(row)),
+)
+const canDeleteSelected = computed(
+  () => canDeleteVariation.value && selectedRows.value.length > 0,
+)
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) rows.value.forEach(row => next.delete(Number(row.id)))
+  else rows.value.forEach(row => next.add(Number(row.id)))
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const isActive = (row: Record<string, unknown>) =>
   row.is_active === true || row.is_active === 1 || row.is_active === '1'
@@ -81,6 +118,7 @@ const loadVariations = async () => {
   loading.value = true
   try {
     rows.value = await productsStore.listVariations(productId.value)
+    selectedIds.value = new Set()
   }
   catch (error: unknown) {
     toast.error(getErrorMessage(error))
@@ -148,6 +186,63 @@ const confirmDelete = async () => {
   }
 }
 
+const runBulkActivate = async () => {
+  const eligible = selectedRows.value.filter(row => !isActive(row))
+  if (!eligible.length) return
+  bulkActivateConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(
+      eligible.map(row => productsStore.activateVariation(productId.value, Number(row.id))),
+    )
+    toast.success(t('common.bulk_activated_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadVariations()
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
+const runBulkDeactivate = async () => {
+  const eligible = selectedRows.value.filter(row => isActive(row))
+  if (!eligible.length) return
+  bulkDeactivateConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(
+      eligible.map(row => productsStore.deactivateVariation(productId.value, Number(row.id))),
+    )
+    toast.success(t('common.bulk_deactivated_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadVariations()
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
+const runBulkDelete = async () => {
+  const eligible = selectedRows.value
+  if (!eligible.length) return
+  bulkDeleteConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(
+      eligible.map(row => productsStore.deleteVariation(productId.value, Number(row.id))),
+    )
+    toast.success(t('common.bulk_deleted_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadVariations()
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadProductName()
   loadVariations()
@@ -179,11 +274,40 @@ onMounted(() => {
     >
       {{ t('common.forbidden') }}
     </div>
+    <div
+      v-else-if="selectedCount > 0"
+      class="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-2.5 flex-wrap"
+    >
+      <span class="text-sm font-medium text-emerald-700">
+        {{ t('common.bulk_status_actions_notice', { count: selectedCount }) }}
+      </span>
+      <div class="flex items-center gap-2 ms-auto">
+        <Button variant="outline" size="sm" class="h-8" :disabled="bulkActionLoading || !canActivateSelected" @click="bulkActivateConfirmOpen = true">
+          {{ t('common.activate') }}
+        </Button>
+        <Button variant="outline" size="sm" class="h-8" :disabled="bulkActionLoading || !canDeactivateSelected" @click="bulkDeactivateConfirmOpen = true">
+          {{ t('common.deactivate') }}
+        </Button>
+        <Button variant="outline" size="sm" class="h-8 text-red-600 border-red-300 hover:bg-red-100" :disabled="bulkActionLoading || !canDeleteSelected" @click="bulkDeleteConfirmOpen = true">
+          {{ t('common.delete') }}
+        </Button>
+        <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+          {{ t('common.deselect') }}
+        </Button>
+      </div>
+    </div>
 
     <div v-else class="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="w-10 text-center">
+              <Checkbox
+                :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelectAll"
+              />
+            </TableHead>
             <TableHead class="text-start">{{ t('products_variations.variation_sku') }}</TableHead>
             <TableHead class="text-start">{{ t('products_variations.variation_barcode') }}</TableHead>
             <TableHead class="text-center">{{ t('products_variations.variation_price') }}</TableHead>
@@ -196,17 +320,24 @@ onMounted(() => {
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="8" class="py-10 ">
+            <TableCell :colspan="9" class="py-10 ">
               <Loader2 class="size-4 animate-spin inline-block mr-2" />
               {{ t('common.loading') }}
             </TableCell>
           </TableRow>
           <TableRow v-else-if="rows.length === 0">
-            <TableCell :colspan="8" class="py-10 text-center text-muted-foreground">
+            <TableCell :colspan="9" class="py-10 text-center text-muted-foreground">
               {{ t('products_variations.no_variations') }}
             </TableCell>
           </TableRow>
-          <TableRow v-for="row in rows" :key="String(row.id)" v-else class="hover:bg-muted/30 transition-colors align-middle">
+          <TableRow v-for="row in rows" :key="String(row.id)" v-else class="hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(Number(row.id)) }">
+            <TableCell class="w-10">
+              <Checkbox
+                :model-value="selectedIds.has(Number(row.id))"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelect(Number(row.id))"
+              />
+            </TableCell>
             <TableCell class="text-start font-medium">
               <NuxtLink
                 v-if="canShowVariation"
@@ -266,6 +397,57 @@ onMounted(() => {
           <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
           <Button class="bg-red-600 hover:bg-red-700 text-white" @click="confirmDelete">
             {{ t('products_variations.delete_confirm') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkActivateConfirmOpen" @update:open="bulkActivateConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.bulk_activate_selected_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('common.bulk_activate_selected_body') }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button class="bg-green-600 hover:bg-green-700 text-white" :disabled="bulkActionLoading" @click="runBulkActivate">
+            <Loader2 v-if="bulkActionLoading" class="size-4 animate-spin" />
+            {{ t('common.activate') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkDeactivateConfirmOpen" @update:open="bulkDeactivateConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.bulk_deactivate_selected_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('common.bulk_deactivate_selected_body') }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button class="bg-amber-600 hover:bg-amber-700 text-white" :disabled="bulkActionLoading" @click="runBulkDeactivate">
+            <Loader2 v-if="bulkActionLoading" class="size-4 animate-spin" />
+            {{ t('common.deactivate') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button class="bg-red-600 hover:bg-red-700 text-white" :disabled="bulkActionLoading" @click="runBulkDelete">
+            <Loader2 v-if="bulkActionLoading" class="size-4 animate-spin" />
+            {{ t('common.delete') }}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

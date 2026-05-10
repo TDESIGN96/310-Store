@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -100,7 +101,34 @@ const search = ref('')
 const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
 const sortBy = ref<SortField | ''>('')
 const sortOrder = ref<'asc' | 'desc'>('asc')
+const selectedIds = ref<Set<number>>(new Set())
+const bulkActivateConfirmOpen = ref(false)
+const bulkDeactivateConfirmOpen = ref(false)
+const bulkDeleteConfirmOpen = ref(false)
+const bulkActionLoading = ref(false)
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const isAllSelected = computed(
+  () => warehouses.value.length > 0 && warehouses.value.every(wh => selectedIds.value.has(wh.id)),
+)
+const isIndeterminate = computed(
+  () => warehouses.value.some(wh => selectedIds.value.has(wh.id)) && !isAllSelected.value,
+)
+const selectedCount = computed(() => selectedIds.value.size)
+const selectedWarehouses = computed(() => warehouses.value.filter(wh => selectedIds.value.has(wh.id)))
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) warehouses.value.forEach(wh => next.delete(wh.id))
+  else warehouses.value.forEach(wh => next.add(wh.id))
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const loadWarehouses = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
@@ -130,6 +158,7 @@ const loadWarehouses = async (page = currentPage.value, query = search.value.tri
     warehouses.value = list
     pagination.value = paginationData
     currentPage.value = paginationData?.current_page ?? page
+    selectedIds.value = new Set()
   }
   catch (error: unknown) {
     setListLoadErrorFromException(error)
@@ -256,6 +285,15 @@ const buildWarehouseStatusBody = (w: WarehouseItem, status: 'active' | 'inactive
   status,
   manager_id: w.manager?.id ?? null,
 })
+const canActivateSelected = computed(
+  () => canEditWarehouse.value && selectedWarehouses.value.some(wh => !isActiveStatus(wh.status)),
+)
+const canDeactivateSelected = computed(
+  () => canEditWarehouse.value && selectedWarehouses.value.some(wh => isActiveStatus(wh.status)),
+)
+const canDeleteSelected = computed(
+  () => canDeleteWarehouse.value && selectedWarehouses.value.length > 0,
+)
 
 const togglingId = ref<number | null>(null)
 const warehouseToDeactivate = ref<WarehouseItem | null>(null)
@@ -330,6 +368,67 @@ const confirmActivate = async () => {
   }
 }
 
+const runBulkActivate = async () => {
+  const eligible = selectedWarehouses.value.filter(wh => !isActiveStatus(wh.status))
+  if (!eligible.length) return
+  bulkActivateConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(
+      eligible.map(wh => $api(`/warehouses/${wh.id}`, {
+        method: 'PUT',
+        body: buildWarehouseStatusBody(wh, 'active'),
+      })),
+    )
+    toast.success(t('common.bulk_activated_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadWarehouses(currentPage.value)
+  } catch (error: any) {
+    toast.error(getErrorMessage(error) || t('warehouses_page.activate_error'))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
+const runBulkDeactivate = async () => {
+  const eligible = selectedWarehouses.value.filter(wh => isActiveStatus(wh.status))
+  if (!eligible.length) return
+  bulkDeactivateConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(
+      eligible.map(wh => $api(`/warehouses/${wh.id}`, {
+        method: 'PUT',
+        body: buildWarehouseStatusBody(wh, 'inactive'),
+      })),
+    )
+    toast.success(t('common.bulk_deactivated_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadWarehouses(currentPage.value)
+  } catch (error: any) {
+    toast.error(getErrorMessage(error) || t('warehouses_page.deactivate_error'))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
+const runBulkDelete = async () => {
+  const eligible = selectedWarehouses.value
+  if (!eligible.length) return
+  bulkDeleteConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(eligible.map(wh => $api(`/warehouses/${wh.id}`, { method: 'DELETE' })))
+    toast.success(t('common.bulk_deleted_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadWarehouses(currentPage.value)
+  } catch (error: any) {
+    toast.error(getErrorMessage(error) || t('warehouses_page.delete_error'))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
 onMounted(() => loadWarehouses())
 </script>
 
@@ -382,11 +481,40 @@ onMounted(() => loadWarehouses())
         </Select>
       </div>
     </div>
+    <div
+      v-if="selectedCount > 0"
+      class="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-2.5 flex-wrap"
+    >
+      <span class="text-sm font-medium text-emerald-700">
+        {{ t('common.bulk_status_actions_notice', { count: selectedCount }) }}
+      </span>
+      <div class="flex items-center gap-2 ms-auto">
+        <Button variant="outline" size="sm" class="h-8" :disabled="bulkActionLoading || !canActivateSelected" @click="bulkActivateConfirmOpen = true">
+          {{ t('common.activate') }}
+        </Button>
+        <Button variant="outline" size="sm" class="h-8" :disabled="bulkActionLoading || !canDeactivateSelected" @click="bulkDeactivateConfirmOpen = true">
+          {{ t('common.deactivate') }}
+        </Button>
+        <Button variant="outline" size="sm" class="h-8 text-red-600 border-red-300 hover:bg-red-100" :disabled="bulkActionLoading || !canDeleteSelected" @click="bulkDeleteConfirmOpen = true">
+          {{ t('common.delete') }}
+        </Button>
+        <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+          {{ t('common.deselect') }}
+        </Button>
+      </div>
+    </div>
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="w-10 text-center">
+              <Checkbox
+                :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelectAll"
+              />
+            </TableHead>
             <TableHead
               class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors"
               @click="toggleSortName"
@@ -430,7 +558,7 @@ onMounted(() => loadWarehouses())
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="8" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('warehouses_page.loading') }}
@@ -439,7 +567,7 @@ onMounted(() => loadWarehouses())
           </TableRow>
 
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -454,7 +582,7 @@ onMounted(() => loadWarehouses())
           </TableRow>
 
           <TableRow v-else-if="warehouses.length === 0">
-            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
               {{ emptyListMessage }}
             </TableCell>
           </TableRow>
@@ -464,7 +592,11 @@ onMounted(() => loadWarehouses())
             v-else
             :key="wh.id"
             class="hover:bg-muted/30 transition-colors align-middle"
+            :class="{ 'bg-muted/20': selectedIds.has(wh.id) }"
           >
+            <TableCell class="w-10">
+              <Checkbox :model-value="selectedIds.has(wh.id)" class="mt-0.5 mx-4" @update:model-value="toggleSelect(wh.id)" />
+            </TableCell>
             <TableCell class="font-medium">
               <button
                 v-if="canShowWarehouse"
@@ -629,6 +761,57 @@ onMounted(() => loadWarehouses())
         >
           <LoaderCircle v-if="togglingId" class="size-4 animate-spin" />
           {{ t('warehouses_page.confirm_yes_activate') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+  <AlertDialog :open="bulkActivateConfirmOpen" @update:open="bulkActivateConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('common.bulk_activate_selected_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('common.bulk_activate_selected_body') }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button class="bg-green-600 hover:bg-green-700 text-white" :disabled="bulkActionLoading" @click="runBulkActivate">
+          <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin" />
+          {{ t('common.activate') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+  <AlertDialog :open="bulkDeactivateConfirmOpen" @update:open="bulkDeactivateConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('common.bulk_deactivate_selected_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('common.bulk_deactivate_selected_body') }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button class="bg-amber-600 hover:bg-amber-700 text-white" :disabled="bulkActionLoading" @click="runBulkDeactivate">
+          <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin" />
+          {{ t('common.deactivate') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+  <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button class="bg-red-600 hover:bg-red-700 text-white" :disabled="bulkActionLoading" @click="runBulkDelete">
+          <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin" />
+          {{ t('common.delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

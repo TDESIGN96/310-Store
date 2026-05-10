@@ -17,6 +17,7 @@ import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -49,6 +50,8 @@ definePageMeta({ layout: 'default' })
 
 const { t } = useI18n()
 const { $api } = useApi()
+const { getErrorMessage } = useApiError()
+const { loadActiveWarehouses } = useInvoiceWarehouses()
 const { canAccess, canCreate, canEdit, canDelete } = usePermissions()
 const quotationsStore = useQuotationsStore()
 const invoicesStore = useInvoicesStore()
@@ -61,15 +64,17 @@ const canDeleteQuotation = computed(() => canDelete('quotations'))
 const search = ref('')
 const filterStatus = ref<'all' | 'active' | 'expired'>('all')
 const issueFrom = ref('')
-const issueTo = ref('')
 const dueFrom = ref('')
-const dueTo = ref('')
 const currentPage = ref(1)
 const deleteTarget = ref<QuotationListItem | null>(null)
 const deleteDialogOpen = ref(false)
 const deleting = ref(false)
 const copyingId = ref<number | null>(null)
 const convertingId = ref<number | null>(null)
+const conversionWarehouseId = ref<number | null>(null)
+const selectedIds = ref<Set<number>>(new Set())
+const bulkDeleteConfirmOpen = ref(false)
+const bulkDeleteLoading = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
@@ -77,10 +82,29 @@ const hasActiveFilters = computed(
     search.value.trim().length > 0
     || filterStatus.value !== 'all'
     || Boolean(issueFrom.value)
-    || Boolean(issueTo.value)
-    || Boolean(dueFrom.value)
-    || Boolean(dueTo.value),
+    || Boolean(dueFrom.value),
 )
+const isAllSelected = computed(
+  () => sortedList.value.length > 0 && sortedList.value.every(row => selectedIds.value.has(row.id)),
+)
+const isIndeterminate = computed(
+  () => sortedList.value.some(row => selectedIds.value.has(row.id)) && !isAllSelected.value,
+)
+const selectedCount = computed(() => selectedIds.value.size)
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) sortedList.value.forEach(row => next.delete(row.id))
+  else sortedList.value.forEach(row => next.add(row.id))
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const list = computed(() => quotationsStore.list)
 const sortedList = computed(() => {
@@ -96,7 +120,22 @@ const loading = computed(() => quotationsStore.listLoading)
 const fmtDate = (value?: string) => {
   return formatDisplayDate(value)
 }
-
+const normalizePickerDate = (value: string): string | undefined => {
+  const raw = value.trim()
+  if (!raw) return undefined
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw)
+  if (!match) return undefined
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1000) return undefined
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+const toIsoDateTimeStart = (value: string): string | undefined => {
+  const normalized = normalizePickerDate(value)
+  if (!normalized) return undefined
+  return `${normalized}T00:00:00.000Z`
+}
 const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
 
 const isEditable = (row: QuotationListItem) => {
@@ -116,22 +155,19 @@ const loadRows = async (page = currentPage.value) => {
     search: search.value.trim() || undefined,
     reference_number: search.value.trim() || undefined,
     customer_name: search.value.trim() || undefined,
-    issue_date_from: issueFrom.value || undefined,
-    issue_date_to: issueTo.value || undefined,
-    expiry_date_from: dueFrom.value || undefined,
-    expiry_date_to: dueTo.value || undefined,
+    issue_date: toIsoDateTimeStart(issueFrom.value),
+    expiry_date: toIsoDateTimeStart(dueFrom.value),
     status: filterStatus.value === 'all' ? undefined : filterStatus.value,
   }
   await quotationsStore.loadList(params)
+  selectedIds.value = new Set()
 }
 
 const resetFilters = async () => {
   search.value = ''
   filterStatus.value = 'all'
   issueFrom.value = ''
-  issueTo.value = ''
   dueFrom.value = ''
-  dueTo.value = ''
   await loadRows(1)
 }
 
@@ -158,6 +194,25 @@ const confirmDelete = async () => {
   }
 }
 
+const confirmBulkDelete = async () => {
+  if (selectedIds.value.size === 0) return
+  bulkDeleteConfirmOpen.value = false
+  bulkDeleteLoading.value = true
+  try {
+    const ids = [...selectedIds.value]
+    await Promise.all(ids.map(id => quotationsStore.deleteQuotation(id)))
+    toast.success(t('common.bulk_deleted_success', { count: ids.length }))
+    selectedIds.value = new Set()
+    await loadRows(currentPage.value)
+  }
+  catch {
+    toast.error(t('quotations_page.delete_error'))
+  }
+  finally {
+    bulkDeleteLoading.value = false
+  }
+}
+
 const extractCreatedQuotationId = (response: unknown): number | null => {
   if (!response || typeof response !== 'object') return null
   const root = response as Record<string, unknown>
@@ -165,6 +220,59 @@ const extractCreatedQuotationId = (response: unknown): number | null => {
   const quotation = (nested?.quotation ?? root.quotation ?? null) as Record<string, unknown> | null
   const id = Number(quotation?.id ?? 0)
   return Number.isFinite(id) && id > 0 ? id : null
+}
+
+const toFiniteNumberOrUndefined = (value: unknown): number | undefined => {
+  if (value === null || value === undefined) return undefined
+  if (typeof value === 'string' && value.trim() === '') return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const resolveQuotationDeliveryFeesForConvert = (quotation: Record<string, unknown>): number => {
+  const nestedDistrict = (quotation.district && typeof quotation.district === 'object')
+    ? quotation.district as Record<string, unknown>
+    : null
+  const fromQuotation = toFiniteNumberOrUndefined(quotation.delivery_fees)
+    ?? toFiniteNumberOrUndefined(quotation.delivery_fee)
+    ?? toFiniteNumberOrUndefined(nestedDistrict?.delivery_fee)
+  if (fromQuotation !== undefined) return Math.max(0, fromQuotation)
+
+  const fallback = Number(quotation.grand_total ?? 0) - Number(quotation.subtotal ?? 0) + Number(quotation.total_discount ?? 0)
+  return Number.isFinite(fallback) ? Math.max(0, fallback) : 0
+}
+
+const ensureConversionWarehouseId = async (): Promise<number | null> => {
+  if (conversionWarehouseId.value) return conversionWarehouseId.value
+  const warehouses = await loadActiveWarehouses()
+  const fallbackId = Number(warehouses[0]?.id ?? 0)
+  conversionWarehouseId.value = Number.isFinite(fallbackId) && fallbackId > 0 ? fallbackId : null
+  return conversionWarehouseId.value
+}
+
+const validateQuotationConversion = async (quotationId: number, warehouseId: number): Promise<{ canConvert: boolean, message: string }> => {
+  try {
+    const endpoint = String(`/quotations/${quotationId}/validate-conversion-to-invoice`)
+    const res = await (($api as unknown) as (url: string, options: { method: string, body?: Record<string, unknown> }) => Promise<unknown>)(endpoint, {
+      method: 'POST',
+      body: { warehouse_id: warehouseId },
+    }) as Record<string, unknown>
+
+    const nested = (res.data && typeof res.data === 'object') ? res.data as Record<string, unknown> : null
+    const canConvert = Boolean(nested?.can_convert ?? res.can_convert)
+    const returnedMessage = typeof res.message === 'string' ? res.message.trim() : ''
+
+    return {
+      canConvert,
+      message: returnedMessage || t('quotations_page.convert_error'),
+    }
+  }
+  catch (error: unknown) {
+    return {
+      canConvert: false,
+      message: getErrorMessage(error) || t('quotations_page.convert_error'),
+    }
+  }
 }
 
 const cloneQuotation = async (row: QuotationListItem) => {
@@ -219,6 +327,18 @@ const cloneQuotation = async (row: QuotationListItem) => {
 const convertToInvoice = async (row: QuotationListItem) => {
   convertingId.value = row.id
   try {
+    const warehouseId = await ensureConversionWarehouseId()
+    if (!warehouseId) {
+      toast.error(t('invoices_page.warehouse_required'))
+      return
+    }
+
+    const conversionCheck = await validateQuotationConversion(row.id, warehouseId)
+    if (!conversionCheck.canConvert) {
+      toast.error(conversionCheck.message)
+      return
+    }
+
     const source = await quotationsStore.loadById(row.id)
     if (!source) {
       toast.error(t('quotations_page.convert_error'))
@@ -226,6 +346,9 @@ const convertToInvoice = async (row: QuotationListItem) => {
     }
 
     invoicesStore.hydrateDraftFromQuotationForConvert(source)
+    const resolvedDeliveryFees = resolveQuotationDeliveryFeesForConvert(source)
+    invoicesStore.draft.delivery_fees = resolvedDeliveryFees
+    invoicesStore.draft.warehouse_id = warehouseId
     toast.success(t('quotations_page.convert_success'))
     await navigateTo({
       path: '/invoices/create',
@@ -244,7 +367,7 @@ const convertToInvoice = async (row: QuotationListItem) => {
 }
 
 watch(
-  [search, filterStatus, issueFrom, issueTo, dueFrom, dueTo],
+  [search, filterStatus, issueFrom, dueFrom],
   () => {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => loadRows(1), 300)
@@ -340,29 +463,39 @@ const goToPage = (page: number) => {
       <div class="flex flex-col gap-4 rounded-lg border bg-card/30 p-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">
           <span class="text-sm font-medium text-foreground">{{ t('quotations_page.issue_date') }}</span>
-          <div class="grid gap-2 sm:grid-cols-2">
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('quotations_page.issue_date_from') }}</label>
-              <Input v-model="issueFrom" type="date" class="h-9 w-full" />
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('quotations_page.issue_date_to') }}</label>
-              <Input v-model="issueTo" type="date" class="h-9 w-full" />
-            </div>
+          <div class="space-y-1">
+            <label class="text-xs text-muted-foreground">{{ t('quotations_page.issue_date_from') }}</label>
+            <Input v-model="issueFrom" type="date" class="h-9 w-full" />
           </div>
         </div>
         <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">
           <span class="text-sm font-medium text-foreground">{{ t('quotations_page.col_due_date') }}</span>
-          <div class="grid gap-2 sm:grid-cols-2">
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('quotations_page.due_date_from') }}</label>
-              <Input v-model="dueFrom" type="date" class="h-9 w-full" />
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('quotations_page.due_date_to') }}</label>
-              <Input v-model="dueTo" type="date" class="h-9 w-full" />
-            </div>
+          <div class="space-y-1">
+            <label class="text-xs text-muted-foreground">{{ t('quotations_page.due_date_from') }}</label>
+            <Input v-model="dueFrom" type="date" class="h-9 w-full" />
           </div>
+        </div>
+      </div>
+      <div
+        v-if="selectedCount > 0"
+        class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/70 px-4 py-2.5 flex-wrap"
+      >
+        <span class="text-sm font-medium text-red-700">
+          {{ t('common.bulk_delete_only_notice', { count: selectedCount }) }}
+        </span>
+        <div class="flex items-center gap-2 ms-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1.5 text-red-600 border-red-300 hover:bg-red-100"
+            :disabled="bulkDeleteLoading"
+            @click="bulkDeleteConfirmOpen = true"
+          >
+            {{ t('common.delete') }}
+          </Button>
+          <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+            {{ t('common.deselect') }}
+          </Button>
         </div>
       </div>
 
@@ -370,6 +503,13 @@ const goToPage = (page: number) => {
         <Table>
           <TableHeader>
             <TableRow class="bg-muted/40 hover:bg-muted/40">
+              <TableHead class="w-10 text-center">
+                <Checkbox
+                  :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                  class="mt-0.5 mx-4"
+                  @update:model-value="toggleSelectAll"
+                />
+              </TableHead>
               <TableHead class="text-start font-medium min-w-[120px]">
                 {{ t('quotations_page.col_ref_id') }}
               </TableHead>
@@ -398,7 +538,7 @@ const goToPage = (page: number) => {
           </TableHeader>
           <TableBody>
             <TableRow v-if="loading">
-              <TableCell :colspan="8" class="py-14 text-center">
+              <TableCell :colspan="9" class="py-14 text-center">
                 <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 class="size-4 animate-spin" />
                   {{ t('common.loading') }}…
@@ -406,7 +546,7 @@ const goToPage = (page: number) => {
               </TableCell>
             </TableRow>
             <TableRow v-else-if="!sortedList.length">
-              <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
+              <TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">
                 {{ t('quotations_page.empty') }}
               </TableCell>
             </TableRow>
@@ -414,7 +554,15 @@ const goToPage = (page: number) => {
               v-for="row in sortedList"
               :key="row.id"
               class="hover:bg-muted/30 transition-colors align-middle"
+              :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
             >
+              <TableCell class="w-10">
+                <Checkbox
+                  :model-value="selectedIds.has(row.id)"
+                  class="mt-0.5 mx-4"
+                  @update:model-value="toggleSelect(row.id)"
+                />
+              </TableCell>
               <TableCell class="text-sm font-medium">
                 <NuxtLink
                   :to="`/quotations/show/${row.id}`"
@@ -423,12 +571,25 @@ const goToPage = (page: number) => {
                   {{ row.reference_number || `#${row.id}` }}
                 </NuxtLink>
               </TableCell>
-              <TableCell class="text-sm text-muted-foreground">{{ row.customer_name || '—' }}</TableCell>
+              <TableCell class="text-sm text-muted-foreground">
+                <div class="flex flex-col gap-0.5">
+                  <span>{{ row.customer_name || '—' }}</span>
+                  <span class="text-xs text-muted-foreground/80">
+                    {{ t('quotations_page.district') }}: {{ row.district_name || t('quotations_page.district_unassigned') }}
+                  </span>
+                </div>
+              </TableCell>
               <TableCell class="text-sm tabular-nums">{{ fmtDate(row.issue_date) }}</TableCell>
               <TableCell class="text-sm tabular-nums">{{ fmtDate(row.expiry_date) }}</TableCell>
               <TableCell>
                 <Badge :variant="row.status === 'active' ? 'outline' : 'secondary'">
-                  {{ row.status === 'active' ? t('quotations_page.filter_status_active') : t('quotations_page.filter_status_expired') }}
+                  {{
+                    row.status === 'active'
+                      ? t('quotations_page.filter_status_active')
+                      : row.status === 'expired'
+                        ? t('quotations_page.filter_status_expired')
+                        : String(row.status || '—')
+                  }}
                 </Badge>
               </TableCell>
               <TableCell class="text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
@@ -494,6 +655,23 @@ const goToPage = (page: number) => {
           <AlertDialogCancel :disabled="deleting">{{ t('common.cancel') }}</AlertDialogCancel>
           <AlertDialogAction class="bg-red-600 text-white hover:bg-red-700" :disabled="deleting" @click="confirmDelete">
             <Loader2 v-if="deleting" class="me-2 size-4 animate-spin" />
+            {{ t('common.delete') }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkDeleteLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction class="bg-red-600 text-white hover:bg-red-700" :disabled="bulkDeleteLoading" @click="confirmBulkDelete">
+            <Loader2 v-if="bulkDeleteLoading" class="me-2 size-4 animate-spin" />
             {{ t('common.delete') }}
           </AlertDialogAction>
         </AlertDialogFooter>

@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Users,
   Ruler,
+  MapPin,
   Layers,
   SlidersHorizontal,
   Warehouse,
@@ -68,6 +69,13 @@ export const navItems: NavGroup[] = [
         path: '/units',
         module: 'units',
         createPath: '/units/create',
+      },
+      {
+        labelKey: 'nav.items.districts',
+        icon: MapPin,
+        path: '/districts',
+        module: 'districts',
+        createPath: '/districts/create',
       },
       {
         labelKey: 'nav.items.categories',

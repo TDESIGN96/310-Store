@@ -10,6 +10,12 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/units\/show\/[^/]+\/?$/, permission: 'units.show' },
   { pattern: /^\/units\/?$/, permission: ['units.index', 'units.show'] },
 
+  // Districts
+  { pattern: /^\/districts\/create\/?$/, permission: 'districts.store' },
+  { pattern: /^\/districts\/edit\/[^/]+\/?$/, permission: 'districts.update' },
+  { pattern: /^\/districts\/show\/[^/]+\/?$/, permission: 'districts.show' },
+  { pattern: /^\/districts\/?$/, permission: ['districts.index', 'districts.show'] },
+
   // Categories
   { pattern: /^\/categories\/create\/?$/, permission: 'categories.store' },
   { pattern: /^\/categories\/edit\/[^/]+\/?$/, permission: 'categories.update' },

@@ -19,6 +19,21 @@ const loading = ref(false)
 const errorMessage = ref('')
 
 const invoice = computed(() => invoicesStore.currentInvoice)
+const districtName = computed(() => {
+  const current = invoice.value
+  if (!current) return ''
+  const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
+  return String(district?.district ?? current.district_name ?? '').trim()
+})
+const deliveryFeeValue = computed(() => {
+  const current = invoice.value
+  if (!current) return 0
+  const direct = asNumber(current.delivery_fees)
+  if (direct > 0) return direct
+  const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
+  return asNumber(district?.delivery_fee)
+})
+const showDeliveryFee = computed(() => deliveryFeeValue.value > 0)
 const items = computed(() => {
   const raw = invoice.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []
@@ -110,6 +125,8 @@ onMounted(async () => {
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.warehouse') }}</p><p class="text-sm">{{ warehouseName }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.customer_mobile') }}</p><p class="text-sm">{{ invoice.customer_mobile || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.customer_email') }}</p><p class="text-sm">{{ invoice.customer_email || '—' }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.district') }}</p><p class="text-sm">{{ districtName || t('invoices_page.district_unassigned') }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.address') }}</p><p class="text-sm">{{ invoice.address || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.invoice_date') }}</p><p class="text-sm">{{ fmtDate(invoice.invoice_date) }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.supply_date') }}</p><p class="text-sm">{{ fmtDate(invoice.supply_date) }}</p></div>
           <div class="sm:col-span-2"><p class="text-xs text-muted-foreground">{{ t('invoices_page.invoice_description') }}</p><div class="prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="invoice.description || '—'" /></div>
@@ -122,24 +139,33 @@ onMounted(async () => {
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow class="bg-muted/40 hover:bg-muted/40"><TableHead>{{ t('invoices_page.col_product') }}</TableHead><TableHead>{{ t('invoices_page.variation') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.qty') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.unit_price') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.discount_percentage') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.line_discount') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.row_total') }}</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow class="bg-muted/40 hover:bg-muted/40">
+                  <TableHead class="rtl:text-start">{{ t('invoices_page.col_product') }}</TableHead>
+                  <TableHead class="rtl:text-start">{{ t('invoices_page.variation') }}</TableHead>
+                  <TableHead class="rtl:text-start text-end">{{ t('invoices_page.qty') }}</TableHead>
+                  <TableHead class="rtl:text-start text-end">{{ t('invoices_page.unit_price') }}</TableHead>
+                  <TableHead class="rtl:text-start text-end">{{ t('invoices_page.discount_percentage') }}</TableHead>
+                  <TableHead class="rtl:text-start text-end">{{ t('invoices_page.line_discount') }}</TableHead>
+                  <TableHead class="rtl:text-start text-end">{{ t('invoices_page.row_total') }}</TableHead>
+                </TableRow></TableHeader>
                 <TableBody>
                   <TableRow v-for="(item, idx) in items" :key="String(item.id ?? idx)">
                     <TableCell><div class="flex items-center gap-2"><img v-if="productImageUrl(item)" :src="productImageUrl(item)" :alt="productLabel(item)" class="size-10 shrink-0 rounded-md border object-cover" loading="lazy"><span>{{ productLabel(item) }}</span></div></TableCell>
                     <TableCell>{{ variationLabel(item) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ asNumber(item.qty) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(item.unit_price) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(itemDiscountPercentage(item)) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(itemLineDiscount(item)) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(item.row_total) }}</TableCell>
+                    <TableCell class="rtl:text-start text-end tabular-nums">{{ asNumber(item.qty) }}</TableCell>
+                    <TableCell class="rtl:text-start text-end tabular-nums">{{ money(item.unit_price) }}</TableCell>
+                    <TableCell class="rtl:text-start text-end tabular-nums">{{ money(itemDiscountPercentage(item)) }}</TableCell>
+                    <TableCell class="rtl:text-start text-end tabular-nums">{{ money(itemLineDiscount(item)) }}</TableCell>
+                    <TableCell class="rtl:text-start text-end tabular-nums">{{ money(item.row_total) }}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </div>
           </div>
-          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-3">
+          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-4">
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(invoice.subtotal) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(invoice.total_discount) }}</p></div>
+            <div v-if="showDeliveryFee"><p class="text-xs text-muted-foreground">{{ t('invoices_page.delivery_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(deliveryFeeValue) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ money(invoice.grand_total) }}</p></div>
           </div>
         </CardContent>

@@ -16,6 +16,7 @@ import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -96,6 +97,35 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const deleteDialogOpen = ref(false)
 const deleteTarget = ref<AttributeItem | null>(null)
 const deleting = ref(false)
+const selectedIds = ref<Set<number>>(new Set())
+const bulkDeleteConfirmOpen = ref(false)
+const bulkDeleteLoading = ref(false)
+
+const isAllSelected = computed(
+  () => rows.value.length > 0 && rows.value.every(r => selectedIds.value.has(r.id)),
+)
+const isIndeterminate = computed(
+  () => rows.value.some(r => selectedIds.value.has(r.id)) && !isAllSelected.value,
+)
+const selectedCount = computed(() => selectedIds.value.size)
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) {
+    rows.value.forEach(r => next.delete(r.id))
+  }
+  else {
+    rows.value.forEach(r => next.add(r.id))
+  }
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const loadAttributes = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
@@ -116,6 +146,7 @@ const loadAttributes = async (page = currentPage.value, query = search.value.tri
     const paginationData = res.pagination ?? res.data?.pagination ?? null
     pagination.value = paginationData
     currentPage.value = pagination.value?.current_page ?? page
+    selectedIds.value = new Set()
   }
   catch (error: unknown) {
     setListLoadErrorFromException(error)
@@ -190,6 +221,25 @@ const confirmDelete = async () => {
   }
 }
 
+const confirmBulkDelete = async () => {
+  if (selectedIds.value.size === 0) return
+  bulkDeleteConfirmOpen.value = false
+  bulkDeleteLoading.value = true
+  try {
+    const ids = [...selectedIds.value]
+    await Promise.all(ids.map(id => $api(`/attributes/${id}`, { method: 'DELETE' })))
+    toast.success(t('common.bulk_deleted_success', { count: ids.length }))
+    selectedIds.value = new Set()
+    await loadAttributes(currentPage.value)
+  }
+  catch {
+    toast.error(t('attributes_page.delete_error'))
+  }
+  finally {
+    bulkDeleteLoading.value = false
+  }
+}
+
 const openCreate = () => navigateTo('/attributes/create')
 
 onMounted(() => {
@@ -224,11 +274,40 @@ onMounted(() => {
         />
       </div>
     </div>
+    <div
+      v-if="selectedCount > 0"
+      class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/70 px-4 py-2.5 flex-wrap"
+    >
+      <span class="text-sm font-medium text-red-700">
+        {{ t('common.bulk_delete_only_notice', { count: selectedCount }) }}
+      </span>
+      <div class="flex items-center gap-2 ms-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1.5 text-red-600 border-red-300 hover:bg-red-100"
+          :disabled="bulkDeleteLoading"
+          @click="bulkDeleteConfirmOpen = true"
+        >
+          {{ t('common.delete') }}
+        </Button>
+        <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+          {{ t('common.deselect') }}
+        </Button>
+      </div>
+    </div>
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="w-10 text-center">
+              <Checkbox
+                :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelectAll"
+              />
+            </TableHead>
             <TableHead
               class="text-start font-medium cursor-pointer select-none hover:text-foreground transition-colors min-w-[220px]"
               @click="toggleSort('name')"
@@ -264,7 +343,7 @@ onMounted(() => {
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="5" class="py-14 text-center">
+            <TableCell :colspan="6" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('attributes_page.loading') }}
@@ -273,7 +352,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="5" class="py-14 text-center">
+            <TableCell :colspan="6" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -288,7 +367,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="rows.length === 0">
-            <TableCell :colspan="5" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
               {{ search ? t('attributes_page.no_results') : t('attributes_page.no_attributes') }}
             </TableCell>
           </TableRow>
@@ -298,7 +377,15 @@ onMounted(() => {
             v-else
             :key="row.id"
             class="hover:bg-muted/30 transition-colors align-middle"
+            :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
           >
+            <TableCell class="w-10">
+              <Checkbox
+                :model-value="selectedIds.has(row.id)"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelect(row.id)"
+              />
+            </TableCell>
             <TableCell class="font-medium">
               <button
                 type="button"
@@ -405,6 +492,27 @@ onMounted(() => {
           >
             <Loader2 v-if="deleting" class="size-4 animate-spin ml-2" />
             {{ deleting ? t('common.loading') : t('attributes_page.confirm_yes_delete') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkDeleteLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button
+            class="bg-red-600 hover:bg-red-700 text-white"
+            :disabled="bulkDeleteLoading"
+            @click="confirmBulkDelete"
+          >
+            <Loader2 v-if="bulkDeleteLoading" class="size-4 animate-spin ml-2" />
+            {{ t('common.delete') }}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

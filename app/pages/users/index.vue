@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -111,6 +112,11 @@ const filterRoleId = ref<string>('all')
 const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
 const rolesForFilter = ref<RoleFilterItem[]>([])
 const loadingRolesFilter = ref(false)
+const selectedIds = ref<Set<number>>(new Set())
+const bulkActivateConfirmOpen = ref(false)
+const bulkDeactivateConfirmOpen = ref(false)
+const bulkDeleteConfirmOpen = ref(false)
+const bulkActionLoading = ref(false)
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -168,6 +174,7 @@ const loadUsers = async (page = currentPage.value, query = search.value.trim()) 
     users.value = usersList
     pagination.value = paginationData
     currentPage.value = paginationData?.current_page ?? page
+    selectedIds.value = new Set()
   } catch (error: unknown) {
     setListLoadErrorFromException(error)
   } finally {
@@ -208,6 +215,28 @@ function onStatusFilterChange(value: unknown) {
 const hasActiveFilters = computed(
   () => filterRoleId.value !== 'all' || filterStatus.value !== 'all',
 )
+const isAllSelected = computed(
+  () => users.value.length > 0 && users.value.every(user => selectedIds.value.has(user.id)),
+)
+const isIndeterminate = computed(
+  () => users.value.some(user => selectedIds.value.has(user.id)) && !isAllSelected.value,
+)
+const selectedCount = computed(() => selectedIds.value.size)
+const selectedUsers = computed(() => users.value.filter(user => selectedIds.value.has(user.id)))
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) users.value.forEach(user => next.delete(user.id))
+  else users.value.forEach(user => next.add(user.id))
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const rolePrimaryName = (role: { name_ar?: string; name_en?: string; name?: string }) =>
   locale.value === 'ar'
@@ -244,6 +273,15 @@ const cannotToggleUserActivation = (user: UserItem) =>
 
 /** Endpoint marks admin accounts — delete is not offered for them */
 const canDeleteUserRow = (user: UserItem) => user.is_admin !== true
+const canActivateSelected = computed(
+  () => canEditUser.value && selectedUsers.value.some(user => !user.is_active && !cannotToggleUserActivation(user)),
+)
+const canDeactivateSelected = computed(
+  () => canEditUser.value && selectedUsers.value.some(user => user.is_active && !cannotToggleUserActivation(user)),
+)
+const canDeleteSelected = computed(
+  () => canDestroyUserPerm.value && selectedUsers.value.some(user => canDeleteUserRow(user)),
+)
 
 function buildUserStatusBody(user: UserItem, is_active: boolean) {
   const email = user.email?.trim() ?? ''
@@ -330,6 +368,67 @@ const confirmDelete = async () => {
     toast.error(getErrorMessage(error))
   } finally {
     deletingId.value = null
+  }
+}
+
+const runBulkActivate = async () => {
+  const eligible = selectedUsers.value.filter(user => !user.is_active && !cannotToggleUserActivation(user))
+  if (!eligible.length) return
+  bulkActivateConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(
+      eligible.map(user => $api(`/users/${user.id}`, {
+        method: 'PUT',
+        body: buildUserStatusBody(user, true),
+      })),
+    )
+    toast.success(t('common.bulk_activated_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadUsers(currentPage.value)
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
+const runBulkDeactivate = async () => {
+  const eligible = selectedUsers.value.filter(user => user.is_active && !cannotToggleUserActivation(user))
+  if (!eligible.length) return
+  bulkDeactivateConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(
+      eligible.map(user => $api(`/users/${user.id}`, {
+        method: 'PUT',
+        body: buildUserStatusBody(user, false),
+      })),
+    )
+    toast.success(t('common.bulk_deactivated_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadUsers(currentPage.value)
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  } finally {
+    bulkActionLoading.value = false
+  }
+}
+
+const runBulkDelete = async () => {
+  const eligible = selectedUsers.value.filter(user => canDeleteUserRow(user))
+  if (!eligible.length) return
+  bulkDeleteConfirmOpen.value = false
+  bulkActionLoading.value = true
+  try {
+    await Promise.all(eligible.map(user => $api(`/users/${user.id}`, { method: 'DELETE' })))
+    toast.success(t('common.bulk_deleted_success', { count: eligible.length }))
+    selectedIds.value = new Set()
+    await loadUsers(currentPage.value)
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  } finally {
+    bulkActionLoading.value = false
   }
 }
 
@@ -434,11 +533,40 @@ onMounted(() => {
         </NuxtLink>
       </Button>
     </div>
+    <div
+      v-if="selectedCount > 0"
+      class="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-2.5 flex-wrap"
+    >
+      <span class="text-sm font-medium text-emerald-700">
+        {{ t('common.bulk_status_actions_notice', { count: selectedCount }) }}
+      </span>
+      <div class="flex items-center gap-2 ms-auto">
+        <Button variant="outline" size="sm" class="h-8" :disabled="bulkActionLoading || !canActivateSelected" @click="bulkActivateConfirmOpen = true">
+          {{ t('common.activate') }}
+        </Button>
+        <Button variant="outline" size="sm" class="h-8" :disabled="bulkActionLoading || !canDeactivateSelected" @click="bulkDeactivateConfirmOpen = true">
+          {{ t('common.deactivate') }}
+        </Button>
+        <Button variant="outline" size="sm" class="h-8 text-red-600 border-red-300 hover:bg-red-100" :disabled="bulkActionLoading || !canDeleteSelected" @click="bulkDeleteConfirmOpen = true">
+          {{ t('common.delete') }}
+        </Button>
+        <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+          {{ t('common.deselect') }}
+        </Button>
+      </div>
+    </div>
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="w-10 text-center">
+              <Checkbox
+                :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelectAll"
+              />
+            </TableHead>
             <TableHead class="text-start font-medium">{{ t('users_page.col_name') }}</TableHead>
             <TableHead class="text-start font-medium">{{ t('users_page.col_email') }}</TableHead>
             <TableHead class="text-start font-medium">{{ t('users_page.col_phone') }}</TableHead>
@@ -452,7 +580,7 @@ onMounted(() => {
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="8" class="py-14 text-center">
+            <TableCell :colspan="9" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('users_page.loading') }}
@@ -461,7 +589,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="8" class="py-14 text-center">
+            <TableCell :colspan="9" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -474,7 +602,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="users.length === 0">
-            <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
                   ? t('users_page.no_results')
@@ -488,7 +616,15 @@ onMounted(() => {
             v-else
             :key="user.id"
             class="hover:bg-muted/30 transition-colors align-middle"
+            :class="{ 'bg-muted/20': selectedIds.has(user.id) }"
           >
+            <TableCell class="w-10">
+              <Checkbox
+                :model-value="selectedIds.has(user.id)"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelect(user.id)"
+              />
+            </TableCell>
             <TableCell class="font-medium">
               <NuxtLink
                 v-if="canShowUser"
@@ -621,6 +757,59 @@ onMounted(() => {
         >
           <LoaderCircle v-if="togglingActiveId" class="size-4 animate-spin" />
           {{ t('users_page.alert_deactivate_confirm') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+  <AlertDialog :open="bulkActivateConfirmOpen" @update:open="bulkActivateConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('common.bulk_activate_selected_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('common.bulk_activate_selected_body') }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button :disabled="bulkActionLoading" class="bg-emerald-600 hover:bg-emerald-700 text-white" @click="runBulkActivate">
+          <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin" />
+          {{ t('common.activate') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog :open="bulkDeactivateConfirmOpen" @update:open="bulkDeactivateConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('common.bulk_deactivate_selected_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('common.bulk_deactivate_selected_body') }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button :disabled="bulkActionLoading" class="bg-amber-600 hover:bg-amber-700 text-white" @click="runBulkDeactivate">
+          <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin" />
+          {{ t('common.deactivate') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="bulkActionLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button :disabled="bulkActionLoading" class="bg-red-600 hover:bg-red-700 text-white" @click="runBulkDelete">
+          <LoaderCircle v-if="bulkActionLoading" class="size-4 animate-spin" />
+          {{ t('common.delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

@@ -26,6 +26,7 @@ export interface QuotationListItem {
   issue_date: string
   expiry_date: string
   customer_name: string
+  district_name: string
   total_discount: number
   grand_total: number
   created_at: string
@@ -52,6 +53,7 @@ export interface QuotationDraft {
   customer_name: string
   customer_phone: string
   customer_email: string
+  district_id: number | null
   issue_date: string
   expiry_date: string
   terms: string
@@ -104,6 +106,7 @@ const createEmptyDraft = (): QuotationDraft => ({
   customer_name: '',
   customer_phone: '',
   customer_email: '',
+  district_id: null,
   issue_date: todayIso(),
   expiry_date: todayIso(),
   terms: '',
@@ -152,12 +155,24 @@ export const useQuotationsStore = defineStore('quotations', () => {
   }
 
   const normalizeListItem = (payload: Record<string, unknown>): QuotationListItem => ({
+    // Support both flat district_name and nested district.district shapes
+    // returned by different backend serializers.
+    // Keep empty string to let UI render localized fallback consistently.
     id: toNumber(payload.id, 0),
     reference_number: String(payload.reference_number ?? ''),
     status: normalizeStatus(payload.status),
     issue_date: String(payload.issue_date ?? ''),
     expiry_date: String(payload.expiry_date ?? ''),
     customer_name: String(payload.customer_name ?? ''),
+    district_name: String(
+      (
+        (payload.district && typeof payload.district === 'object'
+          ? (payload.district as Record<string, unknown>).district
+          : null)
+        ?? payload.district_name
+        ?? ''
+      ),
+    ),
     total_discount: toNumber(payload.total_discount, 0),
     grand_total: toNumber(payload.grand_total, 0),
     created_at: String(payload.created_at ?? ''),
@@ -211,6 +226,51 @@ export const useQuotationsStore = defineStore('quotations', () => {
         const item = rawItem as Record<string, unknown>
         const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
         const variationRaw = (item.variation && typeof item.variation === 'object' ? item.variation : null) as Record<string, unknown> | null
+        const mappedVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
+          .map((rawVariation) => {
+            const variation = rawVariation as Record<string, unknown>
+            return {
+              id: toNumber(variation.id, 0),
+              sku: String(variation.sku ?? ''),
+              barcode: String(variation.barcode ?? ''),
+              price: toNumber(variation.price, 0),
+              resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
+              is_active: true,
+              label: String(variation.label ?? variation.sku ?? ''),
+              tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
+                const tier = tierRaw as Record<string, unknown>
+                return {
+                  quantity_from: toNumber(tier.quantity_from, 0),
+                  quantity_to: toNumber(tier.quantity_to, 0),
+                  price: toNumber(tier.price, 0),
+                }
+              }),
+            }
+          })
+          .filter(v => v.id > 0)
+
+        const selectedVariationId = toNumber(item.variation_id ?? variationRaw?.id, 0)
+        const hasSelectedVariation = selectedVariationId > 0 && mappedVariations.some(v => v.id === selectedVariationId)
+        if (!hasSelectedVariation && variationRaw && selectedVariationId > 0) {
+          mappedVariations.unshift({
+            id: selectedVariationId,
+            sku: String(variationRaw.sku ?? ''),
+            barcode: String(variationRaw.barcode ?? ''),
+            price: toNumber(variationRaw.price, 0),
+            resolved_price: toNumber(variationRaw.resolved_price ?? variationRaw.price, 0),
+            is_active: true,
+            label: String(variationRaw.label ?? variationRaw.sku ?? ''),
+            tiered_prices: (Array.isArray(variationRaw.tiered_prices) ? variationRaw.tiered_prices : []).map((tierRaw) => {
+              const tier = tierRaw as Record<string, unknown>
+              return {
+                quantity_from: toNumber(tier.quantity_from, 0),
+                quantity_to: toNumber(tier.quantity_to, 0),
+                price: toNumber(tier.price, 0),
+              }
+            }),
+          })
+        }
+
         const product: QuotationProductOption | null = productRaw
           ? {
               id: toNumber(productRaw.id, 0),
@@ -220,28 +280,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
               price: toNumber(productRaw.price, 0),
               is_available: true,
               is_combo: Boolean(productRaw.is_combo),
-              variations: (Array.isArray(productRaw.variations) ? productRaw.variations : [])
-                .map((rawVariation) => {
-                  const variation = rawVariation as Record<string, unknown>
-                  return {
-                    id: toNumber(variation.id, 0),
-                    sku: String(variation.sku ?? ''),
-                    barcode: String(variation.barcode ?? ''),
-                    price: toNumber(variation.price, 0),
-                    resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
-                    is_active: true,
-                    label: String(variation.label ?? variation.sku ?? ''),
-                    tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
-                      const tier = tierRaw as Record<string, unknown>
-                      return {
-                        quantity_from: toNumber(tier.quantity_from, 0),
-                        quantity_to: toNumber(tier.quantity_to, 0),
-                        price: toNumber(tier.price, 0),
-                      }
-                    }),
-                  }
-                })
-                .filter(v => v.id > 0),
+              variations: mappedVariations,
             }
           : null
 
@@ -251,7 +290,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
         return {
           key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           product_id: toNumber(item.product_id ?? product?.id, 0) || null,
-          variation_id: toNumber(item.variation_id ?? variationRaw?.id, 0) || null,
+          variation_id: selectedVariationId || null,
           product,
           description: String(item.description ?? ''),
           qty,
@@ -270,6 +309,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
       customer_name: String(quotation.customer_name ?? ''),
       customer_phone: String(quotation.customer_phone ?? ''),
       customer_email: String(quotation.customer_email ?? ''),
+      district_id: toNumber(quotation.district_id, 0) || null,
       issue_date: String(quotation.issue_date ?? todayIso()),
       expiry_date: String(quotation.expiry_date ?? todayIso()),
       terms: String(quotation.terms ?? ''),
@@ -277,7 +317,12 @@ export const useQuotationsStore = defineStore('quotations', () => {
       delivery_fees: Math.max(
         0,
         toNumber(
-          quotation.delivery_fees,
+          quotation.delivery_fees
+          ?? (
+            quotation.district && typeof quotation.district === 'object'
+              ? (quotation.district as Record<string, unknown>).delivery_fee
+              : undefined
+          ),
           Math.max(0, toNumber(quotation.grand_total, 0) - toNumber(quotation.subtotal, 0) + toNumber(quotation.total_discount, 0)),
         ),
       ),
@@ -398,6 +443,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
     customer_name: draft.value.customer_name || undefined,
     customer_phone: draft.value.customer_phone || undefined,
     customer_email: draft.value.customer_email || undefined,
+    district_id: draft.value.district_id || undefined,
     issue_date: draft.value.issue_date,
     expiry_date: draft.value.expiry_date,
     terms: draft.value.terms || undefined,

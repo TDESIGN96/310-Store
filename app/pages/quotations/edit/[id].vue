@@ -59,6 +59,7 @@ const { canEdit } = usePermissions()
 const canEditQuotation = computed(() => canEdit('quotations'))
 const quotationsStore = useQuotationsStore()
 const { searchProducts, lookupBarcode, resolvingBarcode, loadingProducts } = useQuotationProducts()
+const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 
 const loading = ref(false)
@@ -67,6 +68,8 @@ const errorMessage = ref('')
 const productSearch = ref('')
 const barcodeInput = ref('')
 const searchResults = ref<QuotationProductOption[]>([])
+const districtOptions = ref<Array<{ id: number, district: string, delivery_fee: string }>>([])
+const loadingDistricts = ref(false)
 const clearDialogOpen = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -85,6 +88,7 @@ const productDisplayName = (product: QuotationProductOption | null): string => {
 }
 
 const formatMoney = (value: number): string => value.toFixed(2)
+const districtLabel = (item: { district: string }) => item.district || '—'
 
 const selectedRowsCount = computed(() => draft.value.items.filter(item => item.product_id).length)
 
@@ -141,6 +145,34 @@ const validate = (): boolean => {
   const errors = validateQuotationDraft(draft.value, selectedRowsCount.value, t)
   formErrors.value = errors
   return Object.keys(errors).length === 0
+}
+
+const loadDistrictOptions = async () => {
+  loadingDistricts.value = true
+  try {
+    const res = await $api<{
+      data?: { districts?: Array<{ id: number, district: string, delivery_fee: string }> }
+      districts?: Array<{ id: number, district: string, delivery_fee: string }>
+    }>('/districts', {
+      params: { page: 1, per_page: 100 },
+    })
+    districtOptions.value = res.data?.districts ?? res.districts ?? []
+  }
+  catch {
+    districtOptions.value = []
+  }
+  finally {
+    loadingDistricts.value = false
+  }
+}
+
+const onDistrictChange = (value: unknown) => {
+  const selectedId = Number(value ?? 0)
+  draft.value.district_id = Number.isFinite(selectedId) && selectedId > 0 ? selectedId : null
+  if (!draft.value.district_id) return
+  const selected = districtOptions.value.find(item => item.id === draft.value.district_id)
+  if (!selected) return
+  draft.value.delivery_fees = Math.max(0, Number(selected.delivery_fee) || 0)
 }
 
 const extractQuotationFromResponse = (res: unknown): Record<string, unknown> | null => {
@@ -207,6 +239,7 @@ onMounted(async () => {
     return
   }
   try {
+    await loadDistrictOptions()
     const quotation = await quotationsStore.loadDraftById(id.value)
     if (!quotation) errorMessage.value = t('quotations_page.not_found')
   }
@@ -272,31 +305,62 @@ onMounted(async () => {
           <div class="grid gap-5 md:grid-cols-2">
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.reference_number') }}</label>
-              <Input :model-value="draft.reference_number || `#${id}`" disabled />
+              <Input
+                :model-value="draft.reference_number || t('quotations_page.reference_generated_after_save')"
+                disabled
+              />
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.customer_name') }}</label>
               <Input v-model="draft.customer_name" />
             </div>
+          </div>
+          <div class="grid gap-5 md:grid-cols-3">
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.customer_phone') }}</label>
-              <Input v-model="draft.customer_phone" />
+              <Input v-model="draft.customer_phone" type="tel" />
+              <p v-if="formErrors.customer_phone" class="text-xs text-red-600">{{ formErrors.customer_phone }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.customer_email') }}</label>
               <Input v-model="draft.customer_email" type="email" />
+              <p v-if="formErrors.customer_email" class="text-xs text-red-600">{{ formErrors.customer_email }}</p>
             </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">{{ t('quotations_page.issue_date') }}</label>
-              <Input v-model="draft.issue_date" type="date" />
-              <p v-if="formErrors.issue_date" class="text-xs text-red-600">{{ formErrors.issue_date }}</p>
+            <div class="space-y-2" >
+              <label class="text-sm font-medium ">{{ t('quotations_page.district') }}</label>
+              <Select
+                :model-value="draft.district_id ? String(draft.district_id) : ''"
+                @update:model-value="onDistrictChange" 
+              >
+                <SelectTrigger class="w-full">
+                  <SelectValue :placeholder="t('quotations_page.select_district')" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="item in districtOptions"
+                    :key="item.id"
+                    :value="String(item.id)"
+                  >
+                    {{ districtLabel(item) }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p v-if="loadingDistricts" class="text-xs text-muted-foreground">{{ t('common.loading') }}</p>
             </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">{{ t('quotations_page.expiry_date') }}</label>
-              <Input v-model="draft.expiry_date" type="date" />
-              <p v-if="formErrors.expiry_date" class="text-xs text-red-600">{{ formErrors.expiry_date }}</p>
             </div>
-          </div>
+            <div class="grid gap-5 md:grid-cols-2">
+              <div class="space-y-2">
+               <label class="text-sm font-medium">{{ t('quotations_page.issue_date') }}</label>
+               <Input v-model="draft.issue_date" type="date" />
+               <p v-if="formErrors.issue_date" class="text-xs text-red-600">{{ formErrors.issue_date }}</p>
+              </div>
+             <div class="space-y-2">
+                <label class="text-sm font-medium">{{ t('quotations_page.expiry_date') }}</label>
+                <Input v-model="draft.expiry_date" type="date" />
+                <p v-if="formErrors.expiry_date" class="text-xs text-red-600">{{ formErrors.expiry_date }}</p>
+              </div>
+          
+            </div>
           <div class="space-y-2">
             <label class="text-sm font-medium">{{ t('quotations_page.quotation_description') }}</label>
             <RichTextEditor v-model="draft.description" />

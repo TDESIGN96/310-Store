@@ -26,6 +26,7 @@ export interface InvoiceListItem {
   warehouse_name_ar: string
   warehouse_name_en: string
   customer_name: string
+  district_name: string
   invoice_date: string
   supply_date: string
   status: InvoiceStatus
@@ -51,7 +52,9 @@ export interface InvoiceDraft {
   id: number | null
   reference_number: string
   warehouse_id: number | null
+  district_id: number | null
   description: string
+  address: string
   customer_name: string
   customer_mobile: string
   customer_email: string
@@ -92,7 +95,9 @@ const createEmptyDraft = (): InvoiceDraft => ({
   id: null,
   reference_number: '',
   warehouse_id: null,
+  district_id: null,
   description: '',
+  address: '',
   customer_name: '',
   customer_mobile: '',
   customer_email: '',
@@ -135,6 +140,12 @@ export const useInvoicesStore = defineStore('invoices', () => {
     const num = Number(value)
     return Number.isFinite(num) ? num : fallback
   }
+  const toFiniteNumberOrUndefined = (value: unknown): number | undefined => {
+    if (value === null || value === undefined) return undefined
+    if (typeof value === 'string' && value.trim() === '') return undefined
+    const num = Number(value)
+    return Number.isFinite(num) ? num : undefined
+  }
 
   const normalizeStatus = (value: unknown): InvoiceStatus => {
     const status = String(value ?? '').toLowerCase()
@@ -158,6 +169,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
   const normalizeListItem = (payload: Record<string, unknown>): InvoiceListItem => {
     const warehouse = (payload.warehouse && typeof payload.warehouse === 'object' ? payload.warehouse : null) as Record<string, unknown> | null
+    const district = (payload.district && typeof payload.district === 'object' ? payload.district : null) as Record<string, unknown> | null
     return {
       id: toNumber(payload.id, 0),
       reference_number: String(payload.reference_number ?? ''),
@@ -165,6 +177,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       warehouse_name_ar: String(warehouse?.name_ar ?? ''),
       warehouse_name_en: String(warehouse?.name_en ?? ''),
       customer_name: String(payload.customer_name ?? ''),
+      district_name: String(district?.district ?? payload.district_name ?? ''),
       invoice_date: String(payload.invoice_date ?? ''),
       supply_date: String(payload.supply_date ?? ''),
       status: normalizeStatus(payload.status),
@@ -221,6 +234,51 @@ export const useInvoicesStore = defineStore('invoices', () => {
         const item = rawItem as Record<string, unknown>
         const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
         const variationRaw = (item.variation && typeof item.variation === 'object' ? item.variation : null) as Record<string, unknown> | null
+        const mappedVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
+          .map((rawVariation) => {
+            const variation = rawVariation as Record<string, unknown>
+            return {
+              id: toNumber(variation.id, 0),
+              sku: String(variation.sku ?? ''),
+              barcode: String(variation.barcode ?? ''),
+              price: toNumber(variation.price, 0),
+              resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
+              is_active: true,
+              label: String(variation.label ?? variation.sku ?? ''),
+              tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
+                const tier = tierRaw as Record<string, unknown>
+                return {
+                  quantity_from: toNumber(tier.quantity_from, 0),
+                  quantity_to: toNumber(tier.quantity_to, 0),
+                  price: toNumber(tier.price, 0),
+                }
+              }),
+            }
+          })
+          .filter(v => v.id > 0)
+
+        const selectedVariationId = toNumber(item.variation_id ?? variationRaw?.id, 0)
+        const hasSelectedVariation = selectedVariationId > 0 && mappedVariations.some(v => v.id === selectedVariationId)
+        if (!hasSelectedVariation && variationRaw && selectedVariationId > 0) {
+          mappedVariations.unshift({
+            id: selectedVariationId,
+            sku: String(variationRaw.sku ?? ''),
+            barcode: String(variationRaw.barcode ?? ''),
+            price: toNumber(variationRaw.price, 0),
+            resolved_price: toNumber(variationRaw.resolved_price ?? variationRaw.price, 0),
+            is_active: true,
+            label: String(variationRaw.label ?? variationRaw.sku ?? ''),
+            tiered_prices: (Array.isArray(variationRaw.tiered_prices) ? variationRaw.tiered_prices : []).map((tierRaw) => {
+              const tier = tierRaw as Record<string, unknown>
+              return {
+                quantity_from: toNumber(tier.quantity_from, 0),
+                quantity_to: toNumber(tier.quantity_to, 0),
+                price: toNumber(tier.price, 0),
+              }
+            }),
+          })
+        }
+
         const product: QuotationProductOption | null = productRaw
           ? {
               id: toNumber(productRaw.id, 0),
@@ -230,28 +288,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
               price: toNumber(productRaw.price, 0),
               is_available: true,
               is_combo: Boolean(productRaw.is_combo),
-              variations: (Array.isArray(productRaw.variations) ? productRaw.variations : [])
-                .map((rawVariation) => {
-                  const variation = rawVariation as Record<string, unknown>
-                  return {
-                    id: toNumber(variation.id, 0),
-                    sku: String(variation.sku ?? ''),
-                    barcode: String(variation.barcode ?? ''),
-                    price: toNumber(variation.price, 0),
-                    resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
-                    is_active: true,
-                    label: String(variation.label ?? variation.sku ?? ''),
-                    tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
-                      const tier = tierRaw as Record<string, unknown>
-                      return {
-                        quantity_from: toNumber(tier.quantity_from, 0),
-                        quantity_to: toNumber(tier.quantity_to, 0),
-                        price: toNumber(tier.price, 0),
-                      }
-                    }),
-                  }
-                })
-                .filter(v => v.id > 0),
+              variations: mappedVariations,
             }
           : null
 
@@ -260,7 +297,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
         return {
           key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           product_id: toNumber(item.product_id ?? product?.id, 0) || null,
-          variation_id: toNumber(item.variation_id ?? variationRaw?.id, 0) || null,
+          variation_id: selectedVariationId || null,
           product,
           description: String(item.description ?? ''),
           qty,
@@ -276,7 +313,13 @@ export const useInvoicesStore = defineStore('invoices', () => {
       id: toNumber(invoice.id, 0) || null,
       reference_number: String(invoice.reference_number ?? ''),
       warehouse_id: toNumber(invoice.warehouse_id ?? ((invoice.warehouse as Record<string, unknown> | null)?.id), 0) || null,
+      district_id: toNumber(
+        invoice.district_id
+        ?? ((invoice.district as Record<string, unknown> | null)?.id),
+        0,
+      ) || null,
       description: String(invoice.description ?? ''),
+      address: String(invoice.address ?? ''),
       customer_name: String(invoice.customer_name ?? ''),
       customer_mobile: String(invoice.customer_mobile ?? ''),
       customer_email: String(invoice.customer_email ?? ''),
@@ -284,7 +327,14 @@ export const useInvoicesStore = defineStore('invoices', () => {
       supply_date: String(invoice.supply_date ?? todayIso()),
       terms: String(invoice.terms ?? ''),
       notes: String(invoice.notes ?? ''),
-      delivery_fees: Math.max(0, toNumber(invoice.delivery_fees, 0)),
+      delivery_fees: Math.max(
+        0,
+        toNumber(
+          invoice.delivery_fees
+          ?? ((invoice.district as Record<string, unknown> | null)?.delivery_fee),
+          0,
+        ),
+      ),
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -295,6 +345,51 @@ export const useInvoicesStore = defineStore('invoices', () => {
         const item = rawItem as Record<string, unknown>
         const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
         const variationRaw = (item.variation && typeof item.variation === 'object' ? item.variation : null) as Record<string, unknown> | null
+        const mappedVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
+          .map((rawVariation) => {
+            const variation = rawVariation as Record<string, unknown>
+            return {
+              id: toNumber(variation.id, 0),
+              sku: String(variation.sku ?? ''),
+              barcode: String(variation.barcode ?? ''),
+              price: toNumber(variation.price, 0),
+              resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
+              is_active: true,
+              label: String(variation.label ?? variation.sku ?? ''),
+              tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
+                const tier = tierRaw as Record<string, unknown>
+                return {
+                  quantity_from: toNumber(tier.quantity_from, 0),
+                  quantity_to: toNumber(tier.quantity_to, 0),
+                  price: toNumber(tier.price, 0),
+                }
+              }),
+            }
+          })
+          .filter(v => v.id > 0)
+
+        const selectedVariationId = toNumber(item.variation_id ?? variationRaw?.id, 0)
+        const hasSelectedVariation = selectedVariationId > 0 && mappedVariations.some(v => v.id === selectedVariationId)
+        if (!hasSelectedVariation && variationRaw && selectedVariationId > 0) {
+          mappedVariations.unshift({
+            id: selectedVariationId,
+            sku: String(variationRaw.sku ?? ''),
+            barcode: String(variationRaw.barcode ?? ''),
+            price: toNumber(variationRaw.price, 0),
+            resolved_price: toNumber(variationRaw.resolved_price ?? variationRaw.price, 0),
+            is_active: true,
+            label: String(variationRaw.label ?? variationRaw.sku ?? ''),
+            tiered_prices: (Array.isArray(variationRaw.tiered_prices) ? variationRaw.tiered_prices : []).map((tierRaw) => {
+              const tier = tierRaw as Record<string, unknown>
+              return {
+                quantity_from: toNumber(tier.quantity_from, 0),
+                quantity_to: toNumber(tier.quantity_to, 0),
+                price: toNumber(tier.price, 0),
+              }
+            }),
+          })
+        }
+
         const product: QuotationProductOption | null = productRaw
           ? {
               id: toNumber(productRaw.id, 0),
@@ -304,28 +399,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
               price: toNumber(productRaw.price, 0),
               is_available: true,
               is_combo: Boolean(productRaw.is_combo),
-              variations: (Array.isArray(productRaw.variations) ? productRaw.variations : [])
-                .map((rawVariation) => {
-                  const variation = rawVariation as Record<string, unknown>
-                  return {
-                    id: toNumber(variation.id, 0),
-                    sku: String(variation.sku ?? ''),
-                    barcode: String(variation.barcode ?? ''),
-                    price: toNumber(variation.price, 0),
-                    resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
-                    is_active: true,
-                    label: String(variation.label ?? variation.sku ?? ''),
-                    tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
-                      const tier = tierRaw as Record<string, unknown>
-                      return {
-                        quantity_from: toNumber(tier.quantity_from, 0),
-                        quantity_to: toNumber(tier.quantity_to, 0),
-                        price: toNumber(tier.price, 0),
-                      }
-                    }),
-                  }
-                })
-                .filter(v => v.id > 0),
+              variations: mappedVariations,
             }
           : null
 
@@ -334,7 +408,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
         return {
           key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           product_id: toNumber(item.product_id ?? product?.id, 0) || null,
-          variation_id: toNumber(item.variation_id ?? variationRaw?.id, 0) || null,
+          variation_id: selectedVariationId || null,
           product,
           description: String(item.description ?? ''),
           qty,
@@ -346,11 +420,26 @@ export const useInvoicesStore = defineStore('invoices', () => {
       })
       .filter(item => item.product_id)
 
+    const quotationFallbackDelivery = Math.max(
+      0,
+      toNumber(quotation.grand_total, 0) - toNumber(quotation.subtotal, 0) + toNumber(quotation.total_discount, 0),
+    )
+    const resolvedConvertedDeliveryFees = toFiniteNumberOrUndefined(quotation.delivery_fees)
+      ?? toFiniteNumberOrUndefined(quotation.delivery_fee)
+      ?? toFiniteNumberOrUndefined((quotation.district as Record<string, unknown> | null)?.delivery_fee)
+      ?? quotationFallbackDelivery
+
     draft.value = {
       id: null,
       reference_number: '',
       warehouse_id: null,
+      district_id: toNumber(
+        quotation.district_id
+        ?? ((quotation.district as Record<string, unknown> | null)?.id),
+        0,
+      ) || null,
       description: String(quotation.description ?? ''),
+      address: String(quotation.address ?? ''),
       customer_name: String(quotation.customer_name ?? ''),
       customer_mobile: String(quotation.customer_phone ?? ''),
       customer_email: String(quotation.customer_email ?? ''),
@@ -358,7 +447,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       supply_date: String(quotation.expiry_date ?? todayIso()),
       terms: String(quotation.terms ?? ''),
       notes: String(quotation.notes ?? ''),
-      delivery_fees: Math.max(0, toNumber(quotation.delivery_fees, 0)),
+      delivery_fees: Math.max(0, resolvedConvertedDeliveryFees),
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -473,7 +562,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
   const buildPayload = () => ({
     reference_number: draft.value.reference_number || undefined,
     warehouse_id: draft.value.warehouse_id,
+    district_id: draft.value.district_id || undefined,
     description: draft.value.description || undefined,
+    address: draft.value.address || undefined,
     customer_name: draft.value.customer_name || undefined,
     customer_mobile: draft.value.customer_mobile || undefined,
     customer_email: draft.value.customer_email || undefined,

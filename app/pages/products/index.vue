@@ -16,6 +16,7 @@ import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -307,12 +308,36 @@ const loadingFilters = ref(false)
 const deleteDialogOpen = ref(false)
 const deleteTarget = ref<ProductRow | null>(null)
 const deleting = ref(false)
+const selectedIds = ref<Set<number>>(new Set())
+const bulkDeleteConfirmOpen = ref(false)
+const bulkDeleteLoading = ref(false)
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
   () => filterCategoryId.value !== 'all' || filterWarehouseId.value !== 'all' || search.value.trim().length > 0,
 )
+const isAllSelected = computed(
+  () => rows.value.length > 0 && rows.value.every(row => selectedIds.value.has(row.id)),
+)
+const isIndeterminate = computed(
+  () => rows.value.some(row => selectedIds.value.has(row.id)) && !isAllSelected.value,
+)
+const selectedCount = computed(() => selectedIds.value.size)
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) rows.value.forEach(row => next.delete(row.id))
+  else rows.value.forEach(row => next.add(row.id))
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const categoryLabel = (c: CategoryFilterItem) =>
   locale.value === 'ar' ? c.name_ar || c.name_en : c.name_en || c.name_ar
@@ -383,6 +408,7 @@ const loadProducts = async (page = currentPage.value, query = search.value.trim(
     rows.value = parsed
     pagination.value = extractPagination(data)
     currentPage.value = pagination.value?.current_page ?? page
+    selectedIds.value = new Set()
   }
   catch (error: unknown) {
     setListLoadErrorFromException(error)
@@ -461,6 +487,35 @@ async function confirmDelete() {
   }
   finally {
     deleting.value = false
+  }
+}
+
+async function confirmBulkDelete() {
+  if (selectedIds.value.size === 0) return
+  bulkDeleteConfirmOpen.value = false
+  bulkDeleteLoading.value = true
+  try {
+    const base = config.public.apiBase as string
+    const ids = [...selectedIds.value]
+    await Promise.all(
+      ids.map(id => $fetch(`${base.replace(/\/$/, '')}/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+          Accept: 'application/json',
+          'Accept-Language': normalizeApiLocale(locale.value),
+        },
+      })),
+    )
+    toast.success(t('common.bulk_deleted_success', { count: ids.length }))
+    selectedIds.value = new Set()
+    await loadProducts(currentPage.value)
+  }
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  }
+  finally {
+    bulkDeleteLoading.value = false
   }
 }
 
@@ -577,6 +632,28 @@ onMounted(async () => {
 </DropdownMenu>
 
 </div>
+    <div
+      v-if="selectedCount > 0"
+      class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/70 px-4 py-2.5 flex-wrap"
+    >
+      <span class="text-sm font-medium text-red-700">
+        {{ t('common.bulk_delete_only_notice', { count: selectedCount }) }}
+      </span>
+      <div class="flex items-center gap-2 ms-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1.5 text-red-600 border-red-300 hover:bg-red-100"
+          :disabled="bulkDeleteLoading"
+          @click="bulkDeleteConfirmOpen = true"
+        >
+          {{ t('common.delete') }}
+        </Button>
+        <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+          {{ t('common.deselect') }}
+        </Button>
+      </div>
+    </div>
 
     <div v-if="loadingFilters" class="text-xs text-muted-foreground">
       {{ t('common.loading') }}…
@@ -586,6 +663,13 @@ onMounted(async () => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="w-10 text-center">
+              <Checkbox
+                :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelectAll"
+              />
+            </TableHead>
             <TableHead class="text-start font-medium min-w-[220px]">
               {{ t('products_page.col_name') }}
             </TableHead>
@@ -608,7 +692,7 @@ onMounted(async () => {
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="6" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('common.loading') }}…
@@ -616,7 +700,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="6" class="py-14 text-center">
+            <TableCell :colspan="7" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -630,7 +714,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="rows.length === 0">
-            <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
               {{ t('products_page.no_products') }}
             </TableCell>
           </TableRow>
@@ -639,7 +723,15 @@ onMounted(async () => {
               v-for="row in rows"
               :key="row.id"
               class="hover:bg-muted/30 transition-colors align-middle"
+              :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
             >
+            <TableCell class="w-10">
+              <Checkbox
+                :model-value="selectedIds.has(row.id)"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelect(row.id)"
+              />
+            </TableCell>
             <TableCell class="text-sm font-medium">
               <div class="inline-flex items-center gap-2">
                 <button
@@ -744,6 +836,23 @@ onMounted(async () => {
           >
             <Loader2 v-if="deleting" class="size-4 animate-spin" />
             {{ deleting ? t('common.loading') + '…' : t('common.delete') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkDeleteLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button class="bg-red-600 hover:bg-red-700 text-white" :disabled="bulkDeleteLoading" @click="confirmBulkDelete">
+            <Loader2 v-if="bulkDeleteLoading" class="size-4 animate-spin" />
+            {{ t('common.delete') }}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

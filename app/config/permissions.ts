@@ -7,6 +7,7 @@ export type PermissionModule =
   | 'invoices'
   | 'product_variations'
   | 'units'
+  | 'districts'
   | 'categories'
   | 'attributes'
   | 'reports'
@@ -94,6 +95,16 @@ export const permissionGroups: PermissionGroup[] = [
       { id: 'units.store' },
       { id: 'units.update' },
       { id: 'units.destroy' },
+    ],
+  },
+  {
+    id: 'districts',
+    permissions: [
+      { id: 'districts.index' },
+      { id: 'districts.show' },
+      { id: 'districts.store' },
+      { id: 'districts.update' },
+      { id: 'districts.destroy' },
     ],
   },
   {

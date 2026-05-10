@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -68,8 +69,37 @@ const loading = ref(false)
 const { listLoadError, clearListLoadError, setListLoadErrorFromException } = useResourceListLoadError('roles_page')
 const pagination = ref<RolesPagination | null>(null)
 const currentPage = ref(1)
+const selectedIds = ref<Set<string>>(new Set())
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const bulkDeleteConfirmOpen = ref(false)
+const bulkDeleteLoading = ref(false)
+
+const isAllSelected = computed(
+  () => roles.value.length > 0 && roles.value.every(role => selectedIds.value.has(String(role.id))),
+)
+const isIndeterminate = computed(
+  () => roles.value.some(role => selectedIds.value.has(String(role.id))) && !isAllSelected.value,
+)
+const selectedCount = computed(() => selectedIds.value.size)
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) {
+    roles.value.forEach(role => next.delete(String(role.id)))
+  }
+  else {
+    roles.value.forEach(role => next.add(String(role.id)))
+  }
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: string) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const loadRoles = async (page = currentPage.value, query = search.value.trim()) => {
   loading.value = true
@@ -83,6 +113,7 @@ const loadRoles = async (page = currentPage.value, query = search.value.trim()) 
     roles.value = data.data.roles ?? []
     pagination.value = data.data.pagination ?? null
     currentPage.value = data.data.pagination?.current_page ?? page
+    selectedIds.value = new Set()
   } catch (error: unknown) {
     setListLoadErrorFromException(error)
   } finally {
@@ -153,6 +184,26 @@ const confirmDelete = async () => {
   }
 }
 
+const confirmBulkDelete = async () => {
+  if (selectedIds.value.size === 0) return
+  bulkDeleteConfirmOpen.value = false
+  bulkDeleteLoading.value = true
+  try {
+    const ids = [...selectedIds.value]
+    await Promise.all(ids.map(id => $api(`/roles/${id}`, { method: 'DELETE' })))
+    toast.success(t('common.bulk_deleted_success', { count: ids.length }))
+    selectedIds.value = new Set()
+    await loadRoles(currentPage.value)
+  }
+  catch (error: any) {
+    const msg = error?.data?.message?.ar || error?.data?.message || t('roles_page.delete_error')
+    toast.error(msg)
+  }
+  finally {
+    bulkDeleteLoading.value = false
+  }
+}
+
 onMounted(loadRoles)
 </script>
 
@@ -195,11 +246,40 @@ onMounted(loadRoles)
       </Button>
      
     </div>
+    <div
+      v-if="selectedCount > 0"
+      class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/70 px-4 py-2.5 flex-wrap"
+    >
+      <span class="text-sm font-medium text-red-700">
+        {{ t('common.bulk_delete_only_notice', { count: selectedCount }) }}
+      </span>
+      <div class="flex items-center gap-2 ms-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1.5 text-red-600 border-red-300 hover:bg-red-100"
+          :disabled="bulkDeleteLoading"
+          @click="bulkDeleteConfirmOpen = true"
+        >
+          {{ t('common.delete') }}
+        </Button>
+        <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+          {{ t('common.deselect') }}
+        </Button>
+      </div>
+    </div>
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="w-10 text-center">
+              <Checkbox
+                :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelectAll"
+              />
+            </TableHead>
             <TableHead class="text-start font-medium">
               {{ locale === 'ar' ? t('roles_page.col_name_ar') : t('roles_page.col_name_en') }}
             </TableHead>
@@ -210,7 +290,7 @@ onMounted(loadRoles)
 
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="3" class="py-14 text-center">
+            <TableCell :colspan="4" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('roles_page.loading') }}
@@ -219,7 +299,7 @@ onMounted(loadRoles)
           </TableRow>
 
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="3" class="py-14 text-center">
+            <TableCell :colspan="4" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -232,7 +312,7 @@ onMounted(loadRoles)
           </TableRow>
 
           <TableRow v-else-if="roles.length === 0">
-            <TableCell :colspan="3" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="4" class="py-14 text-center text-sm text-muted-foreground">
               {{ search ? t('roles_page.no_results_search') : t('roles_page.no_roles') }}
             </TableCell>
           </TableRow>
@@ -242,7 +322,15 @@ onMounted(loadRoles)
             v-else
             :key="role.id"
             class="hover:bg-muted/30 transition-colors align-middle"
+            :class="{ 'bg-muted/20': selectedIds.has(String(role.id)) }"
           >
+            <TableCell class="w-10">
+              <Checkbox
+                :model-value="selectedIds.has(String(role.id))"
+                class="mt-0.5 mx-4"
+                @update:model-value="toggleSelect(String(role.id))"
+              />
+            </TableCell>
             <TableCell class="font-medium">{{ rolePrimaryName(role) }}</TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(role.created_by) }}</TableCell>
             <TableCell class="text-end">
@@ -325,6 +413,27 @@ onMounted(loadRoles)
         >
           <LoaderCircle v-if="deletingId" class="size-4 animate-spin" />
           {{ t('roles_page.delete_confirm') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+  <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="bulkDeleteLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button
+          class="bg-red-600 hover:bg-red-700 text-white"
+          :disabled="bulkDeleteLoading"
+          @click="confirmBulkDelete"
+        >
+          <LoaderCircle v-if="bulkDeleteLoading" class="size-4 animate-spin" />
+          {{ t('common.delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

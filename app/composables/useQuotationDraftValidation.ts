@@ -1,5 +1,8 @@
 import type { QuotationDraft } from '@/stores/quotations'
 
+const STRICT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const STRICT_PHONE_RE = /^\+?[0-9]{8,15}$/
+
 /** Field-level errors for quotation create/edit drafts. */
 export function validateQuotationDraft(
   draft: QuotationDraft,
@@ -7,6 +10,15 @@ export function validateQuotationDraft(
   t: (key: string) => string,
 ): Record<string, string> {
   const errors: Record<string, string> = {}
+  const phone = String(draft.customer_phone ?? '').trim()
+  const email = String(draft.customer_email ?? '').trim()
+
+  if (!phone) errors.customer_phone = t('quotations_page.customer_phone_required')
+  else if (!STRICT_PHONE_RE.test(phone)) errors.customer_phone = t('quotations_page.customer_phone_invalid')
+
+  if (!email) errors.customer_email = t('quotations_page.customer_email_required')
+  else if (!STRICT_EMAIL_RE.test(email)) errors.customer_email = t('quotations_page.customer_email_invalid')
+
   if (!draft.issue_date) errors.issue_date = t('quotations_page.issue_date_required')
   if (!draft.expiry_date) errors.expiry_date = t('quotations_page.expiry_date_required')
   if (draft.issue_date && draft.expiry_date && draft.expiry_date < draft.issue_date) {
@@ -38,7 +50,7 @@ export function validateQuotationDraft(
   return errors
 }
 
-const FORM_KEY_ORDER = ['issue_date', 'expiry_date', 'items'] as const
+const FORM_KEY_ORDER = ['customer_phone', 'customer_email', 'issue_date', 'expiry_date', 'items'] as const
 
 /** Pick one message for a validation-error toast (stable priority). */
 export function firstValidationToastDescription(errors: Record<string, string>): string {

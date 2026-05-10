@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 
 definePageMeta({
   layout: 'auth',
+  langauge_switcher : true 
 })
 
 const { t } = useI18n()
@@ -11,6 +12,8 @@ const { dir } = useDocumentDir()
 const authStore = useAuthStore()
 if (authStore.isLoggedIn) {
   await navigateTo('/mainCards', { replace: true })
+
+
 }
 
 const modulePills = computed(() => [
@@ -31,6 +34,7 @@ const modulePills = computed(() => [
     <div class="kamu-bg-noise"></div>
     <div class="kamu-glow-teal"></div>
     <div class="kamu-glow-lime"></div>
+    
 
     <!-- Floating particles -->
     <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -38,6 +42,7 @@ const modulePills = computed(() => [
       <div class="kamu-particle kamu-p2"></div>
       <div class="kamu-particle kamu-p3"></div>
       <div class="kamu-particle kamu-p4"></div>
+      <div class="kamu-particle kamu-p5"> $t('make it inside the creative products of the the')</div> 
     </div>
 
     <!-- Split layout: brand left / login right -->

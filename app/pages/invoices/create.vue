@@ -60,6 +60,7 @@ const canCreateInvoice = computed(() => canCreate('invoices'))
 const invoicesStore = useInvoicesStore()
 const { searchProducts, lookupBarcode, loadingProducts } = useQuotationProducts()
 const { loadActiveWarehouses, loadingWarehouses } = useInvoiceWarehouses()
+const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 
 const formErrors = ref<Record<string, string>>({})
@@ -68,6 +69,8 @@ const productSearch = ref('')
 const barcodeInput = ref('')
 const searchResults = ref<QuotationProductOption[]>([])
 const warehouseOptions = ref<InvoiceWarehouseOption[]>([])
+const districtOptions = ref<Array<{ id: number, district: string, delivery_fee: string }>>([])
+const loadingDistricts = ref(false)
 const clearDialogOpen = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -86,6 +89,7 @@ const warehouseDisplayName = (warehouse: InvoiceWarehouseOption): string => {
   if (locale.value === 'ar') return warehouse.name_ar || warehouse.name_en || `#${warehouse.id}`
   return warehouse.name_en || warehouse.name_ar || `#${warehouse.id}`
 }
+const districtLabel = (item: { district: string }) => item.district || '—'
 
 const selectedRowsCount = computed(() => draft.value.items.filter(item => item.product_id).length)
 
@@ -144,6 +148,34 @@ const validate = (): boolean => {
   return Object.keys(errors).length === 0
 }
 
+const loadDistrictOptions = async () => {
+  loadingDistricts.value = true
+  try {
+    const res = await $api<{
+      data?: { districts?: Array<{ id: number, district: string, delivery_fee: string }> }
+      districts?: Array<{ id: number, district: string, delivery_fee: string }>
+    }>('/districts', {
+      params: { page: 1, per_page: 100 },
+    })
+    districtOptions.value = res.data?.districts ?? res.districts ?? []
+  }
+  catch {
+    districtOptions.value = []
+  }
+  finally {
+    loadingDistricts.value = false
+  }
+}
+
+const onDistrictChange = (value: unknown) => {
+  const selectedId = Number(value ?? 0)
+  draft.value.district_id = Number.isFinite(selectedId) && selectedId > 0 ? selectedId : null
+  if (!draft.value.district_id) return
+  const selected = districtOptions.value.find(item => item.id === draft.value.district_id)
+  if (!selected) return
+  draft.value.delivery_fees = Math.max(0, Number(selected.delivery_fee) || 0)
+}
+
 type SaveMode = 'close' | 'add'
 
 const saveInvoice = async (mode: SaveMode) => {
@@ -196,6 +228,7 @@ onMounted(() => {
   loadActiveWarehouses().then((rows) => {
     warehouseOptions.value = rows
   })
+  loadDistrictOptions()
 })
 </script>
 
@@ -266,12 +299,36 @@ onMounted(() => {
               <Input v-model="draft.customer_name" />
             </div>
             <div class="space-y-2">
+              <label class="text-sm font-medium">{{ t('invoices_page.district') }}</label>
+              <Select
+                :model-value="draft.district_id ? String(draft.district_id) : ''"
+                @update:model-value="onDistrictChange"
+              >
+                <SelectTrigger class="w-full">
+                  <SelectValue :placeholder="t('invoices_page.select_district')" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="district in districtOptions" :key="district.id" :value="String(district.id)">
+                    {{ districtLabel(district) }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p v-if="loadingDistricts" class="text-xs text-muted-foreground">{{ t('common.loading') }}</p>
+            </div>
+            <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.customer_mobile') }}</label>
-              <Input v-model="draft.customer_mobile" />
+              <Input v-model="draft.customer_mobile" type="tel" />
+              <p v-if="formErrors.customer_mobile" class="text-xs text-red-600">{{ formErrors.customer_mobile }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.customer_email') }}</label>
               <Input v-model="draft.customer_email" type="email" />
+              <p v-if="formErrors.customer_email" class="text-xs text-red-600">{{ formErrors.customer_email }}</p>
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium">{{ t('invoices_page.address') }}</label>
+              <Input v-model="draft.address" />
+              <p v-if="formErrors.address" class="text-xs text-red-600">{{ formErrors.address }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.invoice_date') }}</label>

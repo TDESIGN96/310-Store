@@ -17,6 +17,7 @@ import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
@@ -36,19 +37,44 @@ const canEditInvoice = computed(() => canEdit('invoices'))
 const canDeleteInvoice = computed(() => canDelete('invoices'))
 
 const search = ref('')
-const filterStatus = ref<'all' | 'issued' | 'paid' | 'partially_returned' | 'returned'>('all')
+const filterStatus = ref<'all' | 'pending' | 'in_delivery' | 'complete'>('all')
 const invoiceDateFrom = ref('')
 const invoiceDateTo = ref('')
+const supplyDate = ref('')
 const currentPage = ref(1)
 const deleteTarget = ref<InvoiceListItem | null>(null)
 const deleteDialogOpen = ref(false)
 const deleting = ref(false)
 const copyingId = ref<number | null>(null)
+const selectedIds = ref<Set<number>>(new Set())
+const bulkDeleteConfirmOpen = ref(false)
+const bulkDeleteLoading = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
-  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDateFrom.value) || Boolean(invoiceDateTo.value),
+  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDateFrom.value) || Boolean(invoiceDateTo.value) || Boolean(supplyDate.value),
 )
+const isAllSelected = computed(
+  () => sortedList.value.length > 0 && sortedList.value.every(row => selectedIds.value.has(row.id)),
+)
+const isIndeterminate = computed(
+  () => sortedList.value.some(row => selectedIds.value.has(row.id)) && !isAllSelected.value,
+)
+const selectedCount = computed(() => selectedIds.value.size)
+
+const toggleSelectAll = () => {
+  const next = new Set(selectedIds.value)
+  if (isAllSelected.value) sortedList.value.forEach(row => next.delete(row.id))
+  else sortedList.value.forEach(row => next.add(row.id))
+  selectedIds.value = next
+}
+
+const toggleSelect = (id: number) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
 
 const list = computed(() => invoicesStore.list)
 const sortedList = computed(() => {
@@ -64,6 +90,27 @@ const loading = computed(() => invoicesStore.listLoading)
 const fmtDate = (value?: string) => {
   return formatDisplayDate(value)
 }
+const normalizePickerDate = (value: string): string | undefined => {
+  const raw = value.trim()
+  if (!raw) return undefined
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw)
+  if (!match) return undefined
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1000) return undefined
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+const toIsoDateTimeStart = (value: string): string | undefined => {
+  const normalized = normalizePickerDate(value)
+  if (!normalized) return undefined
+  return `${normalized}T00:00:00.000Z`
+}
+const toIsoDateTimeEnd = (value: string): string | undefined => {
+  const normalized = normalizePickerDate(value)
+  if (!normalized) return undefined
+  return `${normalized}T23:59:59.999Z`
+}
 const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
 const warehouseLabel = (row: InvoiceListItem) => {
   const nameAr = row.warehouse_name_ar || ''
@@ -72,10 +119,9 @@ const warehouseLabel = (row: InvoiceListItem) => {
 }
 
 const statusLabel = (status: string) => {
-  if (status === 'issued') return t('invoices_page.status_issued')
-  if (status === 'paid') return t('invoices_page.status_paid')
-  if (status === 'partially_returned') return t('invoices_page.status_partially_returned')
-  if (status === 'returned') return t('invoices_page.status_returned')
+  if (status === 'pending') return t('invoices_page.status_pending')
+  if (status === 'in_delivery') return t('invoices_page.status_in_delivery')
+  if (status === 'complete') return t('invoices_page.status_complete')
   return status || '—'
 }
 
@@ -89,11 +135,13 @@ const loadRows = async (page = currentPage.value) => {
     search: query || undefined,
     reference_number: query || undefined,
     customer_name: query || undefined,
-    invoice_date_from: invoiceDateFrom.value || undefined,
-    invoice_date_to: invoiceDateTo.value || undefined,
+    invoice_date_from: toIsoDateTimeStart(invoiceDateFrom.value),
+    invoice_date_to: toIsoDateTimeEnd(invoiceDateTo.value),
+    supply_date: toIsoDateTimeStart(supplyDate.value),
     status: filterStatus.value === 'all' ? undefined : filterStatus.value,
   }
   await invoicesStore.loadList(params)
+  selectedIds.value = new Set()
 }
 
 const resetFilters = async () => {
@@ -101,6 +149,7 @@ const resetFilters = async () => {
   filterStatus.value = 'all'
   invoiceDateFrom.value = ''
   invoiceDateTo.value = ''
+  supplyDate.value = ''
   await loadRows(1)
 }
 
@@ -124,6 +173,25 @@ const confirmDelete = async () => {
   }
   finally {
     deleting.value = false
+  }
+}
+
+const confirmBulkDelete = async () => {
+  if (selectedIds.value.size === 0) return
+  bulkDeleteConfirmOpen.value = false
+  bulkDeleteLoading.value = true
+  try {
+    const ids = [...selectedIds.value]
+    await Promise.all(ids.map(id => invoicesStore.deleteInvoice(id)))
+    toast.success(t('common.bulk_deleted_success', { count: ids.length }))
+    selectedIds.value = new Set()
+    await loadRows(currentPage.value)
+  }
+  catch {
+    toast.error(t('invoices_page.delete_error'))
+  }
+  finally {
+    bulkDeleteLoading.value = false
   }
 }
 
@@ -175,7 +243,7 @@ const cloneInvoice = async (row: InvoiceListItem) => {
 }
 
 watch(
-  [search, filterStatus, invoiceDateFrom, invoiceDateTo],
+  [search, filterStatus, invoiceDateFrom, invoiceDateTo, supplyDate],
   () => {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => loadRows(1), 300)
@@ -216,10 +284,9 @@ const goToPage = (page: number) => {
             <SelectTrigger class="h-9 w-[220px] gap-2"><Filter class="size-3.5 shrink-0 text-muted-foreground" /><SelectValue :placeholder="t('invoices_page.filter_status')" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{{ t('invoices_page.filter_status_all') }}</SelectItem>
-              <SelectItem value="issued">{{ t('invoices_page.status_issued') }}</SelectItem>
-              <SelectItem value="paid">{{ t('invoices_page.status_paid') }}</SelectItem>
-              <SelectItem value="partially_returned">{{ t('invoices_page.status_partially_returned') }}</SelectItem>
-              <SelectItem value="returned">{{ t('invoices_page.status_returned') }}</SelectItem>
+              <SelectItem value="pending">{{ t('invoices_page.status_pending') }}</SelectItem>
+              <SelectItem value="in_delivery">{{ t('invoices_page.status_in_delivery') }}</SelectItem>
+              <SelectItem value="complete">{{ t('invoices_page.status_complete') }}</SelectItem>
             </SelectContent>
           </Select>
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('invoices_page.reset_filters') }}</Button>
@@ -233,9 +300,44 @@ const goToPage = (page: number) => {
         <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">
           <span class="text-sm font-medium text-foreground">{{ t('invoices_page.invoice_date') }}</span>
           <div class="grid gap-2 sm:grid-cols-2">
-            <div class="space-y-1"><label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_from') }}</label><Input v-model="invoiceDateFrom" type="date" class="h-9 w-full" /></div>
-            <div class="space-y-1"><label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_to') }}</label><Input v-model="invoiceDateTo" type="date" class="h-9 w-full" /></div>
+            <div class="space-y-1">
+              <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_from') }}</label>
+              <Input v-model="invoiceDateFrom" type="date" class="h-9 w-full" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_to') }}</label>
+              <Input v-model="invoiceDateTo" type="date" class="h-9 w-full" />
+            </div>
           </div>
+        </div>
+        <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">
+          <span class="text-sm font-medium text-foreground">{{ t('invoices_page.supply_date') }}</span>
+          <div class="space-y-1">
+            <label class="text-xs text-muted-foreground">{{ t('invoices_page.supply_date') }}</label>
+            <Input v-model="supplyDate" type="date" class="h-9 w-full" />
+          </div>
+        </div>
+      </div>
+      <div
+        v-if="selectedCount > 0"
+        class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/70 px-4 py-2.5 flex-wrap"
+      >
+        <span class="text-sm font-medium text-red-700">
+          {{ t('common.bulk_delete_only_notice', { count: selectedCount }) }}
+        </span>
+        <div class="flex items-center gap-2 ms-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1.5 text-red-600 border-red-300 hover:bg-red-100"
+            :disabled="bulkDeleteLoading"
+            @click="bulkDeleteConfirmOpen = true"
+          >
+            {{ t('common.delete') }}
+          </Button>
+          <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+            {{ t('common.deselect') }}
+          </Button>
         </div>
       </div>
 
@@ -243,22 +345,32 @@ const goToPage = (page: number) => {
         <Table>
           <TableHeader>
             <TableRow class="bg-muted/40 hover:bg-muted/40">
+              <TableHead class="w-10 text-center">
+                <Checkbox
+                  :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
+                  class="mt-0.5 mx-4"
+                  @update:model-value="toggleSelectAll"
+                />
+              </TableHead>
               <TableHead class="text-start font-medium min-w-[120px]">{{ t('invoices_page.col_ref_id') }}</TableHead>
               <TableHead class="text-start font-medium min-w-[140px]">{{ t('invoices_page.col_customer') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_invoice_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_supply_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.warehouse') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_status') }}</TableHead>
-              <TableHead class="text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_discount_amount') }}</TableHead>
-              <TableHead class="text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_total') }}</TableHead>
-              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_return_id') }}</TableHead>
+              <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_discount_amount') }}</TableHead>
+              <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_total') }}</TableHead>
+              <TableHead class="rtl:text-start text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_return_id') }}</TableHead>
               <TableHead class="font-medium min-w-[220px] text-end">{{ t('invoices_page.col_actions') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loading"><TableCell :colspan="10" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
-            <TableRow v-else-if="!sortedList.length"><TableCell :colspan="10" class="py-14 text-center text-sm text-muted-foreground">{{ t('invoices_page.empty') }}</TableCell></TableRow>
-            <TableRow v-for="row in sortedList" :key="row.id" class="hover:bg-muted/30 transition-colors align-middle">
+            <TableRow v-if="loading"><TableCell :colspan="11" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
+            <TableRow v-else-if="!sortedList.length"><TableCell :colspan="11" class="py-14 text-center text-sm text-muted-foreground">{{ t('invoices_page.empty') }}</TableCell></TableRow>
+            <TableRow v-for="row in sortedList" :key="row.id" class="hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(row.id) }">
+              <TableCell class="w-10">
+                <Checkbox :model-value="selectedIds.has(row.id)" class="mt-0.5 mx-4" @update:model-value="toggleSelect(row.id)" />
+              </TableCell>
               <TableCell class="text-sm font-medium">
                 <NuxtLink
                   :to="`/invoices/show/${row.id}`"
@@ -267,14 +379,21 @@ const goToPage = (page: number) => {
                   {{ row.reference_number || `#${row.id}` }}
                 </NuxtLink>
               </TableCell>
-              <TableCell class="text-sm text-muted-foreground">{{ row.customer_name || '—' }}</TableCell>
-              <TableCell class="text-sm tabular-nums">{{ fmtDate(row.invoice_date) }}</TableCell>
-              <TableCell class="text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
-              <TableCell class="text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
+              <TableCell class="text-sm text-muted-foreground">
+                <div class="flex flex-col gap-0.5">
+                  <span>{{ row.customer_name || '—' }}</span>
+                  <span class="text-xs text-muted-foreground/80">
+                    {{ t('invoices_page.district') }}: {{ row.district_name || t('invoices_page.district_unassigned') }}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.invoice_date) }}</TableCell>
+              <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
+              <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
               <TableCell><Badge variant="outline">{{ statusLabel(row.status) }}</Badge></TableCell>
-              <TableCell class="text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
-              <TableCell class="text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
-              <TableCell class="text-sm">{{ row.return_reference_number || '—' }}</TableCell>
+              <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
+              <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
+              <TableCell class="rtl:text-start text-sm">{{ row.return_reference_number || '—' }}</TableCell>
               <TableCell class="text-end">
                 <TableRowActions
                   :actions="[
@@ -316,6 +435,23 @@ const goToPage = (page: number) => {
           <AlertDialogCancel :disabled="deleting">{{ t('common.cancel') }}</AlertDialogCancel>
           <AlertDialogAction class="bg-red-600 text-white hover:bg-red-700" :disabled="deleting" @click="confirmDelete">
             <Loader2 v-if="deleting" class="me-2 size-4 animate-spin" />
+            {{ t('common.delete') }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkDeleteConfirmOpen" @update:open="bulkDeleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.bulk_delete_selected_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('common.bulk_delete_selected_body', { count: selectedCount }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkDeleteLoading">{{ t('common.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction class="bg-red-600 text-white hover:bg-red-700" :disabled="bulkDeleteLoading" @click="confirmBulkDelete">
+            <Loader2 v-if="bulkDeleteLoading" class="me-2 size-4 animate-spin" />
             {{ t('common.delete') }}
           </AlertDialogAction>
         </AlertDialogFooter>
