@@ -55,18 +55,6 @@ const normalizeMobile = (value: string) =>
     .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
     .replace(/\s+/g, '')
     .replace(/[^\d]/g, '')
-const mobileMeta = (value: string) => {
-  const trimmed = value.trim()
-  const normalized = normalizeMobile(value)
-  return {
-    trimmedLength: trimmed.length,
-    normalizedLength: normalized.length,
-    hasArabicDigits: /[٠-٩]/.test(trimmed),
-    hasSpaces: /\s/.test(trimmed),
-    startsWith07: normalized.startsWith('07'),
-    valid07Format: MOBILE_RE.test(normalized),
-  }
-}
 const locationOptions = computed<string[]>(() => {
   void locale.value
   const raw = tm('distributors_form.iraqi_provinces') as unknown[]
@@ -125,9 +113,6 @@ const createDistributor = async () => {
   const adminMobilePayload = adminMobileNumber.value.trim() ? normalizeMobile(adminMobileNumber.value) : undefined
   submitting.value = true
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7881/ingest/5d1ba08e-cf2e-4257-b83a-e23b15afe695',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'58ba7c'},body:JSON.stringify({sessionId:'58ba7c',runId:'post-fix',hypothesisId:'H1',location:'app/pages/distributors/create.vue:createDistributor',message:'submit payload diagnostics before create',data:{mobile:mobileMeta(mobileNumber.value),adminMobile:mobileMeta(adminMobileNumber.value),mobilePayloadLength:mobilePayload.length,adminMobilePayloadLength:adminMobilePayload?.length ?? 0},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
     await $api('/distributors', {
       method: 'POST',
       body: {
@@ -150,9 +135,6 @@ const createDistributor = async () => {
   catch (error: unknown) {
     if (isValidationError(error)) {
       const fe = getFieldErrors(error)
-      // #region agent log
-      fetch('http://127.0.0.1:7881/ingest/5d1ba08e-cf2e-4257-b83a-e23b15afe695',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'58ba7c'},body:JSON.stringify({sessionId:'58ba7c',runId:'post-fix',hypothesisId:'H4',location:'app/pages/distributors/create.vue:createDistributor.catch',message:'validation keys for create distributor',data:{keys:Object.keys(fe),hasMobile:Boolean(fe.mobile),hasMobileNumber:Boolean(fe.mobile_number),hasPhone:Boolean(fe.phone),hasAddressKey:Boolean(fe.address)},timestamp:Date.now()})}).catch(()=>{})
-      // #endregion
       fieldErrors.value = {
         name_en: fe.name_en ?? fe.distributor_name_en ?? '',
         name_ar: fe.name_ar ?? fe.distributor_name_ar ?? '',

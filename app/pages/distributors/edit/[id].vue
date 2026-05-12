@@ -67,18 +67,6 @@ const normalizeMobile = (value: string) =>
     .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
     .replace(/\s+/g, '')
     .replace(/[^\d]/g, '')
-const mobileMeta = (value: string) => {
-  const trimmed = value.trim()
-  const normalized = normalizeMobile(value)
-  return {
-    trimmedLength: trimmed.length,
-    normalizedLength: normalized.length,
-    hasArabicDigits: /[٠-٩]/.test(trimmed),
-    hasSpaces: /\s/.test(trimmed),
-    startsWith07: normalized.startsWith('07'),
-    valid07Format: MOBILE_RE.test(normalized),
-  }
-}
 const locationOptions = computed<string[]>(() => {
   void locale.value
   const raw = tm('distributors_form.iraqi_provinces') as unknown[]
@@ -142,9 +130,6 @@ const loadDistributor = async () => {
     status.value = normalizeStatus(data.status ?? data.is_active)
     adminName.value = getString(data.admin_name || admin?.name || user?.name)
     adminMobileNumber.value = getString(data.admin_mobile || admin?.mobile || admin?.phone || user?.mobile || user?.phone)
-    // #region agent log
-    fetch('http://127.0.0.1:7881/ingest/5d1ba08e-cf2e-4257-b83a-e23b15afe695',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'58ba7c'},body:JSON.stringify({sessionId:'58ba7c',runId:'pre-fix',hypothesisId:'H1',location:'app/pages/distributors/edit/[id].vue:loadDistributor',message:'loaded values diagnostics from API',data:{hasStatusKey:Object.prototype.hasOwnProperty.call(data,'status'),rawStatusType:typeof data.status,rawStatusValue:String(data.status ?? ''),normalizedStatus:status.value,mobile:mobileMeta(mobileNumber.value),adminMobile:mobileMeta(adminMobileNumber.value)},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
   }
   catch (error: unknown) {
     fetchError.value = getErrorMessage(error)
@@ -195,9 +180,6 @@ const updateDistributor = async () => {
   const adminMobilePayload = adminMobileNumber.value.trim() ? normalizeMobile(adminMobileNumber.value) : undefined
   submitting.value = true
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7881/ingest/5d1ba08e-cf2e-4257-b83a-e23b15afe695',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'58ba7c'},body:JSON.stringify({sessionId:'58ba7c',runId:'pre-fix',hypothesisId:'H2',location:'app/pages/distributors/edit/[id].vue:updateDistributor',message:'submit payload diagnostics before update',data:{statusValue:status.value,statusAllowed:status.value==='active'||status.value==='inactive',mobile:mobileMeta(mobileNumber.value),adminMobile:mobileMeta(adminMobileNumber.value),mobilePayloadLength:mobilePayload.length,adminMobilePayloadLength:adminMobilePayload?.length ?? 0},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
     await $api(`/distributors/${distributorId.value}`, {
       method: 'PUT',
       body: {
@@ -214,9 +196,6 @@ const updateDistributor = async () => {
         password: password.value,
       },
     })
-    // #region agent log
-    fetch('http://127.0.0.1:7881/ingest/5d1ba08e-cf2e-4257-b83a-e23b15afe695',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'58ba7c'},body:JSON.stringify({sessionId:'58ba7c',runId:'post-fix',hypothesisId:'H5',location:'app/pages/distributors/edit/[id].vue:updateDistributor',message:'update distributor succeeded',data:{statusValue:status.value.trim()},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
 
     toast.success(t('distributors_messages.edit_success'))
     await navigateTo('/distributors')
@@ -224,9 +203,6 @@ const updateDistributor = async () => {
   catch (error: unknown) {
     if (isValidationError(error)) {
       const fe = getFieldErrors(error)
-      // #region agent log
-      fetch('http://127.0.0.1:7881/ingest/5d1ba08e-cf2e-4257-b83a-e23b15afe695',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'58ba7c'},body:JSON.stringify({sessionId:'58ba7c',runId:'pre-fix',hypothesisId:'H4',location:'app/pages/distributors/edit/[id].vue:updateDistributor.catch',message:'validation keys for update distributor',data:{keys:Object.keys(fe),hasStatus:Boolean(fe.status),hasMobile:Boolean(fe.mobile),hasMobileNumber:Boolean(fe.mobile_number),hasPhone:Boolean(fe.phone)},timestamp:Date.now()})}).catch(()=>{})
-      // #endregion
       fieldErrors.value = {
         name_en: fe.name_en ?? fe.distributor_name_en ?? '',
         name_ar: fe.name_ar ?? fe.distributor_name_ar ?? '',
