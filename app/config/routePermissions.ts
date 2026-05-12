@@ -16,6 +16,12 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/districts\/show\/[^/]+\/?$/, permission: 'districts.show' },
   { pattern: /^\/districts\/?$/, permission: ['districts.index', 'districts.show'] },
 
+  // Distributors
+  { pattern: /^\/distributors\/create\/?$/, permission: 'distributors.store' },
+  { pattern: /^\/distributors\/edit\/[^/]+\/?$/, permission: 'distributors.update' },
+  { pattern: /^\/distributors\/show\/[^/]+\/?$/, permission: 'distributors.show' },
+  { pattern: /^\/distributors\/?$/, permission: ['distributors.index', 'distributors.show'] },
+
   // Categories
   { pattern: /^\/categories\/create\/?$/, permission: 'categories.store' },
   { pattern: /^\/categories\/edit\/[^/]+\/?$/, permission: 'categories.update' },

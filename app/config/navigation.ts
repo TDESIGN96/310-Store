@@ -70,6 +70,7 @@ export const navItems: NavGroup[] = [
         module: 'units',
         createPath: '/units/create',
       },
+    
       {
         labelKey: 'nav.items.districts',
         icon: MapPin,
@@ -122,6 +123,13 @@ export const navItems: NavGroup[] = [
   {
     groupKey: 'nav.groups.administration',
     items: [
+      {
+        labelKey: 'nav.items.distributors',
+        icon: Users,
+        path: '/distributors',
+        module: 'distributors',
+        createPath: '/distributors/create',
+      },
       {
         labelKey: 'nav.items.users',
         icon: Users,
