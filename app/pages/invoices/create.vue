@@ -447,9 +447,9 @@ onMounted(() => {
                       </div>
                     </TableCell>
                     <TableCell class="align-top py-3 text-start tabular-nums">
-                      <div class="ms-auto flex h-9 max-w-32 items-center justify-end font-medium">{{ formatMoney(rowTotals(idx).rowTotal) }}</div>
+                      <div class="ms-auto flex h-9 max-w-32 items-center justify-enم font-medium">{{ formatMoney(rowTotals(idx).rowTotal) }}</div>
                     </TableCell>
-                    <TableCell class="align-top py-3 text-start">
+                    <TableCell class="align-top py-3 text-start rtl:text-end">
                       <div class="flex h-9 items-center justify-end">
                         <Button type="button" variant="ghost" size="icon" class="size-8 shrink-0 text-red-600" @click="invoicesStore.removeRow(idx)">
                           <Trash2 class="size-4" />

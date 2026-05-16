@@ -491,13 +491,13 @@ onMounted(() => {
                           class="h-9 w-full text-start tabular-nums"
                           @update:model-value="value => quotationsStore.setRowDiscountValue(idx, Number(value))"
                         />
-                        <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600">
+                        <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600 ">
                           {{ formErrors[`row_${idx}_discount`] }}
                         </p>
                       </div>
                     </TableCell>
                     <TableCell class="align-top py-3 text-start tabular-nums">
-                      <div class="ms-auto flex h-9 max-w-32 items-center justify-end font-medium">
+                      <div class="ms-auto flex h-9 max-w-32 items-center justify-start font-medium">
                         {{ formatMoney(rowTotals(idx).rowTotal) }}
                       </div>
                     </TableCell>

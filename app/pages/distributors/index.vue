@@ -37,8 +37,13 @@ interface DistributorItem {
   id: number
   name_en: string
   name_ar: string
+  mobile: string
+  email: string
+  address: string
   admin_name: string
+  admin_mobile: string
   location: string
+  description: string
   status: string
   created_at?: string | null
 }
@@ -110,8 +115,13 @@ const normalizeDistributor = (raw: unknown): DistributorItem | null => {
     id,
     name_en: getString(raw.name_en || raw.distributor_name_en || raw.name || raw.company_name_en),
     name_ar: getString(raw.name_ar || raw.distributor_name_ar || raw.company_name_ar),
+    mobile: getString(raw.mobile || raw.mobile_number || raw.phone),
+    email: getString(raw.email),
+    address: getString(raw.address),
     admin_name: getString(raw.admin_name || admin?.name || user?.name || raw.primary_admin_name),
+    admin_mobile: getString(raw.admin_mobile || raw.admin_mobile_number || admin?.mobile || admin?.phone || user?.mobile || user?.phone),
     location: getString(raw.location || raw.city || raw.location_city),
+    description: getString(raw.description),
     status: statusText(raw.status ?? raw.is_active),
     created_at: getString(raw.created_at || raw.createdAt) || null,
   }
@@ -228,6 +238,19 @@ const emptyListMessage = computed(() => {
   return t('distributors_page.empty_list')
 })
 
+const buildDistributorStatusBody = (row: DistributorItem, status: 'active' | 'inactive') => ({
+  name_en: row.name_en.trim(),
+  name_ar: row.name_ar.trim(),
+  mobile: row.mobile.trim(),
+  email: row.email.trim() || undefined,
+  address: row.address.trim() || undefined,
+  city: row.location.trim(),
+  description: row.description.trim() || undefined,
+  admin_name: row.admin_name.trim(),
+  admin_mobile: row.admin_mobile.trim() || undefined,
+  status,
+})
+
 const confirmDeactivate = async () => {
   const row = distributorToDeactivate.value
   if (!row) return
@@ -236,7 +259,7 @@ const confirmDeactivate = async () => {
   try {
     await $api(`/distributors/${row.id}`, {
       method: 'PUT',
-      body: { status: 'inactive' },
+      body: buildDistributorStatusBody(row, 'inactive'),
     })
     toast.success(t('distributors_page.deactivate_success', { name: distributorDisplayName(row) }))
     await loadDistributors(currentPage.value)
@@ -257,7 +280,7 @@ const confirmActivate = async () => {
   try {
     await $api(`/distributors/${row.id}`, {
       method: 'PUT',
-      body: { status: 'active' },
+      body: buildDistributorStatusBody(row, 'active'),
     })
     toast.success(t('distributors_page.activate_success', { name: distributorDisplayName(row) }))
     await loadDistributors(currentPage.value)

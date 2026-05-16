@@ -420,13 +420,13 @@ onMounted(async () => {
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead>{{ t('quotations_page.col_product') }}</TableHead>
-                    <TableHead>{{ t('quotations_page.row_description') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.qty') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.unit_price') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.discount_percent') }}</TableHead>
-                    <TableHead class="text-end">{{ t('quotations_page.row_total') }}</TableHead>
-                    <TableHead class="w-[1%] whitespace-nowrap text-end">{{ t('quotations_page.col_actions') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.col_product') }}</TableHead>
+                    <TableHead class="rtl:text-start">{{ t('quotations_page.row_description') }}</TableHead>
+                    <TableHead class="text-end rtl:text-start">{{ t('quotations_page.qty') }}</TableHead>
+                    <TableHead class="text-end rtl:text-start">{{ t('quotations_page.unit_price') }}</TableHead>
+                    <TableHead class="text-end rtl:text-start">{{ t('quotations_page.discount_percent') }}</TableHead>
+                    <TableHead class="text-end rtl:text-start">{{ t('quotations_page.row_total') }}</TableHead>
+                    <TableHead class="w-[1%] whitespace-nowrap text-end rtl:text-start">{{ t('quotations_page.col_actions') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -476,8 +476,8 @@ onMounted(async () => {
                       <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600">
                         {{ formErrors[`row_${idx}_discount`] }}
                       </p>
-                    </TableCell>
-                    <TableCell class="text-end font-medium tabular-nums">{{ formatMoney(rowTotals(idx).rowTotal) }}</TableCell>
+                    </TableCell> 
+                    <TableCell class="text-end rtl:text-start font-medium tabular-nums">{{ formatMoney(rowTotals(idx).rowTotal) }}</TableCell>
                     <TableCell class="text-end">
                       <Button type="button" variant="ghost" size="icon" class="size-8 text-red-600" @click="quotationsStore.removeRow(idx)">
                         <Trash2 class="size-4" />

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
+import { DatePickerInput } from '@/components/ui/date-picker'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -93,11 +94,21 @@ const fmtDate = (value?: string) => {
 const normalizePickerDate = (value: string): string | undefined => {
   const raw = value.trim()
   if (!raw) return undefined
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw)
-  if (!match) return undefined
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
+  // DD-MM-YYYY (flatpickr output format)
+  const dmyMatch = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(raw)
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1])
+    const month = Number(dmyMatch[2])
+    const year = Number(dmyMatch[3])
+    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1000) return undefined
+    return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+  // YYYY-MM-DD fallback
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw)
+  if (!isoMatch) return undefined
+  const year = Number(isoMatch[1])
+  const month = Number(isoMatch[2])
+  const day = Number(isoMatch[3])
   if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1000) return undefined
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
@@ -302,11 +313,11 @@ const goToPage = (page: number) => {
           <div class="grid gap-2 sm:grid-cols-2">
             <div class="space-y-1">
               <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_from') }}</label>
-              <Input v-model="invoiceDateFrom" type="date" class="h-9 w-full" />
+              <DatePickerInput v-model="invoiceDateFrom" class="w-full" />
             </div>
             <div class="space-y-1">
               <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_to') }}</label>
-              <Input v-model="invoiceDateTo" type="date" class="h-9 w-full" />
+              <DatePickerInput v-model="invoiceDateTo" class="w-full" />
             </div>
           </div>
         </div>
@@ -314,7 +325,7 @@ const goToPage = (page: number) => {
           <span class="text-sm font-medium text-foreground">{{ t('invoices_page.supply_date') }}</span>
           <div class="space-y-1">
             <label class="text-xs text-muted-foreground">{{ t('invoices_page.supply_date') }}</label>
-            <Input v-model="supplyDate" type="date" class="h-9 w-full" />
+            <DatePickerInput v-model="supplyDate" class="w-full" />
           </div>
         </div>
       </div>

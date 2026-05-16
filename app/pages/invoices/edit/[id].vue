@@ -278,8 +278,19 @@ onMounted(async () => {
 
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
+              
               <Table>
-                <TableHeader><TableRow class="bg-muted/40 hover:bg-muted/40"><TableHead>{{ t('invoices_page.col_product') }}</TableHead><TableHead>{{ t('invoices_page.row_description') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.qty') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.unit_price') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.discount_percent') }}</TableHead><TableHead class="text-end">{{ t('invoices_page.row_total') }}</TableHead><TableHead class="w-[1%] whitespace-nowrap text-end">{{ t('invoices_page.col_actions') }}</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow class="bg-muted/40 hover:bg-muted/40">
+                    <TableHead class="min-w-[200px] text-start">{{ t('invoices_page.col_product') }}</TableHead>
+                    <TableHead class="min-w-[180px] text-start">{{ t('invoices_page.row_description') }}</TableHead>
+                    <TableHead class="w-24 text-start">{{ t('invoices_page.qty') }}</TableHead>
+                    <TableHead class="w-32 text-start">{{ t('invoices_page.unit_price') }}</TableHead>
+                    <TableHead class="w-44 text-start">{{ t('invoices_page.discount_percent') }}</TableHead>
+                    <TableHead class="w-32 text-start">{{ t('invoices_page.row_total') }}</TableHead>
+                    <TableHead class="w-12 text-start">{{ t('invoices_page.col_actions') }}</TableHead>
+                  </TableRow>
+                  </TableHeader>
                 <TableBody>
                   <TableRow v-for="(item, idx) in draft.items" :key="item.key" class="align-top">
                     <TableCell class="min-w-[220px] space-y-2">
@@ -289,17 +300,17 @@ onMounted(async () => {
                         <SelectContent><SelectItem v-for="variation in item.product.variations" :key="variation.id" :value="String(variation.id)">{{ variation.label }}</SelectItem></SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell class="min-w-[200px]"><Input v-model="item.description" /></TableCell>
-                    <TableCell class="min-w-[90px] text-end"><Input :model-value="item.qty" type="number" min="1" class="text-end tabular-nums" @update:model-value="value => invoicesStore.setRowQty(idx, Number(value))" /></TableCell>
-                    <TableCell class="min-w-[120px] text-end"><Input :model-value="item.unit_price" type="number" min="0" class="text-end tabular-nums" @update:model-value="value => invoicesStore.setRowUnitPrice(idx, Number(value))" /></TableCell>
-                    <TableCell class="min-w-[220px] text-end">
+                    <TableCell class="min-w-[200px] ltr:text-start rtl:text-end text-start"><Input v-model="item.description" /></TableCell>
+                    <TableCell class="min-w-[90px] text-start rtl:text-end"><Input :model-value="item.qty" type="number" min="1" class="text-start rtl:text-end tabular-nums" @update:model-value="value => invoicesStore.setRowQty(idx, Number(value))" /></TableCell>
+                    <TableCell class="min-w-[120px] text-start rtl:text-end"><Input :model-value="item.unit_price" type="number" min="0" class="text-start rtl:text-end tabular-nums" @update:model-value="value => invoicesStore.setRowUnitPrice(idx, Number(value))" /></TableCell>
+                    <TableCell class="min-w-[220px] text-start rtl:text-end">
                       <Select :model-value="item.discount_mode" @update:model-value="value => invoicesStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))">
                         <SelectTrigger class="h-9 w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="fixed">{{ t('invoices_page.discount_mode_fixed') }}</SelectItem><SelectItem value="percentage">{{ t('invoices_page.discount_mode_percentage') }}</SelectItem></SelectContent>
                       </Select>
-                      <Input :model-value="item.discount_value" type="number" step="0.01" class="mt-2 text-end tabular-nums" @update:model-value="value => invoicesStore.setRowDiscountValue(idx, Number(value))" />
+                      <Input :model-value="item.discount_value" type="number" step="0.01" class="mt-2 text-start rtl:text-end tabular-nums" @update:model-value="value => invoicesStore.setRowDiscountValue(idx, Number(value))" />
                     </TableCell>
-                    <TableCell class="text-end font-medium tabular-nums">{{ formatMoney(rowTotals(idx).rowTotal) }}</TableCell>
+                    <TableCell class="text-start rtl:text-end font-medium tabular-nums">{{ formatMoney(rowTotals(idx).rowTotal) }}</TableCell>
                     <TableCell class="text-end"><Button type="button" variant="ghost" size="icon" class="size-8 text-red-600" @click="invoicesStore.removeRow(idx)"><Trash2 class="size-4" /></Button></TableCell>
                   </TableRow>
                 </TableBody>
