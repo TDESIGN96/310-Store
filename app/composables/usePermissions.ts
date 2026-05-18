@@ -6,18 +6,47 @@ import type { PermissionModule } from '@/config/permissions'
  */
 export function usePermissions() {
   const authStore = useAuthStore()
+  const restrictedModulesForDistributor = new Set<PermissionModule>([
+    'units',
+    'districts',
+    'categories',
+    'attributes',
+    'warehouses',
+    'roles',
+    'distributors',
+  ])
 
-  const can = (permission: string) => authStore.hasPermission(permission)
+  const isDistributorUser = computed(() => Boolean(authStore.user?.is_distributor))
+  const isModuleBlockedForDistributor = (module: PermissionModule) =>
+    isDistributorUser.value && restrictedModulesForDistributor.has(module)
+
+  const can = (permission: string) => {
+    const [module] = permission.split('.')
+    if (
+      isDistributorUser.value
+      && module
+      && restrictedModulesForDistributor.has(module as PermissionModule)
+    ) {
+      return false
+    }
+    return authStore.hasPermission(permission)
+  }
 
   /** Can see list or module area (index or show permission from API) */
   const canAccess = (module: PermissionModule) =>
+    !isModuleBlockedForDistributor(module)
+    && (
     can(`${module}.index`) || can(`${module}.show`)
+    )
 
-  const canCreate = (module: PermissionModule) => can(`${module}.store`)
+  const canCreate = (module: PermissionModule) =>
+    !isModuleBlockedForDistributor(module) && can(`${module}.store`)
 
-  const canEdit = (module: PermissionModule) => can(`${module}.update`)
+  const canEdit = (module: PermissionModule) =>
+    !isModuleBlockedForDistributor(module) && can(`${module}.update`)
 
-  const canDelete = (module: PermissionModule) => can(`${module}.destroy`)
+  const canDelete = (module: PermissionModule) =>
+    !isModuleBlockedForDistributor(module) && can(`${module}.destroy`)
 
   /**
    * Sidebar:
@@ -29,6 +58,7 @@ export function usePermissions() {
   const navVisibility = (
     module: PermissionModule,
   ): 'hidden' | 'link' | 'dropdown' | 'dropdown-create-only' => {
+    if (isModuleBlockedForDistributor(module)) return 'hidden'
     const list = canAccess(module)
     const create = canCreate(module)
     if (!list && !create) return 'hidden'

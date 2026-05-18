@@ -30,6 +30,7 @@ definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
 const { canAccess, canCreate, canEdit, canDelete } = usePermissions()
+const { $api } = useApi()
 const invoicesStore = useInvoicesStore()
 
 const canViewInvoices = computed(() => canAccess('invoices'))
@@ -50,6 +51,7 @@ const copyingId = ref<number | null>(null)
 const selectedIds = ref<Set<number>>(new Set())
 const bulkDeleteConfirmOpen = ref(false)
 const bulkDeleteLoading = ref(false)
+const shipmentSyncLoading = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
@@ -210,6 +212,21 @@ const showReturnStub = () => {
   toast.info(t('invoices_page.return_unavailable'))
 }
 
+const syncShipmentStatus = async () => {
+  shipmentSyncLoading.value = true
+  try {
+    await $api('/invoices/sync-shipment-status', { method: 'POST' })
+    toast.success(t('invoices_page.shipment_sync_success'))
+    await loadRows(currentPage.value)
+  }
+  catch {
+    toast.error(t('invoices_page.shipment_sync_error'))
+  }
+  finally {
+    shipmentSyncLoading.value = false
+  }
+}
+
 const extractCreatedInvoiceId = (response: unknown): number | null => {
   if (!response || typeof response !== 'object') return null
   const root = response as Record<string, unknown>
@@ -302,9 +319,21 @@ const goToPage = (page: number) => {
           </Select>
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('invoices_page.reset_filters') }}</Button>
         </div>
-        <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] shrink-0" as-child>
-          <NuxtLink to="/invoices/create"><Plus class="size-4" />{{ t('invoices_page.new_invoice') }}</NuxtLink>
-        </Button>
+        <div class="flex items-center gap-2 shrink-0">
+          <Button
+            class="h-9 gap-2"
+            variant="outline"
+            :disabled="shipmentSyncLoading || loading"
+            @click="syncShipmentStatus"
+          >
+            <Loader2 v-if="shipmentSyncLoading" class="size-4 animate-spin" />
+            <RotateCcw v-else class="size-4" />
+            {{ t('invoices_page.shipment_status_sync') }}
+          </Button>
+          <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+            <NuxtLink to="/invoices/create"><Plus class="size-4" />{{ t('invoices_page.new_invoice') }}</NuxtLink>
+          </Button>
+        </div>
       </div>
 
       <div class="flex flex-col gap-4 rounded-lg border bg-card/30 p-4 sm:flex-row sm:flex-wrap sm:items-end">
@@ -369,6 +398,7 @@ const goToPage = (page: number) => {
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_supply_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.warehouse') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_status') }}</TableHead>
+              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_shipment_status') }}</TableHead>
               <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_discount_amount') }}</TableHead>
               <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_total') }}</TableHead>
               <TableHead class="rtl:text-start text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_return_id') }}</TableHead>
@@ -376,8 +406,8 @@ const goToPage = (page: number) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loading"><TableCell :colspan="11" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
-            <TableRow v-else-if="!sortedList.length"><TableCell :colspan="11" class="py-14 text-center text-sm text-muted-foreground">{{ t('invoices_page.empty') }}</TableCell></TableRow>
+            <TableRow v-if="loading"><TableCell :colspan="12" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
+            <TableRow v-else-if="!sortedList.length"><TableCell :colspan="12" class="py-14 text-center text-sm text-muted-foreground">{{ t('invoices_page.empty') }}</TableCell></TableRow>
             <TableRow v-for="row in sortedList" :key="row.id" class="hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(row.id) }">
               <TableCell class="w-10">
                 <Checkbox :model-value="selectedIds.has(row.id)" class="mt-0.5 mx-4" @update:model-value="toggleSelect(row.id)" />
@@ -402,6 +432,7 @@ const goToPage = (page: number) => {
               <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
               <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
               <TableCell><Badge variant="outline">{{ statusLabel(row.status) }}</Badge></TableCell>
+              <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ row.shipment_status_label || '—' }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
               <TableCell class="rtl:text-start text-sm">{{ row.return_reference_number || '—' }}</TableCell>

@@ -1,7 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ArrowRight, Loader2, ShieldAlert, Pencil, UserX, UserCheck, Trash2, Building2, Boxes } from 'lucide-vue-next'
+import { ArrowRight, Loader2, ShieldAlert, Pencil, UserX, UserCheck, Trash2, Building2, Boxes, Search, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
+import { Input } from '@/components/ui/input'
+import { DatePickerInput } from '@/components/ui/date-picker'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -34,6 +52,30 @@ interface DistributorShowResponse {
   data?: unknown
 }
 
+interface AllocationPagination {
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+}
+
+interface AllocationRow {
+  id: string
+  variation_id: string
+  warehouse_id: string
+  product_name: string
+  variation: string
+  unit: string
+  allocated_quantity: number
+  sold_quantity: number
+  remaining_quantity: number
+  custom_price: number | null
+  source_warehouse: string
+  allocation_date: string
+  status: 'active' | 'returned' | 'partially_returned' | string
+  status_label: string
+}
+
 const route = useRoute()
 const distributorId = computed(() => String(route.params.id ?? ''))
 
@@ -56,6 +98,23 @@ const deleting = ref(false)
 const toggling = ref(false)
 
 const currentTab = ref<'general' | 'stock-allocation'>('general')
+
+const allocations = ref<AllocationRow[]>([])
+const allocationsLoading = ref(false)
+const allocationsError = ref('')
+const allocationsPagination = ref<AllocationPagination>({
+  current_page: 1,
+  last_page: 1,
+  per_page: 15,
+  total: 0,
+})
+const allocationsPage = ref(1)
+const allocationsSearch = ref('')
+const allocationsWarehouse = ref('all')
+const allocationsStatus = ref<'all' | 'active' | 'returned' | 'partially_returned'>('all')
+const allocationsDateFrom = ref('')
+const allocationsDateTo = ref('')
+let allocationsSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object'
 const getString = (value: unknown) => (typeof value === 'string' ? value : '')
@@ -87,6 +146,213 @@ const normalizeDistributor = (raw: unknown): DistributorDetail | null => {
     status: normalizeStatus(raw.status ?? raw.is_active),
   }
 }
+
+const toNumber = (value: unknown, fallback = 0) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
+const normalizeFilterDate = (value: string): string | undefined => {
+  const raw = value.trim()
+  if (!raw) return undefined
+  const dmy = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(raw)
+  if (dmy) {
+    const day = Number(dmy[1])
+    const month = Number(dmy[2])
+    const year = Number(dmy[3])
+    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1000) return undefined
+    return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw)
+  if (!iso) return undefined
+  return `${iso[1]}-${iso[2]}-${iso[3]}`
+}
+
+const normalizeAllocationStatus = (value: unknown): AllocationRow['status'] => {
+  const status = getString(value).trim().toLowerCase().replace(/\s+/g, '_')
+  if (status === 'active' || status === 'returned' || status === 'partially_returned') return status
+  return status || 'active'
+}
+
+const normalizeAllocation = (raw: unknown): AllocationRow | null => {
+  if (!isRecord(raw)) return null
+  const variationObj = isRecord(raw.variation) ? raw.variation : null
+  const warehouseObj = isRecord(raw.warehouse) ? raw.warehouse : null
+  const productObj = isRecord(variationObj?.product) ? variationObj.product : null
+  const status = normalizeAllocationStatus(raw.status ?? raw.allocation_status)
+
+  const sourceWarehouse = typeof raw.warehouse === 'string'
+    ? raw.warehouse
+    : getString(
+      warehouseObj?.name_ar
+      || warehouseObj?.name_en
+      || warehouseObj?.name
+      || raw.source_warehouse
+      || raw.warehouse_name,
+    )
+
+  const id = String(raw.id ?? '').trim()
+  if (!id) return null
+
+  return {
+    id,
+    variation_id: String(raw.variation_id ?? variationObj?.id ?? '').trim(),
+    warehouse_id: String(raw.warehouse_id ?? warehouseObj?.id ?? '').trim(),
+    product_name: getString(
+      raw.product_name
+      || productObj?.name_en
+      || productObj?.name_ar
+      || raw.product
+      || raw.variation,
+    ),
+    variation: getString(
+      raw.variation_label
+      || variationObj?.label
+      || variationObj?.name
+      || variationObj?.sku
+      || raw.variation,
+    ),
+    unit: getString(raw.unit || raw.unit_name || variationObj?.unit || variationObj?.unit_name),
+    allocated_quantity: toNumber(raw.allocated_quantity, 0),
+    sold_quantity: toNumber(raw.consumed_quantity ?? raw.sold_quantity, 0),
+    remaining_quantity: toNumber(raw.remaining_quantity, 0),
+    custom_price: Number.isFinite(Number(raw.custom_price ?? raw.price ?? raw.distributor_price))
+      ? Number(raw.custom_price ?? raw.price ?? raw.distributor_price)
+      : null,
+    source_warehouse: sourceWarehouse,
+    allocation_date: getString(raw.allocation_date || raw.created_at),
+    status,
+    status_label: getString(raw.status_label || raw.status_text || raw.status),
+  }
+}
+
+const warehouseOptions = computed(() => {
+  const unique = new Map<string, string>()
+  allocations.value.forEach((row) => {
+    if (!row.warehouse_id) return
+    if (!unique.has(row.warehouse_id)) unique.set(row.warehouse_id, row.source_warehouse || row.warehouse_id)
+  })
+  return [...unique.entries()].map(([id, label]) => ({ id, label }))
+})
+
+const hasAllocationFilters = computed(() =>
+  allocationsSearch.value.trim().length > 0
+  || allocationsWarehouse.value !== 'all'
+  || allocationsStatus.value !== 'all'
+  || Boolean(allocationsDateFrom.value)
+  || Boolean(allocationsDateTo.value),
+)
+
+const extractAllocationsPagination = (payload: unknown, page: number): AllocationPagination => {
+  const root = isRecord(payload) ? payload : {}
+  const nested = isRecord(root.data) ? root.data : null
+  const paginationRaw = isRecord(nested?.pagination) ? nested.pagination : (isRecord(root.pagination) ? root.pagination : null)
+  if (!paginationRaw) {
+    return {
+      current_page: page,
+      last_page: 1,
+      per_page: Math.max(allocations.value.length, 1),
+      total: allocations.value.length,
+    }
+  }
+  return {
+    current_page: toNumber(paginationRaw.current_page, page),
+    last_page: toNumber(paginationRaw.last_page, 1),
+    per_page: toNumber(paginationRaw.per_page, 15),
+    total: toNumber(paginationRaw.total, 0),
+  }
+}
+
+const loadAllocations = async (page = allocationsPage.value) => {
+  if (!distributorId.value) return
+  allocationsLoading.value = true
+  allocationsError.value = ''
+  try {
+    const params: Record<string, string | number | undefined> = {
+      page,
+      distributor_id: distributorId.value,
+      search: allocationsSearch.value.trim() || undefined,
+      product_name: allocationsSearch.value.trim() || undefined,
+      status: allocationsStatus.value === 'all' ? undefined : allocationsStatus.value,
+      warehouse_id: allocationsWarehouse.value === 'all' ? undefined : allocationsWarehouse.value,
+      source_warehouse_id: allocationsWarehouse.value === 'all' ? undefined : allocationsWarehouse.value,
+      from: normalizeFilterDate(allocationsDateFrom.value),
+      to: normalizeFilterDate(allocationsDateTo.value),
+      allocation_date_from: normalizeFilterDate(allocationsDateFrom.value),
+      allocation_date_to: normalizeFilterDate(allocationsDateTo.value),
+      'sortBy[column]': 'allocation_date',
+      'sortBy[direction]': 'desc',
+    }
+    const response = await $api<Record<string, unknown>>('/distributors/allocations', { params })
+    const root = isRecord(response) ? response : {}
+    const nested = isRecord(root.data) ? root.data : null
+    const rowsRaw = Array.isArray(nested?.allocations)
+      ? nested.allocations
+      : Array.isArray(root.allocations)
+        ? root.allocations
+        : isRecord(nested?.allocation)
+          ? [nested.allocation]
+          : isRecord(root.allocation)
+            ? [root.allocation]
+            : []
+
+    const normalized = rowsRaw
+      .map(item => normalizeAllocation(item))
+      .filter((item): item is AllocationRow => !!item)
+      .sort((a, b) => new Date(b.allocation_date || 0).getTime() - new Date(a.allocation_date || 0).getTime())
+
+    allocations.value = normalized
+    allocationsPagination.value = extractAllocationsPagination(response, page)
+    allocationsPage.value = allocationsPagination.value.current_page || page
+  }
+  catch (error: unknown) {
+    allocationsError.value = getErrorMessage(error)
+  }
+  finally {
+    allocationsLoading.value = false
+  }
+}
+
+const resetAllocationFilters = () => {
+  allocationsSearch.value = ''
+  allocationsWarehouse.value = 'all'
+  allocationsStatus.value = 'all'
+  allocationsDateFrom.value = ''
+  allocationsDateTo.value = ''
+  if (currentTab.value === 'stock-allocation') loadAllocations(1)
+}
+
+const statusLabel = (row: AllocationRow) => {
+  if (row.status_label.trim()) return row.status_label
+  if (row.status === 'active') return t('distributors_show.stock_allocation_status_active')
+  if (row.status === 'returned') return t('distributors_show.stock_allocation_status_returned')
+  if (row.status === 'partially_returned') return t('distributors_show.stock_allocation_status_partially_returned')
+  return row.status || '—'
+}
+
+const statusBadgeClass = (row: AllocationRow) => {
+  if (row.status === 'active') return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+  if (row.status === 'partially_returned') return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+  if (row.status === 'returned') return 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700'
+  return 'bg-muted text-muted-foreground border-border'
+}
+
+const canEditAllocation = (row: AllocationRow) => row.status === 'active' || row.status === 'partially_returned'
+const canReturnAllocation = (row: AllocationRow) => row.remaining_quantity > 0
+
+const goToAllocationPage = (page: number) => {
+  if (page < 1 || page > allocationsPagination.value.last_page) return
+  loadAllocations(page)
+}
+
+const goToAllocateProducts = () => navigateTo({ path: '/distributors/allocations/create', query: { distributor_id: distributorId.value } })
+const goToEditAllocation = (row: AllocationRow) =>
+  navigateTo({ path: `/distributors/allocations/edit/${row.id}`, query: { distributor_id: distributorId.value } })
+const goToReturnAllocation = (row: AllocationRow) =>
+  navigateTo({ path: `/distributors/allocations/return/${row.id}`, query: { distributor_id: distributorId.value } })
+
+const formatQty = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(2))
+const formatMoney = (value: number | null) => (value == null ? '—' : value.toFixed(2))
 
 const distributorName = computed(() => distributor.value?.name_en || distributor.value?.name_ar || `#${distributor.value?.id ?? ''}`)
 
@@ -193,9 +459,32 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => {
+watch(allocationsSearch, (value) => {
+  if (allocationsSearchDebounceTimer) clearTimeout(allocationsSearchDebounceTimer)
+  allocationsSearchDebounceTimer = setTimeout(() => {
+    if (currentTab.value !== 'stock-allocation') return
+    allocationsPage.value = 1
+    loadAllocations(1)
+  }, 400)
+})
+
+watch(
+  [allocationsWarehouse, allocationsStatus, allocationsDateFrom, allocationsDateTo],
+  () => {
+    if (currentTab.value !== 'stock-allocation') return
+    allocationsPage.value = 1
+    loadAllocations(1)
+  },
+)
+
+watch(currentTab, (tab) => {
+  if (tab === 'stock-allocation') loadAllocations(allocationsPage.value)
+})
+
+onMounted(async () => {
   if (!canViewDistributor.value) return
-  loadDistributor()
+  await loadDistributor()
+  if (currentTab.value === 'stock-allocation') await loadAllocations(1)
 })
 </script>
 
@@ -363,10 +652,204 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-else class="rounded-lg border p-6 flex flex-col items-center text-center gap-2">
-          <Boxes class="size-7 text-muted-foreground" />
-          <h3 class="font-medium">{{ t('distributors_show.tab_stock_allocation') }}</h3>
-          <p class="text-sm text-muted-foreground">{{ t('distributors_show.stock_allocation_placeholder') }}</p>
+        <div v-else class="space-y-4">
+          <div class="rounded-lg border p-4">
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div class="relative flex-1">
+                  <Search class="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    v-model="allocationsSearch"
+                    class="ps-9 h-9"
+                    :placeholder="t('distributors_show.stock_allocation_search_placeholder')"
+                  />
+                </div>
+                <Select v-model="allocationsWarehouse">
+                  <SelectTrigger class="w-full lg:w-[220px] h-9">
+                    <SelectValue :placeholder="t('distributors_show.stock_allocation_filter_warehouse')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{{ t('distributors_show.stock_allocation_filter_all_warehouses') }}</SelectItem>
+                    <SelectItem
+                      v-for="warehouse in warehouseOptions"
+                      :key="warehouse.id"
+                      :value="warehouse.id"
+                    >
+                      {{ warehouse.label || warehouse.id }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select v-model="allocationsStatus">
+                  <SelectTrigger class="w-full lg:w-[220px] h-9">
+                    <SelectValue :placeholder="t('distributors_show.stock_allocation_filter_status')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{{ t('distributors_show.stock_allocation_filter_all_statuses') }}</SelectItem>
+                    <SelectItem value="active">{{ t('distributors_show.stock_allocation_status_active') }}</SelectItem>
+                    <SelectItem value="partially_returned">{{ t('distributors_show.stock_allocation_status_partially_returned') }}</SelectItem>
+                    <SelectItem value="returned">{{ t('distributors_show.stock_allocation_status_returned') }}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+                <div class="w-full lg:w-[220px]">
+                  <label class="text-xs text-muted-foreground">{{ t('distributors_show.stock_allocation_date_from') }}</label>
+                  <DatePickerInput v-model="allocationsDateFrom" class="w-full mt-1" />
+                </div>
+                <div class="w-full lg:w-[220px]">
+                  <label class="text-xs text-muted-foreground">{{ t('distributors_show.stock_allocation_date_to') }}</label>
+                  <DatePickerInput v-model="allocationsDateTo" class="w-full mt-1" />
+                </div>
+                <div class="flex items-center gap-2 lg:ms-auto">
+                  <Button
+                    v-if="hasAllocationFilters"
+                    variant="ghost"
+                    size="sm"
+                    class="h-9 gap-1.5 text-muted-foreground"
+                    :disabled="allocationsLoading"
+                    @click="resetAllocationFilters"
+                  >
+                    <X class="size-3.5" />
+                    {{ t('distributors_show.stock_allocation_reset_filters') }}
+                  </Button>
+                  <Button class="h-9 gap-2 bg-[#215260] hover:bg-[#184754]" @click="goToAllocateProducts">
+                    <Boxes class="size-4" />
+                    {{ t('distributors_show.stock_allocation_allocate_products') }}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
+                  <TableHead>{{ t('distributors_show.stock_allocation_col_variation') }}</TableHead>
+                  <TableHead>{{ t('distributors_show.stock_allocation_col_unit') }}</TableHead>
+                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_allocated_quantity') }}</TableHead>
+                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
+                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
+                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_custom_price') }}</TableHead>
+                  <TableHead>{{ t('distributors_show.stock_allocation_col_source_warehouse') }}</TableHead>
+                  <TableHead>{{ t('distributors_show.stock_allocation_col_allocation_date') }}</TableHead>
+                  <TableHead>{{ t('distributors_show.stock_allocation_col_status') }}</TableHead>
+                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_actions') }}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-if="allocationsLoading">
+                  <TableCell :colspan="11" class="py-14 text-center">
+                    <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 class="size-4 animate-spin" />
+                      {{ t('distributors_show.stock_allocation_loading') }}
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <TableRow v-else-if="allocationsError">
+                  <TableCell :colspan="11" class="py-14 text-center">
+                    <div class="flex flex-col items-center gap-2 text-sm text-red-500">
+                      <ShieldAlert class="size-6" />
+                      <p class="font-medium">{{ t('distributors_show.stock_allocation_error_title') }}</p>
+                      <p class="text-center text-red-600/90 dark:text-red-400/90 max-w-md leading-relaxed">
+                        {{ allocationsError }}
+                      </p>
+                      <Button variant="outline" size="sm" @click="loadAllocations(allocationsPage)">
+                        {{ t('common.retry') }}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <TableRow v-else-if="allocations.length === 0">
+                  <TableCell :colspan="11" class="py-14 text-center text-sm text-muted-foreground">
+                    <div class="flex flex-col items-center gap-2">
+                      <Boxes class="size-6 text-muted-foreground" />
+                      <p class="font-medium">{{ t('distributors_show.stock_allocation_empty_title') }}</p>
+                      <p>{{ t('distributors_show.stock_allocation_empty_hint') }}</p>
+                      <Button class="mt-1 h-8 gap-2" @click="goToAllocateProducts">
+                        <Boxes class="size-4" />
+                        {{ t('distributors_show.stock_allocation_allocate_products') }}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <TableRow
+                  v-for="row in allocations"
+                  v-else
+                  :key="row.id"
+                  class="hover:bg-muted/30 transition-colors align-middle"
+                >
+                  <TableCell class="font-medium">{{ row.product_name || '—' }}</TableCell>
+                  <TableCell>{{ row.variation || '—' }}</TableCell>
+                  <TableCell>{{ row.unit || '—' }}</TableCell>
+                  <TableCell class="text-end tabular-nums">{{ formatQty(row.allocated_quantity) }}</TableCell>
+                  <TableCell class="text-end tabular-nums">{{ formatQty(row.sold_quantity) }}</TableCell>
+                  <TableCell class="text-end tabular-nums">{{ formatQty(row.remaining_quantity) }}</TableCell>
+                  <TableCell class="text-end tabular-nums">{{ formatMoney(row.custom_price) }}</TableCell>
+                  <TableCell>{{ row.source_warehouse || '—' }}</TableCell>
+                  <TableCell>{{ row.allocation_date || '—' }}</TableCell>
+                  <TableCell>
+                    <span
+                      class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                      :class="statusBadgeClass(row)"
+                    >
+                      {{ statusLabel(row) }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-end">
+                    <div class="inline-flex items-center gap-2">
+                      <Button
+                        v-if="canEditAllocation(row)"
+                        variant="outline"
+                        size="sm"
+                        class="h-8"
+                        @click="goToEditAllocation(row)"
+                      >
+                        {{ t('distributors_show.stock_allocation_action_edit') }}
+                      </Button>
+                      <Button
+                        v-if="canReturnAllocation(row)"
+                        variant="outline"
+                        size="sm"
+                        class="h-8"
+                        @click="goToReturnAllocation(row)"
+                      >
+                        {{ t('distributors_show.stock_allocation_action_return') }}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+
+            <div
+              v-if="allocationsPagination.last_page > 1 && allocations.length > 0"
+              class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t px-4 py-3"
+            >
+              <p class="text-xs text-muted-foreground">
+                {{
+                  t('common.showing_range', {
+                    from: allocationsPagination.total ? (allocationsPage - 1) * allocationsPagination.per_page + 1 : 0,
+                    to: allocationsPagination.total ? Math.min(allocationsPage * allocationsPagination.per_page, allocationsPagination.total) : 0,
+                    total: allocationsPagination.total,
+                  })
+                }}
+              </p>
+              <PaginationArrowButtons
+                :current-page="allocationsPage"
+                :last-page="allocationsPagination.last_page"
+                :loading="allocationsLoading"
+                @prev="goToAllocationPage(allocationsPage - 1)"
+                @next="goToAllocationPage(allocationsPage + 1)"
+              >
+                <span class="text-sm text-muted-foreground px-2 tabular-nums">
+                  {{ t('common.page_of', { current: allocationsPage, total: allocationsPagination.last_page }) }}
+                </span>
+              </PaginationArrowButtons>
+            </div>
+          </div>
         </div>
       </template>
     </template>

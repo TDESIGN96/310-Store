@@ -59,10 +59,12 @@ const { getErrorMessage } = useApiError()
 const config = useRuntimeConfig()
 const authStore = useAuthStore()
 const { canCreate: canCreateProd, canEdit: canEditProd, canDelete: canDeleteProd, can: canPerm } = usePermissions()
-const canCreateProduct = computed(() => canCreateProd('products'))
-const canShowProduct = computed(() => canPerm('products.show'))
-const canEditProduct = computed(() => canEditProd('products'))
-const canDeleteProduct = computed(() => canDeleteProd('products'))
+const isDistributorUser = computed(() => Boolean(authStore.user?.is_distributor))
+const canCreateProduct = computed(() => !isDistributorUser.value && canCreateProd('products'))
+const canShowProduct = computed(() => !isDistributorUser.value && canPerm('products.show'))
+const canEditProduct = computed(() => !isDistributorUser.value && canEditProd('products'))
+const canDeleteProduct = computed(() => !isDistributorUser.value && canDeleteProd('products'))
+const canSelectProductsForDelete = computed(() => canDeleteProduct.value)
 
 interface Pagination {
   current_page: number
@@ -464,7 +466,7 @@ function openDelete(row: ProductRow) {
 }
 
 async function confirmDelete() {
-  if (!deleteTarget.value) return
+  if (!deleteTarget.value || !canDeleteProduct.value) return
   deleting.value = true
   try {
     const id = deleteTarget.value.id
@@ -491,7 +493,7 @@ async function confirmDelete() {
 }
 
 async function confirmBulkDelete() {
-  if (selectedIds.value.size === 0) return
+  if (selectedIds.value.size === 0 || !canDeleteProduct.value) return
   bulkDeleteConfirmOpen.value = false
   bulkDeleteLoading.value = true
   try {
@@ -633,7 +635,7 @@ onMounted(async () => {
 
 </div>
     <div
-      v-if="selectedCount > 0"
+      v-if="canSelectProductsForDelete && selectedCount > 0"
       class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/70 px-4 py-2.5 flex-wrap"
     >
       <span class="text-sm font-medium text-red-700">
@@ -663,7 +665,7 @@ onMounted(async () => {
       <Table>
         <TableHeader>
           <TableRow class="bg-muted/40 hover:bg-muted/40">
-            <TableHead class="w-10 text-center">
+            <TableHead v-if="canSelectProductsForDelete" class="w-10 text-center">
               <Checkbox
                 :model-value="isIndeterminate ? 'indeterminate' : isAllSelected"
                 class="mt-0.5 mx-4"
@@ -692,7 +694,7 @@ onMounted(async () => {
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="canSelectProductsForDelete ? 7 : 6" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('common.loading') }}…
@@ -700,7 +702,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="listLoadError">
-            <TableCell :colspan="7" class="py-14 text-center">
+            <TableCell :colspan="canSelectProductsForDelete ? 7 : 6" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -714,7 +716,7 @@ onMounted(async () => {
             </TableCell>
           </TableRow>
           <TableRow v-else-if="rows.length === 0">
-            <TableCell :colspan="7" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="canSelectProductsForDelete ? 7 : 6" class="py-14 text-center text-sm text-muted-foreground">
               {{ t('products_page.no_products') }}
             </TableCell>
           </TableRow>
@@ -725,7 +727,7 @@ onMounted(async () => {
               class="hover:bg-muted/30 transition-colors align-middle"
               :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
             >
-            <TableCell class="w-10">
+            <TableCell v-if="canSelectProductsForDelete" class="w-10">
               <Checkbox
                 :model-value="selectedIds.has(row.id)"
                 class="mt-0.5 mx-4"

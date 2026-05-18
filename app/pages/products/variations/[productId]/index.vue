@@ -28,6 +28,7 @@ const route = useRoute()
 const productId = computed(() => String(route.params.productId))
 const { t } = useI18n()
 const productsStore = useProductsStore()
+const authStore = useAuthStore()
 const { getErrorMessage } = useApiError()
 const { $api } = useApi()
 const { can } = usePermissions()
@@ -50,11 +51,12 @@ interface ProductShowResponse {
   product?: Record<string, unknown>
 }
 
+const isDistributorUser = computed(() => Boolean(authStore.user?.is_distributor))
 const canListVariations = computed(() => can('product_variations.index'))
-const canShowVariation = computed(() => can('product_variations.show'))
-const canCreateVariation = computed(() => can('product_variations.store'))
-const canEditVariation = computed(() => can('product_variations.update'))
-const canDeleteVariation = computed(() => can('product_variations.destroy'))
+const canShowVariation = computed(() => !isDistributorUser.value && can('product_variations.show'))
+const canCreateVariation = computed(() => !isDistributorUser.value && can('product_variations.store'))
+const canEditVariation = computed(() => !isDistributorUser.value && can('product_variations.update'))
+const canDeleteVariation = computed(() => !isDistributorUser.value && can('product_variations.destroy'))
 const canActivateVariation = computed(() => can('product_variations.activate'))
 const canDeactivateVariation = computed(() => can('product_variations.deactivate'))
 const selectedRows = computed(() => rows.value.filter(row => selectedIds.value.has(Number(row.id))))
@@ -74,6 +76,7 @@ const canDeactivateSelected = computed(
 const canDeleteSelected = computed(
   () => canDeleteVariation.value && selectedRows.value.length > 0,
 )
+const tableColspan = computed(() => (isDistributorUser.value ? 8 : 9))
 
 const toggleSelectAll = () => {
   const next = new Set(selectedIds.value)
@@ -143,10 +146,12 @@ const toggleActivation = async (row: Record<string, unknown>) => {
   const variationId = Number(row.id)
   if (!variationId) return
   if (isActive(row) && !canDeactivateVariation.value) {
+    if (isDistributorUser.value) return
     toast.error(t('common.forbidden'))
     return
   }
   if (!isActive(row) && !canActivateVariation.value) {
+    if (isDistributorUser.value) return
     toast.error(t('common.forbidden'))
     return
   }
@@ -168,6 +173,7 @@ const confirmDelete = async () => {
   const variationId = Number(deleteTarget.value?.id)
   if (!variationId) return
   if (!canDeleteVariation.value) {
+    if (isDistributorUser.value) return
     toast.error(t('common.forbidden'))
     return
   }
@@ -225,6 +231,11 @@ const runBulkDeactivate = async () => {
 }
 
 const runBulkDelete = async () => {
+  if (!canDeleteVariation.value) {
+    if (isDistributorUser.value) return
+    toast.error(t('common.forbidden'))
+    return
+  }
   const eligible = selectedRows.value
   if (!eligible.length) return
   bulkDeleteConfirmOpen.value = false
@@ -315,18 +326,18 @@ onMounted(() => {
             <TableHead class="text-center">{{ t('products_variations.tiered_prices') }}</TableHead>
             <TableHead class="text-start">{{ t('products_page.col_warehouse') }}</TableHead>
             <TableHead class="text-start">{{ t('common.status') }}</TableHead>
-            <TableHead class="text-end">{{ t('common.actions') }}</TableHead>
+            <TableHead v-if="!isDistributorUser" class="text-end">{{ t('common.actions') }}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading">
-            <TableCell :colspan="9" class="py-10 ">
+            <TableCell :colspan="tableColspan" class="py-10 ">
               <Loader2 class="size-4 animate-spin inline-block mr-2" />
               {{ t('common.loading') }}
             </TableCell>
           </TableRow>
           <TableRow v-else-if="rows.length === 0">
-            <TableCell :colspan="9" class="py-10 text-center text-muted-foreground">
+            <TableCell :colspan="tableColspan" class="py-10 text-center text-muted-foreground">
               {{ t('products_variations.no_variations') }}
             </TableCell>
           </TableRow>
@@ -354,7 +365,7 @@ onMounted(() => {
             <TableCell class="text-center">{{ tieredCount(row) }}</TableCell>
             <TableCell class="max-w-[220px] truncate text-start">{{ inventorySummary(row) }}</TableCell>
             <TableCell class="text-start">{{ isActive(row) ? t('common.active') : t('common.inactive') }}</TableCell>
-            <TableCell class="text-end">
+            <TableCell v-if="!isDistributorUser" class="text-end">
               <div class="flex flex-wrap gap-1 justify-end">
                 <Button v-if="canEditVariation" variant="outline" size="sm" as-child>
                   <NuxtLink :to="`/products/variations/${productId}/edit/${row.id}`"><Pencil class="size-3.5" /></NuxtLink>

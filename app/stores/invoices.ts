@@ -30,6 +30,9 @@ export interface InvoiceListItem {
   invoice_date: string
   supply_date: string
   status: InvoiceStatus
+  shipment_code: string
+  shipment_status: number | null
+  shipment_status_label: string
   total_discount: number
   grand_total: number
   return_reference_number: string
@@ -170,6 +173,8 @@ export const useInvoicesStore = defineStore('invoices', () => {
   const normalizeListItem = (payload: Record<string, unknown>): InvoiceListItem => {
     const warehouse = (payload.warehouse && typeof payload.warehouse === 'object' ? payload.warehouse : null) as Record<string, unknown> | null
     const district = (payload.district && typeof payload.district === 'object' ? payload.district : null) as Record<string, unknown> | null
+    const shipmentCode = String(payload.shipment_code ?? '').trim()
+    const shipmentStatusLabel = String(payload.shipment_status_label ?? '').trim()
     return {
       id: toNumber(payload.id, 0),
       reference_number: String(payload.reference_number ?? ''),
@@ -181,6 +186,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
       invoice_date: String(payload.invoice_date ?? ''),
       supply_date: String(payload.supply_date ?? ''),
       status: normalizeStatus(payload.status),
+      shipment_code: shipmentCode,
+      shipment_status: toFiniteNumberOrUndefined(payload.shipment_status) ?? null,
+      shipment_status_label: shipmentStatusLabel,
       total_discount: toNumber(payload.total_discount, 0),
       grand_total: toNumber(payload.grand_total, 0),
       return_reference_number: String(payload.return_reference_number ?? payload.return_ref_id ?? ''),

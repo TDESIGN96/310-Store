@@ -121,6 +121,9 @@ onMounted(async () => {
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.reference_number') }}</p><p class="text-sm font-medium">{{ invoice.reference_number || `#${invoice.id}` }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.col_status') }}</p><p class="text-sm font-medium">{{ invoice.status }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_code') }}</p><p class="text-sm font-medium">{{ invoice.shipment_code || '—' }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_status') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status ?? '—' }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_status_label') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status_label || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.customer_name') }}</p><p class="text-sm">{{ invoice.customer_name || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.warehouse') }}</p><p class="text-sm">{{ warehouseName }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.customer_mobile') }}</p><p class="text-sm">{{ invoice.customer_mobile || '—' }}</p></div>

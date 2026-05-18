@@ -51,6 +51,8 @@ interface UserResponse {
 const route = useRoute()
 const router = useRouter()
 const { $api } = useApi()
+const authStore = useAuthStore()
+const isDistributorUser = computed(() => Boolean(authStore.user?.is_distributor))
 
 const name = ref('')
 const phone = ref('')
@@ -138,6 +140,11 @@ let effectivePermDebounce: ReturnType<typeof setTimeout> | null = null
 watch(
   () => [...selectedRoleIds.value],
   (ids) => {
+    if (isDistributorUser.value) {
+      effectivePermissions.value = []
+      loadingEffectivePermissions.value = false
+      return
+    }
     if (effectivePermDebounce) clearTimeout(effectivePermDebounce)
     effectivePermDebounce = setTimeout(async () => {
       if (!ids.length) {
@@ -301,7 +308,7 @@ const createUser = async () => {
   if (phone.value.trim() && !phoneValid.value) {
     fieldErrors.value.phone = getPhoneError() || t('users_form.validation_phone')
   }
-  if (selectedRoleIds.value.length === 0) {
+  if (!isDistributorUser.value && selectedRoleIds.value.length === 0) {
     fieldErrors.value.role_ids = t('errors.roles_required')
   }
 
@@ -319,7 +326,7 @@ const createUser = async () => {
         is_active: isActive.value,
         password: password.value,
         password_confirmation: passwordConfirmation.value,
-        role_ids: selectedRoleIds.value,
+        role_ids: isDistributorUser.value ? undefined : selectedRoleIds.value,
       },
     })
 
@@ -345,7 +352,9 @@ const createUser = async () => {
 }
 
 onMounted(async () => {
-  await loadRoles()
+  if (!isDistributorUser.value) {
+    await loadRoles()
+  }
   await applyClonePrefill()
 })
 </script>
@@ -494,7 +503,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div>
+    <div v-if="!isDistributorUser">
       <h2 class="text-xl font-semibold flex items-center gap-2">
         <ShieldCheck class="size-4" />
         {{ t('users_form.roles_section') }}
@@ -504,7 +513,7 @@ onMounted(async () => {
       </p>
     </div>
 
-    <div class="space-y-2">
+    <div v-if="!isDistributorUser" class="space-y-2">
       <label class="text-sm font-medium">{{ t('users_form.roles_label') }} <span class="text-red-500">*</span></label>
       <Popover>
         <PopoverTrigger as-child>
@@ -552,7 +561,7 @@ onMounted(async () => {
     </div>
 
     <!-- Effective permissions from selected roles (read-only; visible to everyone on this page) -->
-    <div class="rounded-lg border overflow-hidden">
+    <div v-if="!isDistributorUser" class="rounded-lg border overflow-hidden">
       <div class="bg-muted/40 px-4 py-3 border-b">
         <h2 class="font-semibold flex items-center gap-2">
           <ShieldCheck class="size-4" />

@@ -14,6 +14,7 @@ interface User {
   name: string
   phone: string
   role: string
+  is_distributor?: boolean
   /** When `false`, the user must not access the app (blocked at login). */
   is_active?: boolean
   permissions?: Array<string | { name?: string } | { key?: string }>

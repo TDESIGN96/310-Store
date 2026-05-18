@@ -130,7 +130,6 @@ const handleLogin = async () => {
         <div class="form-group anim-fade-up" style="--delay: 0.6s">
           <div class="label-row">
             <label class="form-label">{{ t('auth.password') }}</label>
-            <a href="#" class="forgot-link">{{ t('auth.forgot_password') }}</a>
           </div>
           <div class="input-wrap">
             <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"

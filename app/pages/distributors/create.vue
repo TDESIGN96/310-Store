@@ -110,7 +110,7 @@ const createDistributor = async () => {
   if (!validateForm()) return
 
   const mobilePayload = normalizeMobile(mobileNumber.value)
-  const adminMobilePayload = adminMobileNumber.value.trim() ? normalizeMobile(adminMobileNumber.value) : undefined
+  const adminMobilePayload = adminMobileNumber.value.trim() ? normalizeMobile(adminMobileNumber.value) : ''
   submitting.value = true
   try {
     await $api('/distributors', {
@@ -229,6 +229,7 @@ const createDistributor = async () => {
       <Separator class="my-2" />
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 class="text-base font-semibold md:col-span-2">Login Details</h2>
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.admin_name') }} <span class="text-red-500">*</span></label>
           <Input v-model="adminName" :class="fieldErrors.admin_name ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.admin_name = ''" />
