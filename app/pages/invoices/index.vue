@@ -29,7 +29,7 @@ import { formatDisplayDate } from '@/utils/formatDisplayDate'
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
-const { canAccess, canCreate, canEdit, canDelete } = usePermissions()
+const { canAccess, canCreate, canEdit, canDelete, can } = usePermissions()
 const { $api } = useApi()
 const invoicesStore = useInvoicesStore()
 
@@ -37,6 +37,7 @@ const canViewInvoices = computed(() => canAccess('invoices'))
 const canCreateInvoice = computed(() => canCreate('invoices'))
 const canEditInvoice = computed(() => canEdit('invoices'))
 const canDeleteInvoice = computed(() => canDelete('invoices'))
+const canCreateInvoiceReturn = computed(() => can('invoice_returns.store'))
 
 const search = ref('')
 const filterStatus = ref<'all' | 'pending' | 'in_delivery' | 'complete'>('all')
@@ -206,10 +207,6 @@ const confirmBulkDelete = async () => {
   finally {
     bulkDeleteLoading.value = false
   }
-}
-
-const showReturnStub = () => {
-  toast.info(t('invoices_page.return_unavailable'))
 }
 
 const syncShipmentStatus = async () => {
@@ -435,13 +432,13 @@ const goToPage = (page: number) => {
               <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ row.shipment_status_label || '—' }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
-              <TableCell class="rtl:text-start text-sm">{{ row.return_reference_number || '—' }}</TableCell>
+              <TableCell class="rtl:text-start text-sm">{{ row.return_reference || row.return_reference_number || '—' }}</TableCell>
               <TableCell class="text-end">
                 <TableRowActions
                   :actions="[
                     { key: `edit-${row.id}`, label: t('invoices_page.action_edit'), type: 'link', to: `/invoices/edit/${row.id}`, icon: Pencil, tone: 'default', disabled: !canEditInvoice },
                     { key: `copy-${row.id}`, label: t('invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateInvoice, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
-                    { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', onClick: showReturnStub },
+                    { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', visible: canCreateInvoiceReturn, onClick: () => navigateTo(`/invoices/return/${row.id}`) },
                     { key: `delete-${row.id}`, label: t('invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteInvoice, onClick: () => requestDelete(row) },
                   ]"
                   variant="invoice"

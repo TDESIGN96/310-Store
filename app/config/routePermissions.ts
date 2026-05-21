@@ -53,9 +53,15 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
 
   // Invoices
   { pattern: /^\/invoices\/create\/?$/, permission: 'invoices.store' },
+  { pattern: /^\/invoices\/return\/[^/]+\/?$/, permission: 'invoice_returns.store' },
   { pattern: /^\/invoices\/edit\/[^/]+\/?$/, permission: 'invoices.update' },
   { pattern: /^\/invoices\/show\/[^/]+\/?$/, permission: 'invoices.show' },
   { pattern: /^\/invoices\/?$/, permission: ['invoices.index', 'invoices.show'] },
+
+  // Invoice returns
+  { pattern: /^\/invoice-returns\/edit\/[^/]+\/?$/, permission: 'invoice_returns.update' },
+  { pattern: /^\/invoice-returns\/show\/[^/]+\/?$/, permission: 'invoice_returns.show' },
+  { pattern: /^\/invoice-returns\/?$/, permission: ['invoice_returns.index', 'invoice_returns.show'] },
 
   // Activity log
   { pattern: /^\/activities\/?$/, permission: ['activities.index', 'activities.show'] },

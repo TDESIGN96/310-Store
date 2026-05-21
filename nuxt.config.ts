@@ -1,16 +1,17 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
+import { resolve } from 'pathe'
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud/api',
+      apiBase: import.meta.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
       echo: {
         key: 'dA6V4f6Gn3QYA7NDgd6t',
         wsHost: 'ws-a14d3d63-48f2-43f1-a933-d3e4cfde010c-reverb.laravel.cloud',
         wsPort: 443,
         wssPort: 443,
         forceTLS: true,
-        authBaseUrl: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
+        authBaseUrl: import.meta.env.NUXT_PUBLIC_ECHO_AUTH_BASE_URL,
         authEndpoint: '/api/broadcasting/auth',
       },
     },
@@ -69,4 +70,25 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  hooks: {
+    'pages:extend'(pages) {
+      const ensurePageRoute = (path: string, file: string, name: string) => {
+        if (pages.some(page => page.path === path)) return
+        pages.push({
+          name,
+          path,
+          file: resolve(file),
+        } as any)
+      }
+
+      ensurePageRoute('/invoices', 'app/pages/invoices/index.vue', 'invoices-index-manual')
+      ensurePageRoute('/invoices/create', 'app/pages/invoices/create.vue', 'invoices-create-manual')
+      ensurePageRoute('/invoices/show/:id', 'app/pages/invoices/show/[id].vue', 'invoices-show-id-manual')
+      ensurePageRoute('/invoices/edit/:id', 'app/pages/invoices/edit/[id].vue', 'invoices-edit-id-manual')
+      ensurePageRoute('/invoices/return/:id', 'app/pages/invoices/return/[id].vue', 'invoices-return-id-manual')
+      ensurePageRoute('/invoice-returns', 'app/pages/invoice-returns/index.vue', 'invoice-returns-index-manual')
+      ensurePageRoute('/invoice-returns/show/:id', 'app/pages/invoice-returns/show/[id].vue', 'invoice-returns-show-id-manual')
+      ensurePageRoute('/invoice-returns/edit/:id', 'app/pages/invoice-returns/edit/[id].vue', 'invoice-returns-edit-id-manual')
+    },
+  },
 })  
