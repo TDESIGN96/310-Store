@@ -4,7 +4,7 @@ import { resolve } from 'pathe'
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: import.meta.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
+      apiBase: import.meta.env.NUXT_PUBLIC_API_BASE,
       echo: {
         key: 'dA6V4f6Gn3QYA7NDgd6t',
         wsHost: 'ws-a14d3d63-48f2-43f1-a933-d3e4cfde010c-reverb.laravel.cloud',
