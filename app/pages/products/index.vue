@@ -778,7 +778,7 @@ onMounted(async () => {
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditProduct },
                   { key: `variations-${row.id}`, label: t('products_page.manage_variations'), type: 'link', to: `/products/variations/${row.id}`, tone: 'default', visible: row.productType !== 'combo' },
-                  { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteProduct, onClick: () => openDelete(row) },
+                  { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: false, onClick: () => openDelete(row) },
                 ]"
                 variant="invoice"
                 align="end"
