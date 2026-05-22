@@ -33,7 +33,16 @@ const deliveryFeeValue = computed(() => {
   const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
   return asNumber(district?.delivery_fee)
 })
+const otherFeeValue = computed(() => {
+  const current = invoice.value
+  if (!current) return 0
+  const direct = asNumber(current.other_fees)
+  if (direct > 0) return direct
+  const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
+  return asNumber(district?.other_fees)
+})
 const showDeliveryFee = computed(() => deliveryFeeValue.value > 0)
+const showOtherFee = computed(() => otherFeeValue.value > 0)
 const items = computed(() => {
   const raw = invoice.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []
@@ -69,7 +78,7 @@ const productImageUrl = (row: Record<string, unknown>) => {
 const variationLabel = (row: Record<string, unknown>) => {
   const variation = (row.variation && typeof row.variation === 'object' ? row.variation : null) as Record<string, unknown> | null
   if (!variation) return '—'
-  return String(variation.label ?? variation.sku ?? '—')
+  return String(variation.label ?? '—')
 }
 const itemDiscountPercentage = (row: Record<string, unknown>) => {
   const direct = asNumber(row.discount_percentage)
@@ -120,7 +129,7 @@ onMounted(async () => {
         <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6"><FileText class="size-4 text-muted-foreground" /><h2 class="text-base font-semibold">{{ t('invoices_page.details_section') }}</h2></div>
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.reference_number') }}</p><p class="text-sm font-medium">{{ invoice.reference_number || `#${invoice.id}` }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.col_status') }}</p><p class="text-sm font-medium">{{ invoice.status }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.col_status') }}</p><p class="text-sm font-medium">{{ invoice.status_label || invoice.status || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_code') }}</p><p class="text-sm font-medium">{{ invoice.shipment_code || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_status') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status ?? '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_status_label') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status_label || '—' }}</p></div>
@@ -169,6 +178,7 @@ onMounted(async () => {
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(invoice.subtotal) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(invoice.total_discount) }}</p></div>
             <div v-if="showDeliveryFee"><p class="text-xs text-muted-foreground">{{ t('invoices_page.delivery_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(deliveryFeeValue) }}</p></div>
+            <div v-if="showOtherFee"><p class="text-xs text-muted-foreground">{{ t('invoices_page.other_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(otherFeeValue) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ money(invoice.grand_total) }}</p></div>
           </div>
         </CardContent>

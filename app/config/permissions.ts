@@ -1,10 +1,11 @@
-export type PermissionAction = 'index' | 'show' | 'store' | 'update' | 'destroy' | 'activate' | 'deactivate'
+export type PermissionAction = 'index' | 'show' | 'store' | 'update' | 'destroy'
 export type PermissionModule =
   | 'users'
   | 'roles'
   | 'products'
   | 'quotations'
   | 'invoices'
+  | 'invoice_returns'
   | 'product_variations'
   | 'units'
   | 'distributors'
@@ -77,6 +78,16 @@ export const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: 'invoice_returns',
+    permissions: [
+      { id: 'invoice_returns.index' },
+      { id: 'invoice_returns.show' },
+      { id: 'invoice_returns.store' },
+      { id: 'invoice_returns.update' },
+      { id: 'invoice_returns.destroy' },
+    ],
+  },
+  {
     id: 'product_variations',
     permissions: [
       { id: 'product_variations.index' },
@@ -84,8 +95,6 @@ export const permissionGroups: PermissionGroup[] = [
       { id: 'product_variations.store' },
       { id: 'product_variations.update' },
       { id: 'product_variations.destroy' },
-      { id: 'product_variations.activate' },
-      { id: 'product_variations.deactivate' },
     ],
   },
   {

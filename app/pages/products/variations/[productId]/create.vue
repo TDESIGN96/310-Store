@@ -29,6 +29,7 @@ const canCreateVariation = computed(() => can('product_variations.store'))
 const loading = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
+const submitErrorMessage = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 type WarehouseItem = {
   id: number
@@ -325,6 +326,7 @@ const createVariations = async () => {
     return
   }
   errorMessage.value = ''
+  submitErrorMessage.value = ''
   clearServerErrors()
   if (!variations.value.length) variations.value.push(createEmptyVariation())
   const allRowsValid = variations.value.every((row, rowIndex) => validateRow(row, rowIndex))
@@ -337,17 +339,17 @@ const createVariations = async () => {
       await productsStore.createVariation(productId.value, createVariationPayload(row))
     }
     catch (error: unknown) {
+      const apiErrorMessage = getErrorMessage(error)
+      submitErrorMessage.value = apiErrorMessage
+      toast.error(apiErrorMessage)
       if (isValidationError(error)) {
         applyServerErrorsToRow(rowIndex, getFieldErrors(error))
-        errorMessage.value = ''
-      }
-      else {
-        errorMessage.value = getErrorMessage(error)
       }
       submitting.value = false
       return
     }
   }
+  submitErrorMessage.value = ''
   toast.success(t('products_variations.create_success'))
   await navigateTo(`/products/variations/${productId.value}`)
   submitting.value = false
@@ -397,6 +399,9 @@ onMounted(async () => {
     </div>
 
     <div v-else class="rounded-lg border p-5 space-y-4">
+      <div v-if="submitErrorMessage" class="rounded-md bg-red-500/10 border border-red-200 text-red-600 text-sm px-4 py-3">
+        {{ submitErrorMessage }}
+      </div>
       <div
         v-for="(row, rowIndex) in variations"
         :key="rowIndex"

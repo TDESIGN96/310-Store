@@ -17,6 +17,8 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
+      title: 'KAMU',
+      titleTemplate: '%s',
       link: [
         {
           rel: 'stylesheet',

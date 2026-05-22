@@ -59,6 +59,7 @@ export interface QuotationDraft {
   terms: string
   notes: string
   delivery_fees: number
+  other_fees: number
   items: QuotationDraftItem[]
 }
 
@@ -112,6 +113,7 @@ const createEmptyDraft = (): QuotationDraft => ({
   terms: '',
   notes: '',
   delivery_fees: 0,
+  other_fees: 0,
   items: [createEmptyItem()],
 })
 
@@ -132,6 +134,12 @@ export const useQuotationsStore = defineStore('quotations', () => {
   const toNumber = (value: unknown, fallback = 0): number => {
     const num = Number(value)
     return Number.isFinite(num) ? num : fallback
+  }
+  const toFiniteNumberOrUndefined = (value: unknown): number | undefined => {
+    if (value === null || value === undefined) return undefined
+    if (typeof value === 'string' && value.trim() === '') return undefined
+    const num = Number(value)
+    return Number.isFinite(num) ? num : undefined
   }
 
   const normalizeStatus = (value: unknown): QuotationStatus => {
@@ -202,19 +210,20 @@ export const useQuotationsStore = defineStore('quotations', () => {
     item: Record<string, unknown>,
     qty: number,
   ): { mode: 'fixed' | 'percentage', value: number } => {
-    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
-    if (Number.isFinite(perUnitDiscount)) {
-      return { mode: 'fixed', value: perUnitDiscount }
-    }
-
     const discountPercent = toNumber(item.discount_percent, NaN)
     if (Number.isFinite(discountPercent)) {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
 
+    // Fixed discount is now row-level (group qty), so hydrate as total line discount.
+    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
+    if (Number.isFinite(perUnitDiscount)) {
+      return { mode: 'fixed', value: perUnitDiscount * Math.max(1, qty) }
+    }
+
     const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
-    if (Number.isFinite(lineDiscount) && qty > 0) {
-      return { mode: 'fixed', value: lineDiscount / qty }
+    if (Number.isFinite(lineDiscount)) {
+      return { mode: 'fixed', value: lineDiscount }
     }
 
     return { mode: 'percentage', value: 0 }
@@ -326,6 +335,18 @@ export const useQuotationsStore = defineStore('quotations', () => {
           Math.max(0, toNumber(quotation.grand_total, 0) - toNumber(quotation.subtotal, 0) + toNumber(quotation.total_discount, 0)),
         ),
       ),
+      other_fees: Math.max(
+        0,
+        toNumber(
+          toFiniteNumberOrUndefined(quotation.other_fees)
+          ?? toFiniteNumberOrUndefined(
+            quotation.district && typeof quotation.district === 'object'
+              ? (quotation.district as Record<string, unknown>).other_fees
+              : undefined,
+          ),
+          0,
+        ),
+      ),
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -347,6 +368,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
     return calculateQuotationSummary({
       rows,
       deliveryFees: draft.value.delivery_fees,
+      otherFees: draft.value.other_fees,
     })
   })
 
@@ -437,6 +459,11 @@ export const useQuotationsStore = defineStore('quotations', () => {
     row.discount_value = Number.isFinite(n) ? Math.max(0, n) : 0
   }
 
+  const rowDiscountPercentage = (unitPrice: number, discountPerUnit: number): string => {
+    if (!(unitPrice > 0)) return formatTo2DecimalString(0)
+    return formatTo2DecimalString((discountPerUnit / unitPrice) * 100)
+  }
+
   const buildPayload = () => ({
     reference_number: draft.value.reference_number || undefined,
     description: draft.value.description || undefined,
@@ -449,21 +476,27 @@ export const useQuotationsStore = defineStore('quotations', () => {
     terms: draft.value.terms || undefined,
     notes: draft.value.notes || undefined,
     delivery_fees: draft.value.delivery_fees || 0,
+    other_fees: draft.value.other_fees || 0,
     subtotal: summary.value.subtotal,
     total_discount: summary.value.totalDiscount,
     grand_total: summary.value.grandTotal,
     items: draft.value.items
       .filter(item => item.product_id)
-      .map(item => ({
-        product_id: item.product_id,
-        variation_id: item.variation_id,
-        description: item.description || undefined,
-        qty: item.qty,
-        unit_price: item.unit_price,
-        discount: formatTo2DecimalString(rowMath(item).discount),
-        line_discount: formatTo2DecimalString(rowMath(item).lineDiscount),
-        row_total: rowMath(item).rowTotal,
-      })),
+      .map((item) => {
+        const totals = rowMath(item)
+        const discountPercentage = rowDiscountPercentage(item.unit_price, totals.discount)
+        return {
+          product_id: item.product_id,
+          variation_id: item.variation_id,
+          description: item.description || undefined,
+          qty: item.qty,
+          unit_price: item.unit_price,
+          discount: formatTo2DecimalString(totals.discount),
+          discount_percentage: discountPercentage,
+          line_discount: discountPercentage,
+          row_total: totals.rowTotal,
+        }
+      }),
   })
 
   const loadList = async (params: Record<string, string | number | undefined> = {}) => {

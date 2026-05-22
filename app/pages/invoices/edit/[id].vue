@@ -35,7 +35,7 @@ const productSearch = ref('')
 const barcodeInput = ref('')
 const searchResults = ref<QuotationProductOption[]>([])
 const warehouseOptions = ref<InvoiceWarehouseOption[]>([])
-const districtOptions = ref<Array<{ id: number, district: string, delivery_fee: string }>>([])
+const districtOptions = ref<Array<{ id: number, district: string, delivery_fee: string, other_fees: string | null }>>([])
 const loadingDistricts = ref(false)
 const clearDialogOpen = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -109,8 +109,8 @@ const loadDistrictOptions = async () => {
   loadingDistricts.value = true
   try {
     const res = await $api<{
-      data?: { districts?: Array<{ id: number, district: string, delivery_fee: string }> }
-      districts?: Array<{ id: number, district: string, delivery_fee: string }>
+      data?: { districts?: Array<{ id: number, district: string, delivery_fee: string, other_fees: string | null }> }
+      districts?: Array<{ id: number, district: string, delivery_fee: string, other_fees: string | null }>
     }>('/districts', {
       params: { page: 1, per_page: 100 },
     })
@@ -127,10 +127,15 @@ const loadDistrictOptions = async () => {
 const onDistrictChange = (value: unknown) => {
   const selectedId = Number(value ?? 0)
   draft.value.district_id = Number.isFinite(selectedId) && selectedId > 0 ? selectedId : null
-  if (!draft.value.district_id) return
+  if (!draft.value.district_id) {
+    draft.value.delivery_fees = 0
+    draft.value.other_fees = 0
+    return
+  }
   const selected = districtOptions.value.find(item => item.id === draft.value.district_id)
   if (!selected) return
   draft.value.delivery_fees = Math.max(0, Number(selected.delivery_fee) || 0)
+  draft.value.other_fees = Math.max(0, Number(selected.other_fees) || 0)
 }
 type SaveMode = 'close' | 'add'
 const saveInvoice = async (mode: SaveMode) => {
@@ -319,7 +324,7 @@ onMounted(async () => {
           </div>
 
           <div class="flex flex-wrap gap-2"><Button type="button" variant="outline" class="gap-1.5" @click="invoicesStore.addRow"><Plus class="size-4" />{{ t('invoices_page.add_row') }}</Button><Button type="button" variant="outline" class="text-red-600" @click="clearDialogOpen = true">{{ t('invoices_page.clear_all') }}</Button></div>
-          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-5">
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.subtotal) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.totalDiscount) }}</p></div>
             <div class="space-y-1"><label class="text-xs text-muted-foreground">{{ t('invoices_page.delivery_fees') }}</label><Input :model-value="draft.delivery_fees" type="number" min="0" class="tabular-nums" @update:model-value="value => draft.delivery_fees = Math.max(0, Number(value) || 0)" /></div>

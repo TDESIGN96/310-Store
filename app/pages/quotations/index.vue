@@ -253,12 +253,15 @@ const resolveQuotationDeliveryFeesForConvert = (quotation: Record<string, unknow
   return Number.isFinite(fallback) ? Math.max(0, fallback) : 0
 }
 
-const ensureConversionWarehouseId = async (): Promise<number | null> => {
-  if (conversionWarehouseId.value) return conversionWarehouseId.value
+const ensureConversionWarehouseCandidates = async (): Promise<number[]> => {
   const warehouses = await loadActiveWarehouses()
-  const fallbackId = Number(warehouses[0]?.id ?? 0)
-  conversionWarehouseId.value = Number.isFinite(fallbackId) && fallbackId > 0 ? fallbackId : null
-  return conversionWarehouseId.value
+  const ids = warehouses
+    .map(warehouse => Number(warehouse.id))
+    .filter(id => Number.isFinite(id) && id > 0)
+  if (conversionWarehouseId.value && !ids.includes(conversionWarehouseId.value)) {
+    return [conversionWarehouseId.value, ...ids]
+  }
+  return conversionWarehouseId.value ? [conversionWarehouseId.value, ...ids.filter(id => id !== conversionWarehouseId.value)] : ids
 }
 
 const validateQuotationConversion = async (quotationId: number, warehouseId: number): Promise<{ canConvert: boolean, message: string }> => {
@@ -283,6 +286,33 @@ const validateQuotationConversion = async (quotationId: number, warehouseId: num
       canConvert: false,
       message: getErrorMessage(error) || t('quotations_page.convert_error'),
     }
+  }
+}
+
+const resolveConvertibleWarehouse = async (
+  quotationId: number,
+): Promise<{ warehouseId: number | null, message: string }> => {
+  const candidates = await ensureConversionWarehouseCandidates()
+  if (!candidates.length) {
+    return {
+      warehouseId: null,
+      message: t('invoices_page.warehouse_required'),
+    }
+  }
+
+  let lastMessage = t('quotations_page.convert_error')
+  for (const warehouseId of candidates) {
+    const result = await validateQuotationConversion(quotationId, warehouseId)
+    if (result.canConvert) {
+      conversionWarehouseId.value = warehouseId
+      return { warehouseId, message: '' }
+    }
+    if (result.message) lastMessage = result.message
+  }
+
+  return {
+    warehouseId: null,
+    message: lastMessage,
   }
 }
 
@@ -338,15 +368,10 @@ const cloneQuotation = async (row: QuotationListItem) => {
 const convertToInvoice = async (row: QuotationListItem) => {
   convertingId.value = row.id
   try {
-    const warehouseId = await ensureConversionWarehouseId()
+    const warehouseResolution = await resolveConvertibleWarehouse(row.id)
+    const warehouseId = warehouseResolution.warehouseId
     if (!warehouseId) {
-      toast.error(t('invoices_page.warehouse_required'))
-      return
-    }
-
-    const conversionCheck = await validateQuotationConversion(row.id, warehouseId)
-    if (!conversionCheck.canConvert) {
-      toast.error(conversionCheck.message)
+      toast.error(warehouseResolution.message || t('quotations_page.convert_error'))
       return
     }
 
@@ -356,7 +381,7 @@ const convertToInvoice = async (row: QuotationListItem) => {
       return
     }
 
-    invoicesStore.hydrateDraftFromQuotationForConvert(source)
+    await invoicesStore.hydrateDraftFromQuotationForConvert(source)
     const resolvedDeliveryFees = resolveQuotationDeliveryFeesForConvert(source)
     invoicesStore.draft.delivery_fees = resolvedDeliveryFees
     invoicesStore.draft.warehouse_id = warehouseId

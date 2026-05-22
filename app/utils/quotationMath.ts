@@ -28,13 +28,14 @@ export const calculateLineTotals = (line: QuotationLineMathInput): QuotationLine
   const unitPrice = Math.max(0, toNumber(line.unitPrice, 0))
   const discountMode = line.discountMode === 'fixed' ? 'fixed' : 'percentage'
   const rawDiscountValue = Math.max(0, toNumber(line.discountValue, 0))
-  const discountPercent = clamp(rawDiscountValue, 0, 100)
-  const discountPerUnit = discountMode === 'fixed'
-    ? Math.min(rawDiscountValue, unitPrice)
-    : unitPrice * (discountPercent / 100)
   const gross = qty * unitPrice
-  const lineDiscountRaw = discountPerUnit * qty
+  const discountPercent = clamp(rawDiscountValue, 0, 100)
+  // Fixed discount is row-level (qty * unit price), not per-unit.
+  const lineDiscountRaw = discountMode === 'fixed'
+    ? rawDiscountValue
+    : gross * (discountPercent / 100)
   const lineDiscount = Math.min(gross, lineDiscountRaw)
+  const discountPerUnit = qty > 0 ? lineDiscount / qty : 0
   const rowTotal = gross - lineDiscount
   return {
     gross: roundTo2(gross),
@@ -47,6 +48,7 @@ export const calculateLineTotals = (line: QuotationLineMathInput): QuotationLine
 export interface QuotationSummaryInput {
   rows: QuotationLineMathInput[]
   deliveryFees: string | number | undefined
+  otherFees?: string | number | undefined
 }
 
 export interface QuotationSummaryResult {
@@ -68,7 +70,8 @@ export const calculateQuotationSummary = (
     { subtotal: 0, totalDiscount: 0 },
   )
   const deliveryFees = Math.max(0, toNumber(input.deliveryFees, 0))
-  const grandTotal = totals.subtotal - totals.totalDiscount + deliveryFees
+  const otherFees = Math.max(0, toNumber(input.otherFees, 0))
+  const grandTotal = totals.subtotal - totals.totalDiscount + deliveryFees + otherFees
   return {
     subtotal: totals.subtotal,
     totalDiscount: totals.totalDiscount,

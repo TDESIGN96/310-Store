@@ -45,7 +45,19 @@ const deliveryFeeValue = computed(() => {
   }
   return 0
 })
+const otherFeeValue = computed(() => {
+  const q = quotation.value
+  if (!q) return 0
+  const direct = asNumber(q.other_fees)
+  if (direct > 0) return direct
+  const district = q.district
+  if (district && typeof district === 'object') {
+    return asNumber((district as Record<string, unknown>).other_fees)
+  }
+  return 0
+})
 const showDeliveryFee = computed(() => deliveryFeeValue.value > 0)
+const showOtherFee = computed(() => otherFeeValue.value > 0)
 const items = computed(() => {
   const raw = quotation.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []
@@ -81,7 +93,7 @@ const productImageUrl = (row: Record<string, unknown>) => {
 const variationLabel = (row: Record<string, unknown>) => {
   const variation = (row.variation && typeof row.variation === 'object' ? row.variation : null) as Record<string, unknown> | null
   if (!variation) return '—'
-  return String(variation.label ?? variation.sku ?? '—')
+  return String(variation.label ?? '—')
 }
 
 const itemDiscount = (row: Record<string, unknown>) => {
@@ -271,6 +283,10 @@ onMounted(async () => {
             <div v-if="showDeliveryFee">
               <p class="text-xs text-muted-foreground">{{ t('quotations_page.delivery_fees') }}</p>
               <p class="mt-1 font-semibold tabular-nums">{{ money(deliveryFeeValue) }}</p>
+            </div>
+            <div v-if="showOtherFee">
+              <p class="text-xs text-muted-foreground">{{ t('quotations_page.other_fees') }}</p>
+              <p class="mt-1 font-semibold tabular-nums">{{ money(otherFeeValue) }}</p>
             </div>
             <div>
               <p class="text-xs text-muted-foreground">{{ t('quotations_page.grand_total') }}</p>

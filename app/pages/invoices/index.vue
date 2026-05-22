@@ -29,7 +29,7 @@ import { formatDisplayDate } from '@/utils/formatDisplayDate'
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
-const { canAccess, canCreate, canEdit, canDelete } = usePermissions()
+const { canAccess, canCreate, canEdit, canDelete, can } = usePermissions()
 const { $api } = useApi()
 const invoicesStore = useInvoicesStore()
 
@@ -37,11 +37,11 @@ const canViewInvoices = computed(() => canAccess('invoices'))
 const canCreateInvoice = computed(() => canCreate('invoices'))
 const canEditInvoice = computed(() => canEdit('invoices'))
 const canDeleteInvoice = computed(() => canDelete('invoices'))
+const canCreateInvoiceReturn = computed(() => can('invoice_returns.store'))
 
 const search = ref('')
 const filterStatus = ref<'all' | 'pending' | 'in_delivery' | 'complete'>('all')
-const invoiceDateFrom = ref('')
-const invoiceDateTo = ref('')
+const invoiceDate = ref('')
 const supplyDate = ref('')
 const currentPage = ref(1)
 const deleteTarget = ref<InvoiceListItem | null>(null)
@@ -55,7 +55,7 @@ const shipmentSyncLoading = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
-  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDateFrom.value) || Boolean(invoiceDateTo.value) || Boolean(supplyDate.value),
+  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDate.value) || Boolean(supplyDate.value),
 )
 const isAllSelected = computed(
   () => sortedList.value.length > 0 && sortedList.value.every(row => selectedIds.value.has(row.id)),
@@ -131,11 +131,12 @@ const warehouseLabel = (row: InvoiceListItem) => {
   return locale.value === 'ar' ? (nameAr || nameEn || '—') : (nameEn || nameAr || '—')
 }
 
-const statusLabel = (status: string) => {
-  if (status === 'pending') return t('invoices_page.status_pending')
-  if (status === 'in_delivery') return t('invoices_page.status_in_delivery')
-  if (status === 'complete') return t('invoices_page.status_complete')
-  return status || '—'
+const statusLabel = (row: InvoiceListItem) => {
+  if (row.status_label) return row.status_label
+  if (row.status === 'pending') return t('invoices_page.status_pending')
+  if (row.status === 'in_delivery') return t('invoices_page.status_in_delivery')
+  if (row.status === 'complete') return t('invoices_page.status_complete')
+  return row.status || '—'
 }
 
 const loadRows = async (page = currentPage.value) => {
@@ -148,8 +149,7 @@ const loadRows = async (page = currentPage.value) => {
     search: query || undefined,
     reference_number: query || undefined,
     customer_name: query || undefined,
-    invoice_date_from: toIsoDateTimeStart(invoiceDateFrom.value),
-    invoice_date_to: toIsoDateTimeEnd(invoiceDateTo.value),
+    invoice_date: toIsoDateTimeStart(invoiceDate.value),
     supply_date: toIsoDateTimeStart(supplyDate.value),
     status: filterStatus.value === 'all' ? undefined : filterStatus.value,
   }
@@ -160,8 +160,7 @@ const loadRows = async (page = currentPage.value) => {
 const resetFilters = async () => {
   search.value = ''
   filterStatus.value = 'all'
-  invoiceDateFrom.value = ''
-  invoiceDateTo.value = ''
+  invoiceDate.value = ''
   supplyDate.value = ''
   await loadRows(1)
 }
@@ -206,10 +205,6 @@ const confirmBulkDelete = async () => {
   finally {
     bulkDeleteLoading.value = false
   }
-}
-
-const showReturnStub = () => {
-  toast.info(t('invoices_page.return_unavailable'))
 }
 
 const syncShipmentStatus = async () => {
@@ -271,7 +266,7 @@ const cloneInvoice = async (row: InvoiceListItem) => {
 }
 
 watch(
-  [search, filterStatus, invoiceDateFrom, invoiceDateTo, supplyDate],
+  [search, filterStatus, invoiceDate, supplyDate],
   () => {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => loadRows(1), 300)
@@ -339,15 +334,9 @@ const goToPage = (page: number) => {
       <div class="flex flex-col gap-4 rounded-lg border bg-card/30 p-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">
           <span class="text-sm font-medium text-foreground">{{ t('invoices_page.invoice_date') }}</span>
-          <div class="grid gap-2 sm:grid-cols-2">
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_from') }}</label>
-              <DatePickerInput v-model="invoiceDateFrom" class="w-full" />
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_to') }}</label>
-              <DatePickerInput v-model="invoiceDateTo" class="w-full" />
-            </div>
+          <div class="space-y-1">
+            <label class="text-xs text-muted-foreground">{{ t('invoices_page.invoice_date') }}</label>
+            <DatePickerInput v-model="invoiceDate" class="w-full" />
           </div>
         </div>
         <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">
@@ -431,17 +420,17 @@ const goToPage = (page: number) => {
               <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.invoice_date) }}</TableCell>
               <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
               <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
-              <TableCell><Badge variant="outline">{{ statusLabel(row.status) }}</Badge></TableCell>
+              <TableCell><Badge variant="outline">{{ statusLabel(row) }}</Badge></TableCell>
               <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ row.shipment_status_label || '—' }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
-              <TableCell class="rtl:text-start text-sm">{{ row.return_reference_number || '—' }}</TableCell>
+              <TableCell class="rtl:text-start text-sm">{{ row.return_reference || row.return_reference_number || '—' }}</TableCell>
               <TableCell class="text-end">
                 <TableRowActions
                   :actions="[
                     { key: `edit-${row.id}`, label: t('invoices_page.action_edit'), type: 'link', to: `/invoices/edit/${row.id}`, icon: Pencil, tone: 'default', disabled: !canEditInvoice },
                     { key: `copy-${row.id}`, label: t('invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateInvoice, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
-                    { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', onClick: showReturnStub },
+                    { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', visible: canCreateInvoiceReturn, onClick: () => navigateTo(`/invoices/return/${row.id}`) },
                     { key: `delete-${row.id}`, label: t('invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteInvoice, onClick: () => requestDelete(row) },
                   ]"
                   variant="invoice"

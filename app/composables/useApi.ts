@@ -8,8 +8,17 @@ export const useApi = () => {
   const { getErrorMessage } = useApiError()
   const { locale } = useI18n()
 
+  const normalizeBaseUrl = (value: unknown): string => {
+    const raw = String(value ?? '').trim()
+    if (!raw) return 'http://localhost:8000/api'
+    if (/^https?:\/\//i.test(raw)) return raw.replace(/\/+$/, '')
+    return 'http://localhost:8000/api'
+  }
+
+  const resolvedBaseURL = normalizeBaseUrl(config.public.apiBase)
+
   const $api = $fetch.create({
-    baseURL: config.public.apiBase,
+    baseURL: resolvedBaseURL,
 
     onRequest({ options }) {
       const headers = new Headers(options.headers as HeadersInit | undefined)
@@ -22,7 +31,6 @@ export const useApi = () => {
       }
 
       options.headers = headers
-
     },
 
     onResponseError({ response }) {

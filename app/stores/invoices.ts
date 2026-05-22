@@ -30,12 +30,80 @@ export interface InvoiceListItem {
   invoice_date: string
   supply_date: string
   status: InvoiceStatus
+  status_label: string
   shipment_code: string
   shipment_status: number | null
   shipment_status_label: string
   total_discount: number
   grand_total: number
+  return_reference: string
   return_reference_number: string
+}
+
+export interface InvoiceReturnFormItem {
+  invoice_item_id: number
+  product_id: number | null
+  variation_id: number | null
+  description: string
+  product_name_ar: string
+  product_name_en: string
+  variation_label: string
+  original_qty: number
+}
+
+export interface InvoiceReturnCreateItemPayload {
+  invoice_item_id: number
+  qty: number
+}
+
+export interface InvoiceReturnCreatePayload {
+  reason: string | null
+  return_date: string | null
+  items: InvoiceReturnCreateItemPayload[]
+}
+
+export interface InvoiceReturnActor {
+  id: number
+  name: string
+  email: string
+}
+
+export interface InvoiceReturnListItem {
+  id: number
+  return_reference: string
+  reference_number: string
+  invoice_id: number
+  return_date: string
+  reason: string
+  created_by: InvoiceReturnActor | null
+}
+
+export interface InvoiceReturnItem {
+  id: number
+  invoice_return_id: number
+  invoice_item_id: number
+  product_id: number
+  variation_id: number
+  qty: number
+  invoice_item: Record<string, unknown> | null
+  product: Record<string, unknown> | null
+  variation: Record<string, unknown> | null
+}
+
+export interface InvoiceReturnRecord {
+  id: number
+  return_reference: string
+  reference_number: string
+  invoice_id: number
+  reason: string
+  return_date: string
+  items: InvoiceReturnItem[]
+  created_by: InvoiceReturnActor | null
+}
+
+export interface InvoiceReturnListResult {
+  returns: InvoiceReturnListItem[]
+  pagination: InvoicePagination
 }
 
 export interface InvoiceDraftItem {
@@ -66,6 +134,7 @@ export interface InvoiceDraft {
   terms: string
   notes: string
   delivery_fees: number
+  other_fees: number
   items: InvoiceDraftItem[]
 }
 
@@ -109,6 +178,7 @@ const createEmptyDraft = (): InvoiceDraft => ({
   terms: '',
   notes: '',
   delivery_fees: 0,
+  other_fees: 0,
   items: [createEmptyItem()],
 })
 
@@ -127,6 +197,7 @@ const getVariationPrice = (item: InvoiceDraftItem): number => {
 export const useInvoicesStore = defineStore('invoices', () => {
   const { $api } = useApi()
   const INVOICES_ENDPOINT = '/v1/invoices'
+  const INVOICE_RETURNS_ENDPOINT = '/v1/invoice-returns'
   const draft = ref<InvoiceDraft>(createEmptyDraft())
   const submitting = ref(false)
   const list = ref<InvoiceListItem[]>([])
@@ -173,8 +244,18 @@ export const useInvoicesStore = defineStore('invoices', () => {
   const normalizeListItem = (payload: Record<string, unknown>): InvoiceListItem => {
     const warehouse = (payload.warehouse && typeof payload.warehouse === 'object' ? payload.warehouse : null) as Record<string, unknown> | null
     const district = (payload.district && typeof payload.district === 'object' ? payload.district : null) as Record<string, unknown> | null
+    const returnEntity = (
+      payload.return && typeof payload.return === 'object' ? payload.return : null
+    ) as Record<string, unknown> | null
     const shipmentCode = String(payload.shipment_code ?? '').trim()
     const shipmentStatusLabel = String(payload.shipment_status_label ?? '').trim()
+    const returnReference = String(
+      payload.return_reference
+      ?? payload.return_reference_number
+      ?? returnEntity?.reference_number
+      ?? payload.return_ref_id
+      ?? '',
+    ).trim()
     return {
       id: toNumber(payload.id, 0),
       reference_number: String(payload.reference_number ?? ''),
@@ -186,12 +267,14 @@ export const useInvoicesStore = defineStore('invoices', () => {
       invoice_date: String(payload.invoice_date ?? ''),
       supply_date: String(payload.supply_date ?? ''),
       status: normalizeStatus(payload.status),
+      status_label: String(payload.status_label ?? payload.status ?? ''),
       shipment_code: shipmentCode,
       shipment_status: toFiniteNumberOrUndefined(payload.shipment_status) ?? null,
       shipment_status_label: shipmentStatusLabel,
       total_discount: toNumber(payload.total_discount, 0),
       grand_total: toNumber(payload.grand_total, 0),
-      return_reference_number: String(payload.return_reference_number ?? payload.return_ref_id ?? ''),
+      return_reference: returnReference,
+      return_reference_number: returnReference,
     }
   }
 
@@ -214,26 +297,170 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return invoice && typeof invoice === 'object' ? invoice : null
   }
 
+  const extractReturnFormItems = (invoice: Record<string, unknown>): InvoiceReturnFormItem[] => {
+    const rows = Array.isArray(invoice.items) ? invoice.items : []
+    return rows
+      .map((raw) => {
+        const item = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+        const product = (
+          item.product && typeof item.product === 'object' ? item.product : null
+        ) as Record<string, unknown> | null
+        const variation = (
+          item.variation && typeof item.variation === 'object' ? item.variation : null
+        ) as Record<string, unknown> | null
+        return {
+          invoice_item_id: toNumber(item.id, 0),
+          product_id: toNumber(item.product_id, 0) || null,
+          variation_id: toNumber(item.variation_id, 0) || null,
+          description: String(item.description ?? ''),
+          product_name_ar: String(product?.name_ar ?? ''),
+          product_name_en: String(product?.name_en ?? ''),
+          variation_label: String(variation?.label ?? variation?.sku ?? ''),
+          original_qty: Math.max(0, toNumber(item.qty, 0)),
+        }
+      })
+      .filter(item => item.invoice_item_id > 0 && item.original_qty > 0)
+  }
+
+  const normalizeReturnActor = (value: unknown): InvoiceReturnActor | null => {
+    if (!value || typeof value !== 'object') return null
+    const raw = value as Record<string, unknown>
+    const id = toNumber(raw.id, 0)
+    const name = String(raw.name ?? '').trim()
+    const email = String(raw.email ?? '').trim()
+    if (!id && !name && !email) return null
+    return { id, name, email }
+  }
+
+  const normalizeReturnItem = (value: unknown): InvoiceReturnItem | null => {
+    if (!value || typeof value !== 'object') return null
+    const raw = value as Record<string, unknown>
+    return {
+      id: toNumber(raw.id, 0),
+      invoice_return_id: toNumber(raw.invoice_return_id, 0),
+      invoice_item_id: toNumber(raw.invoice_item_id, 0),
+      product_id: toNumber(raw.product_id, 0),
+      variation_id: toNumber(raw.variation_id, 0),
+      qty: Math.max(0, toNumber(raw.qty, 0)),
+      invoice_item: raw.invoice_item && typeof raw.invoice_item === 'object' ? raw.invoice_item as Record<string, unknown> : null,
+      product: raw.product && typeof raw.product === 'object' ? raw.product as Record<string, unknown> : null,
+      variation: raw.variation && typeof raw.variation === 'object' ? raw.variation as Record<string, unknown> : null,
+    }
+  }
+
+  const normalizeInvoiceReturnListItem = (value: unknown): InvoiceReturnListItem | null => {
+    if (!value || typeof value !== 'object') return null
+    const raw = value as Record<string, unknown>
+    const id = toNumber(raw.id, 0)
+    if (id <= 0) return null
+    const returnReference = String(raw.return_reference ?? raw.reference_number ?? '').trim()
+    return {
+      id,
+      return_reference: returnReference,
+      reference_number: returnReference,
+      invoice_id: toNumber(raw.invoice_id, 0),
+      return_date: String(raw.return_date ?? ''),
+      reason: String(raw.reason ?? ''),
+      created_by: normalizeReturnActor(raw.created_by),
+    }
+  }
+
+  const normalizeInvoiceReturnRecord = (value: unknown): InvoiceReturnRecord | null => {
+    if (!value || typeof value !== 'object') return null
+    const raw = value as Record<string, unknown>
+    const id = toNumber(raw.id, 0)
+    if (id <= 0) return null
+    const itemsRaw = Array.isArray(raw.items) ? raw.items : []
+    const returnReference = String(raw.return_reference ?? raw.reference_number ?? '').trim()
+    return {
+      id,
+      return_reference: returnReference,
+      reference_number: returnReference,
+      invoice_id: toNumber(raw.invoice_id, 0),
+      reason: String(raw.reason ?? ''),
+      return_date: String(raw.return_date ?? ''),
+      items: itemsRaw.map(item => normalizeReturnItem(item)).filter((x): x is InvoiceReturnItem => Boolean(x)),
+      created_by: normalizeReturnActor(raw.created_by),
+    }
+  }
+
+  const extractInvoiceReturn = (payload: unknown): InvoiceReturnRecord | null => {
+    if (!payload || typeof payload !== 'object') return null
+    const root = payload as Record<string, unknown>
+    const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
+    return normalizeInvoiceReturnRecord(nested?.return ?? root.return ?? null)
+  }
+
+  const extractInvoiceReturns = (payload: unknown): InvoiceReturnListItem[] => {
+    if (!payload || typeof payload !== 'object') return []
+    const root = payload as Record<string, unknown>
+    const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
+    const rows = (nested?.returns ?? root.returns ?? []) as unknown[]
+    if (!Array.isArray(rows)) return []
+    return rows.map(row => normalizeInvoiceReturnListItem(row)).filter((x): x is InvoiceReturnListItem => Boolean(x))
+  }
+
   const resolveHydratedDiscount = (
     item: Record<string, unknown>,
     qty: number,
   ): { mode: 'fixed' | 'percentage', value: number } => {
-    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
-    if (Number.isFinite(perUnitDiscount)) {
-      return { mode: 'fixed', value: perUnitDiscount }
-    }
-
     const discountPercent = toNumber(item.discount_percentage ?? item.discount_percent, NaN)
     if (Number.isFinite(discountPercent)) {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
 
+    // Fixed discount is now row-level (group qty), so hydrate as total line discount.
+    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
+    if (Number.isFinite(perUnitDiscount)) {
+      return { mode: 'fixed', value: perUnitDiscount * Math.max(1, qty) }
+    }
+
     const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
-    if (Number.isFinite(lineDiscount) && qty > 0) {
-      return { mode: 'fixed', value: lineDiscount / qty }
+    if (Number.isFinite(lineDiscount)) {
+      return { mode: 'fixed', value: lineDiscount }
     }
 
     return { mode: 'percentage', value: 0 }
+  }
+
+  const normalizeVariationOption = (raw: Record<string, unknown>) => ({
+    id: toNumber(raw.id, 0),
+    sku: String(raw.sku ?? ''),
+    barcode: String(raw.barcode ?? ''),
+    price: toNumber(raw.price, 0),
+    resolved_price: toNumber(raw.resolved_price ?? raw.price, 0),
+    is_active: true,
+    label: String(raw.label ?? raw.sku ?? ''),
+    tiered_prices: (Array.isArray(raw.tiered_prices) ? raw.tiered_prices : []).map((tierRaw) => {
+      const tier = tierRaw as Record<string, unknown>
+      return {
+        quantity_from: toNumber(tier.quantity_from, 0),
+        quantity_to: toNumber(tier.quantity_to, 0),
+        price: toNumber(tier.price, 0),
+      }
+    }),
+  })
+
+  const loadVariationMapForProducts = async (productIds: number[]): Promise<Map<number, ReturnType<typeof normalizeVariationOption>[]>> => {
+    const uniqueIds = [...new Set(productIds.filter(id => Number.isFinite(id) && id > 0))]
+    const entries = await Promise.all(uniqueIds.map(async (productId) => {
+      try {
+        const response = await $api(`/products/${productId}/variations`)
+        const root = (response && typeof response === 'object') ? response as Record<string, unknown> : {}
+        const nested = (root.data && typeof root.data === 'object') ? root.data as Record<string, unknown> : null
+        const rows = (nested?.variations ?? root.variations ?? []) as unknown[]
+        const mapped = Array.isArray(rows)
+          ? rows
+            .map(row => normalizeVariationOption((row ?? {}) as Record<string, unknown>))
+            .filter(variation => variation.id > 0)
+          : []
+        return [productId, mapped] as [number, ReturnType<typeof normalizeVariationOption>[]]
+      }
+      catch {
+        return [productId, [] as ReturnType<typeof normalizeVariationOption>[]] as [number, ReturnType<typeof normalizeVariationOption>[]]
+      }
+    }))
+    return new Map(entries)
   }
 
   const hydrateDraftFromInvoice = (invoice: Record<string, unknown>) => {
@@ -343,70 +570,57 @@ export const useInvoicesStore = defineStore('invoices', () => {
           0,
         ),
       ),
+      other_fees: Math.max(
+        0,
+        toNumber(
+          toFiniteNumberOrUndefined(invoice.other_fees)
+          ?? toFiniteNumberOrUndefined((invoice.district as Record<string, unknown> | null)?.other_fees),
+          0,
+        ),
+      ),
       items: items.length ? items : [createEmptyItem()],
     }
   }
 
-  const hydrateDraftFromQuotationForConvert = (quotation: Record<string, unknown>) => {
-    const items = (Array.isArray(quotation.items) ? quotation.items : [])
+  const hydrateDraftFromQuotationForConvert = async (quotation: Record<string, unknown>) => {
+    const sourceItems = Array.isArray(quotation.items) ? quotation.items : []
+    const productIds = sourceItems
+      .map((rawItem) => {
+        const item = rawItem as Record<string, unknown>
+        const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
+        return toNumber(item.product_id ?? productRaw?.id, 0)
+      })
+      .filter(id => id > 0)
+    const variationMap = await loadVariationMapForProducts(productIds)
+
+    const items = sourceItems
       .map((rawItem) => {
         const item = rawItem as Record<string, unknown>
         const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
         const variationRaw = (item.variation && typeof item.variation === 'object' ? item.variation : null) as Record<string, unknown> | null
-        const mappedVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
-          .map((rawVariation) => {
-            const variation = rawVariation as Record<string, unknown>
-            return {
-              id: toNumber(variation.id, 0),
-              sku: String(variation.sku ?? ''),
-              barcode: String(variation.barcode ?? ''),
-              price: toNumber(variation.price, 0),
-              resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
-              is_active: true,
-              label: String(variation.label ?? variation.sku ?? ''),
-              tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
-                const tier = tierRaw as Record<string, unknown>
-                return {
-                  quantity_from: toNumber(tier.quantity_from, 0),
-                  quantity_to: toNumber(tier.quantity_to, 0),
-                  price: toNumber(tier.price, 0),
-                }
-              }),
-            }
-          })
+        const productId = toNumber(item.product_id ?? productRaw?.id, 0)
+        const fallbackVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
+          .map(rawVariation => normalizeVariationOption(rawVariation as Record<string, unknown>))
           .filter(v => v.id > 0)
+        const mappedVariations = [...(variationMap.get(productId) ?? fallbackVariations)]
 
         const selectedVariationId = toNumber(item.variation_id ?? variationRaw?.id, 0)
         const hasSelectedVariation = selectedVariationId > 0 && mappedVariations.some(v => v.id === selectedVariationId)
         if (!hasSelectedVariation && variationRaw && selectedVariationId > 0) {
-          mappedVariations.unshift({
-            id: selectedVariationId,
-            sku: String(variationRaw.sku ?? ''),
-            barcode: String(variationRaw.barcode ?? ''),
-            price: toNumber(variationRaw.price, 0),
-            resolved_price: toNumber(variationRaw.resolved_price ?? variationRaw.price, 0),
-            is_active: true,
-            label: String(variationRaw.label ?? variationRaw.sku ?? ''),
-            tiered_prices: (Array.isArray(variationRaw.tiered_prices) ? variationRaw.tiered_prices : []).map((tierRaw) => {
-              const tier = tierRaw as Record<string, unknown>
-              return {
-                quantity_from: toNumber(tier.quantity_from, 0),
-                quantity_to: toNumber(tier.quantity_to, 0),
-                price: toNumber(tier.price, 0),
-              }
-            }),
-          })
+          mappedVariations.unshift(normalizeVariationOption(variationRaw))
         }
 
-        const product: QuotationProductOption | null = productRaw
+        const nameAr = String(productRaw?.name_ar ?? item.product_name_ar ?? item.product_name ?? '')
+        const nameEn = String(productRaw?.name_en ?? item.product_name_en ?? item.product_name ?? '')
+        const product: QuotationProductOption | null = productId > 0
           ? {
-              id: toNumber(productRaw.id, 0),
-              name_ar: String(productRaw.name_ar ?? ''),
-              name_en: String(productRaw.name_en ?? ''),
-              barcode: String(productRaw.barcode ?? ''),
-              price: toNumber(productRaw.price, 0),
+              id: productId,
+              name_ar: nameAr,
+              name_en: nameEn,
+              barcode: String(productRaw?.barcode ?? ''),
+              price: toNumber(productRaw?.price ?? item.unit_price, 0),
               is_available: true,
-              is_combo: Boolean(productRaw.is_combo),
+              is_combo: Boolean(productRaw?.is_combo),
               variations: mappedVariations,
             }
           : null
@@ -436,6 +650,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
       ?? toFiniteNumberOrUndefined(quotation.delivery_fee)
       ?? toFiniteNumberOrUndefined((quotation.district as Record<string, unknown> | null)?.delivery_fee)
       ?? quotationFallbackDelivery
+    const resolvedConvertedOtherFees = toFiniteNumberOrUndefined(quotation.other_fees)
+      ?? toFiniteNumberOrUndefined((quotation.district as Record<string, unknown> | null)?.other_fees)
+      ?? 0
 
     draft.value = {
       id: null,
@@ -456,6 +673,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       terms: String(quotation.terms ?? ''),
       notes: String(quotation.notes ?? ''),
       delivery_fees: Math.max(0, resolvedConvertedDeliveryFees),
+      other_fees: Math.max(0, resolvedConvertedOtherFees),
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -477,6 +695,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return calculateQuotationSummary({
       rows,
       deliveryFees: draft.value.delivery_fees,
+      otherFees: draft.value.other_fees,
     })
   })
 
@@ -567,6 +786,11 @@ export const useInvoicesStore = defineStore('invoices', () => {
     row.discount_value = Number.isFinite(n) ? Math.max(0, n) : 0
   }
 
+  const rowDiscountPercentage = (unitPrice: number, discountPerUnit: number): string => {
+    if (!(unitPrice > 0)) return formatTo2DecimalString(0)
+    return formatTo2DecimalString((discountPerUnit / unitPrice) * 100)
+  }
+
   const buildPayload = () => ({
     reference_number: draft.value.reference_number || undefined,
     warehouse_id: draft.value.warehouse_id,
@@ -581,6 +805,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     terms: draft.value.terms || undefined,
     notes: draft.value.notes || undefined,
     delivery_fees: draft.value.delivery_fees || 0,
+    other_fees: draft.value.other_fees || 0,
     subtotal: summary.value.subtotal,
     total_discount: summary.value.totalDiscount,
     grand_total: summary.value.grandTotal,
@@ -588,6 +813,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       .filter(item => item.product_id)
       .map((item) => {
         const totals = rowMath(item)
+        const discountPercentage = rowDiscountPercentage(item.unit_price, totals.discount)
         return {
           product_id: item.product_id,
           variation_id: item.variation_id,
@@ -595,8 +821,8 @@ export const useInvoicesStore = defineStore('invoices', () => {
           qty: item.qty,
           unit_price: item.unit_price,
           discount: formatTo2DecimalString(totals.discount),
-          line_discount: formatTo2DecimalString(totals.lineDiscount),
-          discount_percentage: formatTo2DecimalString(item.unit_price > 0 ? (totals.discount / item.unit_price) * 100 : 0),
+          line_discount: discountPercentage,
+          discount_percentage: discountPercentage,
           row_total: formatTo2DecimalString(totals.rowTotal),
         }
       }),
@@ -610,6 +836,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
       const nextPagination = extractPagination(response)
       if (nextPagination) pagination.value = nextPagination
       return list.value
+    }
+    catch (error: unknown) {
+      throw error
     }
     finally {
       listLoading.value = false
@@ -644,6 +873,52 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return await $api(`${INVOICES_ENDPOINT}/${id}`, { method: 'DELETE' })
   }
 
+  const createInvoiceReturn = async (invoiceId: string | number, payload: InvoiceReturnCreatePayload) => {
+    return await $api(`${INVOICES_ENDPOINT}/${invoiceId}/returns`, {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  const updateInvoiceReturn = async (invoiceReturnId: string | number, payload: InvoiceReturnCreatePayload) => {
+    return await $api(`${INVOICE_RETURNS_ENDPOINT}/${invoiceReturnId}`, {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
+  const deleteInvoiceReturn = async (invoiceReturnId: string | number) => {
+    return await $api(`${INVOICE_RETURNS_ENDPOINT}/${invoiceReturnId}`, { method: 'DELETE' })
+  }
+
+  const loadInvoiceReturnById = async (invoiceReturnId: string | number) => {
+    const response = await $api(`${INVOICE_RETURNS_ENDPOINT}/${invoiceReturnId}`)
+    return extractInvoiceReturn(response)
+  }
+
+  const loadInvoiceReturnsForInvoice = async (
+    invoiceId: string | number,
+    params: Record<string, string | number | undefined> = {},
+  ): Promise<InvoiceReturnListResult> => {
+    try {
+      const response = await $api(`${INVOICES_ENDPOINT}/${invoiceId}/returns`, { params })
+      const rows = extractInvoiceReturns(response)
+      const page = extractPagination(response) ?? {
+        current_page: 1,
+        last_page: 1,
+        per_page: rows.length || 15,
+        total: rows.length,
+      }
+      return {
+        returns: rows,
+        pagination: page,
+      }
+    }
+    catch (error: unknown) {
+      throw error
+    }
+  }
+
   return {
     draft,
     submitting,
@@ -671,7 +946,13 @@ export const useInvoicesStore = defineStore('invoices', () => {
     loadList,
     loadById,
     loadDraftById,
+    extractReturnFormItems,
     createInvoice,
+    createInvoiceReturn,
+    updateInvoiceReturn,
+    deleteInvoiceReturn,
+    loadInvoiceReturnById,
+    loadInvoiceReturnsForInvoice,
     updateInvoice,
     deleteInvoice,
   }
