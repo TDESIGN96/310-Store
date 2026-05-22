@@ -404,19 +404,18 @@ export const useInvoicesStore = defineStore('invoices', () => {
     item: Record<string, unknown>,
     qty: number,
   ): { mode: 'fixed' | 'percentage', value: number } => {
-    const discountPercent = toNumber(item.discount_percentage ?? item.discount_percent, NaN)
+    const discountPercent = toNumber(item.discount_percent, NaN)
     if (Number.isFinite(discountPercent)) {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
 
+    // Fixed discount is now row-level (group qty), so hydrate as total line discount.
     const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
-    const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
-
-    // Fixed discount is row-level (group qty), so hydrate as total line discount.
     if (Number.isFinite(perUnitDiscount)) {
       return { mode: 'fixed', value: perUnitDiscount * Math.max(1, qty) }
     }
 
+    const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
     if (Number.isFinite(lineDiscount)) {
       return { mode: 'fixed', value: lineDiscount }
     }

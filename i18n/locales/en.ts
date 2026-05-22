@@ -1521,7 +1521,7 @@ export default {
     headline: 'Full control',
     headline_accent: 'of your business.',
     description:
-      'An integrated platform for point of sale, inventory, and accounting — everything in one place.',
+      'Everything in one Place.',
     stat_units: 'Integrated modules',
     stat_units_value: '7',
     stat_uptime: 'Uptime',

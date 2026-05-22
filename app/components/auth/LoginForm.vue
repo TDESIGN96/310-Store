@@ -215,9 +215,7 @@ const handleLogin = async () => {
 
     </div>
 
-    <p class="login-note anim-fade-up" style="--delay: 1s">
-      {{ t('auth.footer_register') }} <a href="#" class="login-note-link">{{ t('auth.contact_company') }}</a>
-    </p>
+   
   </div>
 </template>
 

@@ -1519,7 +1519,7 @@ export default {
     eyebrow: 'نظام إدارة المتجر',
     headline: 'تحكم كامل',
     headline_accent: 'بعملك.',
-    description: 'منصة متكاملة لنقاط البيع، إدارة المخزون، والمحاسبة — كل شيء في مكان واحد.',
+    description: 'كل شيء في مكان واحد',
     stat_units: 'وحدات متكاملة',
     stat_units_value: '٧',
     stat_uptime: 'وقت التشغيل',

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
+import { navItems } from '@/config/navigation'
 
 definePageMeta({
   layout: 'auth',
@@ -16,15 +17,12 @@ if (authStore.isLoggedIn) {
 
 }
 
-const modulePills = computed(() => [
-  t('landing.pill_pos'),
-  t('landing.pill_inventory'),
-  t('landing.pill_invoices'),
-  t('landing.pill_agents'),
-  t('landing.pill_shipping'),
-  t('landing.pill_accounting'),
-  t('landing.pill_permissions'),
-])
+const modulePills = computed(() =>
+  navItems
+    .flatMap(group => group.items)
+    .filter(item => item.path !== '/mainCards')
+    .map(item => t(item.labelKey)),
+)
 </script>
 
 <template>
@@ -72,7 +70,7 @@ const modulePills = computed(() => [
             </p>
 
             <!-- Stats -->
-            <div class="flex items-center gap-7 kamu-anim-fade-up" style="--delay: 0.5s">
+            <!-- <div class="flex items-center gap-7 kamu-anim-fade-up" style="--delay: 0.5s">
               <div class="text-center group">
                 <span class="kamu-stat-value block text-[26px] font-bold text-white tracking-[-1px] counter"
                   data-target="7">{{ t('landing.stat_units_value') }}</span>
@@ -83,7 +81,7 @@ const modulePills = computed(() => [
                 <span class="kamu-stat-value block text-[26px] font-bold text-white tracking-[-1px]">{{ t('landing.stat_uptime_value') }}</span>
                 <span class="block text-[11px] text-white/50 mt-0.5">{{ t('landing.stat_uptime') }}</span>
               </div>
-            </div>
+            </div> -->
           </div>
 
           <!-- Module pills -->
