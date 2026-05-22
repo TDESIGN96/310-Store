@@ -1,4 +1,4 @@
-export type PermissionAction = 'index' | 'show' | 'store' | 'update' | 'destroy' | 'activate' | 'deactivate'
+export type PermissionAction = 'index' | 'show' | 'store' | 'update' | 'destroy'
 export type PermissionModule =
   | 'users'
   | 'roles'
@@ -95,8 +95,6 @@ export const permissionGroups: PermissionGroup[] = [
       { id: 'product_variations.store' },
       { id: 'product_variations.update' },
       { id: 'product_variations.destroy' },
-      { id: 'product_variations.activate' },
-      { id: 'product_variations.deactivate' },
     ],
   },
   {

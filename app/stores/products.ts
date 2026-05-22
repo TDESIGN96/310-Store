@@ -196,14 +196,6 @@ export const useProductsStore = defineStore('products', () => {
     return await $api(`/products/${productId}/variations/${variationId}`, { method: 'DELETE' })
   }
 
-  const activateVariation = async (productId: string | number, variationId: string | number) => {
-    return await $api(`/products/${productId}/variations/${variationId}/activate`, { method: 'POST' })
-  }
-
-  const deactivateVariation = async (productId: string | number, variationId: string | number) => {
-    return await $api(`/products/${productId}/variations/${variationId}/deactivate`, { method: 'POST' })
-  }
-
   return {
     draft,
     loading,
@@ -215,7 +207,5 @@ export const useProductsStore = defineStore('products', () => {
     createVariation,
     updateVariation,
     deleteVariation,
-    activateVariation,
-    deactivateVariation,
   }
 })
