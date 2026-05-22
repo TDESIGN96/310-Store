@@ -40,7 +40,7 @@ const modulePills = computed(() =>
       <div class="kamu-particle kamu-p2"></div>
       <div class="kamu-particle kamu-p3"></div>
       <div class="kamu-particle kamu-p4"></div>
-      <div class="kamu-particle kamu-p5"> $t('make it inside the creative products of the the')</div> 
+      <div class="kamu-particle kamu-p5"></div> 
     </div>
 
     <!-- Split layout: brand left / login right -->
