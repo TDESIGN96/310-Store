@@ -45,11 +45,13 @@ interface ComboItem {
   product_id?: number | string
   quantity?: number | string
   sort_order?: number
+  sku?: string
   product?: {
     id?: number
     name_ar?: string
     name_en?: string
     name?: string
+    sku?: string
   }
 }
 
@@ -133,6 +135,11 @@ function comboItemName(item: ComboItem): string {
   if (!p) return `#${item.product_id ?? '—'}`
   if (locale.value === 'ar') return p.name_ar || p.name_en || p.name || `#${item.product_id ?? '—'}`
   return p.name_en || p.name_ar || p.name || `#${item.product_id ?? '—'}`
+}
+
+function comboItemSku(item: ComboItem): string {
+  const p = item.product
+  return String(p?.sku ?? item.sku ?? '—')
 }
 
 const formatDate = (value?: string) => {
@@ -293,17 +300,19 @@ onMounted(() => {
               <TableHeader>
                 <TableRow>
                   <TableHead class="rtl:text-right ltr:text-left">{{ t('products_combo.col_product') }}</TableHead>
+                  <TableHead class="rtl:text-right ltr:text-left">{{ t('products_page.col_sku') }}</TableHead>
                   <TableHead class="rtl:text-right ltr:text-left">{{ t('products_combo.col_quantity') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow v-if="!comboItemsForView.length">
-                  <TableCell :colspan="2" class="text-center text-sm text-muted-foreground py-8">
+                  <TableCell :colspan="3" class="text-center text-sm text-muted-foreground py-8">
                     {{ t('products_page.not_found') }}
                   </TableCell>
                 </TableRow>
                 <TableRow v-for="(row, idx) in comboItemsForView" :key="idx">
                   <TableCell>{{ comboItemName(row) }}</TableCell>
+                  <TableCell>{{ comboItemSku(row) }}</TableCell>
                   <TableCell>{{ row.quantity ?? 0 }}</TableCell>
                 </TableRow>
               </TableBody>

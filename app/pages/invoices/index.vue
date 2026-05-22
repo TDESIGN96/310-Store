@@ -429,7 +429,7 @@ const goToPage = (page: number) => {
                 <TableRowActions
                   :actions="[
                     { key: `edit-${row.id}`, label: t('invoices_page.action_edit'), type: 'link', to: `/invoices/edit/${row.id}`, icon: Pencil, tone: 'default', disabled: !canEditInvoice },
-                    { key: `copy-${row.id}`, label: t('invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateInvoice, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
+                    { key: `copy-${row.id}`, label: t('invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: false, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
                     { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', visible: canCreateInvoiceReturn, onClick: () => navigateTo(`/invoices/return/${row.id}`) },
                     { key: `delete-${row.id}`, label: t('invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteInvoice, onClick: () => requestDelete(row) },
                   ]"

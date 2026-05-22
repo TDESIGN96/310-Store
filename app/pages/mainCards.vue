@@ -1,54 +1,26 @@
 <script setup lang="ts">
-import KpiCard from '@/components/Cards/Demo.vue'
-import { ShoppingCart, FileText } from 'lucide-vue-next'
-
 definePageMeta({
   layout: 'default',
 })
-
-const { t } = useI18n()
-
-const cards = computed(() => [
-  {
-    id: 'sales_today',
-    title: t('dashboard.cards.sales_today.title'),
-    value: t('dashboard.demo_sales_value'),
-    change: t('dashboard.demo_sales_change'),
-    changeType: 'up' as const,
-    description: t('dashboard.cards.sales_today.description'),
-    subtitle: t('dashboard.cards.sales_today.subtitle'),
-    icon: ShoppingCart,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-500/10',
-    roles: ['admin', 'manager', 'sales', 'agent'],
-    link: '/invoices',
-  },
-  {
-    id: 'pending_invoices',
-    title: t('dashboard.cards.pending_invoices.title'),
-    value: t('dashboard.demo_pending_value'),
-    change: t('dashboard.demo_pending_change'),
-    changeType: 'down' as const,
-    description: t('dashboard.cards.pending_invoices.description'),
-    subtitle: t('dashboard.cards.pending_invoices.subtitle'),
-    icon: FileText,
-    color: 'text-red-500',
-    bg: 'bg-red-500/10',
-    roles: ['admin', 'manager', 'accountant'],
-    link: '/invoices',
-  },
-])
 </script>
 
 <template>
-  <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
-    <div class="p-6">
-      <h1 class="text-2xl font-bold">{{ t('dashboard.title') }}</h1>
-      <p class="text-muted-foreground">{{ t('dashboard.subtitle') }}</p>
+  <div class="flex min-h-[70vh] flex-1 items-center justify-center p-4">
+    <div class="relative w-full max-w-3xl overflow-hidden rounded-2xl border bg-transparent p-10 text-center">
+      <div class="mx-auto mb-6 h-20 w-20 rounded-full bg-primary/10 p-5 animate-pulse">
+        <div class="h-full w-full rounded-full bg-primary/20" />
+      </div>
+      <h1 class="bg-gradient-to-r from-[#215260] to-[#CFE030] bg-clip-text text-4xl font-extrabold tracking-tight text-transparent">
+        Coming Soon
+      </h1>
+      <p class="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+        We are building a better dashboard experience. New insights and cards will be available soon.
+      </p>
+      <div class="mt-8 flex items-center justify-center gap-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-[#215260] animate-bounce" />
+        <span class="h-2.5 w-2.5 rounded-full bg-[#7B9D1E] animate-bounce [animation-delay:120ms]" />
+        <span class="h-2.5 w-2.5 rounded-full bg-[#CFE030] animate-bounce [animation-delay:240ms]" />
+      </div>
     </div>
-    <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-      <KpiCard v-for="card in cards" :key="card.id" v-bind="card" class="col-span-1" />
-    </div>
-
   </div>
 </template>

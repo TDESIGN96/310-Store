@@ -491,9 +491,8 @@ export const useQuotationsStore = defineStore('quotations', () => {
           description: item.description || undefined,
           qty: item.qty,
           unit_price: item.unit_price,
-          discount: formatTo2DecimalString(totals.discount),
+          discount: formatTo2DecimalString(totals.lineDiscount),
           discount_percentage: discountPercentage,
-          line_discount: discountPercentage,
           row_total: totals.rowTotal,
         }
       }),
