@@ -30,6 +30,7 @@ export interface InvoiceListItem {
   invoice_date: string
   supply_date: string
   status: InvoiceStatus
+  status_label: string
   shipment_code: string
   shipment_status: number | null
   shipment_status_label: string
@@ -264,6 +265,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       invoice_date: String(payload.invoice_date ?? ''),
       supply_date: String(payload.supply_date ?? ''),
       status: normalizeStatus(payload.status),
+      status_label: String(payload.status_label ?? payload.status ?? ''),
       shipment_code: shipmentCode,
       shipment_status: toFiniteNumberOrUndefined(payload.shipment_status) ?? null,
       shipment_status_label: shipmentStatusLabel,

@@ -132,11 +132,12 @@ const warehouseLabel = (row: InvoiceListItem) => {
   return locale.value === 'ar' ? (nameAr || nameEn || '—') : (nameEn || nameAr || '—')
 }
 
-const statusLabel = (status: string) => {
-  if (status === 'pending') return t('invoices_page.status_pending')
-  if (status === 'in_delivery') return t('invoices_page.status_in_delivery')
-  if (status === 'complete') return t('invoices_page.status_complete')
-  return status || '—'
+const statusLabel = (row: InvoiceListItem) => {
+  if (row.status_label) return row.status_label
+  if (row.status === 'pending') return t('invoices_page.status_pending')
+  if (row.status === 'in_delivery') return t('invoices_page.status_in_delivery')
+  if (row.status === 'complete') return t('invoices_page.status_complete')
+  return row.status || '—'
 }
 
 const loadRows = async (page = currentPage.value) => {
@@ -428,7 +429,7 @@ const goToPage = (page: number) => {
               <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.invoice_date) }}</TableCell>
               <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
               <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
-              <TableCell><Badge variant="outline">{{ statusLabel(row.status) }}</Badge></TableCell>
+              <TableCell><Badge variant="outline">{{ statusLabel(row) }}</Badge></TableCell>
               <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ row.shipment_status_label || '—' }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>

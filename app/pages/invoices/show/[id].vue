@@ -120,7 +120,7 @@ onMounted(async () => {
         <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6"><FileText class="size-4 text-muted-foreground" /><h2 class="text-base font-semibold">{{ t('invoices_page.details_section') }}</h2></div>
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.reference_number') }}</p><p class="text-sm font-medium">{{ invoice.reference_number || `#${invoice.id}` }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.col_status') }}</p><p class="text-sm font-medium">{{ invoice.status }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.col_status') }}</p><p class="text-sm font-medium">{{ invoice.status_label || invoice.status || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_code') }}</p><p class="text-sm font-medium">{{ invoice.shipment_code || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_status') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status ?? '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.shipment_status_label') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status_label || '—' }}</p></div>
