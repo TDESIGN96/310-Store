@@ -16,6 +16,8 @@ const toasterPosition = computed(() =>
 )
 
 useHead(() => ({
+  title: 'KAMU',
+  titleTemplate: (titleChunk?: string) => titleChunk ? `${titleChunk} | KAMU` : 'KAMU',
   htmlAttrs: {
     lang: String(localeProperties.value.language ?? locale.value).split('-')[0],
     dir: htmlDir.value,

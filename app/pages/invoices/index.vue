@@ -41,8 +41,7 @@ const canCreateInvoiceReturn = computed(() => can('invoice_returns.store'))
 
 const search = ref('')
 const filterStatus = ref<'all' | 'pending' | 'in_delivery' | 'complete'>('all')
-const invoiceDateFrom = ref('')
-const invoiceDateTo = ref('')
+const invoiceDate = ref('')
 const supplyDate = ref('')
 const currentPage = ref(1)
 const deleteTarget = ref<InvoiceListItem | null>(null)
@@ -56,7 +55,7 @@ const shipmentSyncLoading = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
-  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDateFrom.value) || Boolean(invoiceDateTo.value) || Boolean(supplyDate.value),
+  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDate.value) || Boolean(supplyDate.value),
 )
 const isAllSelected = computed(
   () => sortedList.value.length > 0 && sortedList.value.every(row => selectedIds.value.has(row.id)),
@@ -150,8 +149,7 @@ const loadRows = async (page = currentPage.value) => {
     search: query || undefined,
     reference_number: query || undefined,
     customer_name: query || undefined,
-    invoice_date_from: toIsoDateTimeStart(invoiceDateFrom.value),
-    invoice_date_to: toIsoDateTimeEnd(invoiceDateTo.value),
+    invoice_date: toIsoDateTimeStart(invoiceDate.value),
     supply_date: toIsoDateTimeStart(supplyDate.value),
     status: filterStatus.value === 'all' ? undefined : filterStatus.value,
   }
@@ -162,8 +160,7 @@ const loadRows = async (page = currentPage.value) => {
 const resetFilters = async () => {
   search.value = ''
   filterStatus.value = 'all'
-  invoiceDateFrom.value = ''
-  invoiceDateTo.value = ''
+  invoiceDate.value = ''
   supplyDate.value = ''
   await loadRows(1)
 }
@@ -269,7 +266,7 @@ const cloneInvoice = async (row: InvoiceListItem) => {
 }
 
 watch(
-  [search, filterStatus, invoiceDateFrom, invoiceDateTo, supplyDate],
+  [search, filterStatus, invoiceDate, supplyDate],
   () => {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => loadRows(1), 300)
@@ -337,15 +334,9 @@ const goToPage = (page: number) => {
       <div class="flex flex-col gap-4 rounded-lg border bg-card/30 p-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">
           <span class="text-sm font-medium text-foreground">{{ t('invoices_page.invoice_date') }}</span>
-          <div class="grid gap-2 sm:grid-cols-2">
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_from') }}</label>
-              <DatePickerInput v-model="invoiceDateFrom" class="w-full" />
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('invoices_page.issue_date_to') }}</label>
-              <DatePickerInput v-model="invoiceDateTo" class="w-full" />
-            </div>
+          <div class="space-y-1">
+            <label class="text-xs text-muted-foreground">{{ t('invoices_page.invoice_date') }}</label>
+            <DatePickerInput v-model="invoiceDate" class="w-full" />
           </div>
         </div>
         <div class="flex min-w-0 flex-1 flex-col gap-2 sm:min-w-[240px]">

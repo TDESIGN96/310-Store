@@ -47,6 +47,7 @@ export const calculateLineTotals = (line: QuotationLineMathInput): QuotationLine
 export interface QuotationSummaryInput {
   rows: QuotationLineMathInput[]
   deliveryFees: string | number | undefined
+  otherFees?: string | number | undefined
 }
 
 export interface QuotationSummaryResult {
@@ -68,7 +69,8 @@ export const calculateQuotationSummary = (
     { subtotal: 0, totalDiscount: 0 },
   )
   const deliveryFees = Math.max(0, toNumber(input.deliveryFees, 0))
-  const grandTotal = totals.subtotal - totals.totalDiscount + deliveryFees
+  const otherFees = Math.max(0, toNumber(input.otherFees, 0))
+  const grandTotal = totals.subtotal - totals.totalDiscount + deliveryFees + otherFees
   return {
     subtotal: totals.subtotal,
     totalDiscount: totals.totalDiscount,

@@ -134,6 +134,7 @@ export interface InvoiceDraft {
   terms: string
   notes: string
   delivery_fees: number
+  other_fees: number
   items: InvoiceDraftItem[]
 }
 
@@ -177,6 +178,7 @@ const createEmptyDraft = (): InvoiceDraft => ({
   terms: '',
   notes: '',
   delivery_fees: 0,
+  other_fees: 0,
   items: [createEmptyItem()],
 })
 
@@ -527,6 +529,14 @@ export const useInvoicesStore = defineStore('invoices', () => {
           0,
         ),
       ),
+      other_fees: Math.max(
+        0,
+        toNumber(
+          toFiniteNumberOrUndefined(invoice.other_fees)
+          ?? toFiniteNumberOrUndefined((invoice.district as Record<string, unknown> | null)?.other_fees),
+          0,
+        ),
+      ),
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -620,6 +630,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
       ?? toFiniteNumberOrUndefined(quotation.delivery_fee)
       ?? toFiniteNumberOrUndefined((quotation.district as Record<string, unknown> | null)?.delivery_fee)
       ?? quotationFallbackDelivery
+    const resolvedConvertedOtherFees = toFiniteNumberOrUndefined(quotation.other_fees)
+      ?? toFiniteNumberOrUndefined((quotation.district as Record<string, unknown> | null)?.other_fees)
+      ?? 0
 
     draft.value = {
       id: null,
@@ -640,6 +653,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       terms: String(quotation.terms ?? ''),
       notes: String(quotation.notes ?? ''),
       delivery_fees: Math.max(0, resolvedConvertedDeliveryFees),
+      other_fees: Math.max(0, resolvedConvertedOtherFees),
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -661,6 +675,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return calculateQuotationSummary({
       rows,
       deliveryFees: draft.value.delivery_fees,
+      otherFees: draft.value.other_fees,
     })
   })
 
@@ -751,6 +766,11 @@ export const useInvoicesStore = defineStore('invoices', () => {
     row.discount_value = Number.isFinite(n) ? Math.max(0, n) : 0
   }
 
+  const rowDiscountPercentage = (unitPrice: number, discountPerUnit: number): string => {
+    if (!(unitPrice > 0)) return formatTo2DecimalString(0)
+    return formatTo2DecimalString((discountPerUnit / unitPrice) * 100)
+  }
+
   const buildPayload = () => ({
     reference_number: draft.value.reference_number || undefined,
     warehouse_id: draft.value.warehouse_id,
@@ -765,6 +785,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     terms: draft.value.terms || undefined,
     notes: draft.value.notes || undefined,
     delivery_fees: draft.value.delivery_fees || 0,
+    other_fees: draft.value.other_fees || 0,
     subtotal: summary.value.subtotal,
     total_discount: summary.value.totalDiscount,
     grand_total: summary.value.grandTotal,
@@ -772,6 +793,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       .filter(item => item.product_id)
       .map((item) => {
         const totals = rowMath(item)
+        const discountPercentage = rowDiscountPercentage(item.unit_price, totals.discount)
         return {
           product_id: item.product_id,
           variation_id: item.variation_id,
@@ -779,8 +801,8 @@ export const useInvoicesStore = defineStore('invoices', () => {
           qty: item.qty,
           unit_price: item.unit_price,
           discount: formatTo2DecimalString(totals.discount),
-          line_discount: formatTo2DecimalString(totals.lineDiscount),
-          discount_percentage: formatTo2DecimalString(item.unit_price > 0 ? (totals.discount / item.unit_price) * 100 : 0),
+          line_discount: discountPercentage,
+          discount_percentage: discountPercentage,
           row_total: formatTo2DecimalString(totals.rowTotal),
         }
       }),
