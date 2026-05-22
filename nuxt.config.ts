@@ -1,16 +1,21 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
+
+const resolvedApiBase = import.meta.env.NUXT_PUBLIC_API_BASE
+const resolvedEchoAuthBaseUrl = import.meta.env.NUXT_PUBLIC_ECHO_AUTH_BASE_URL
+  || resolvedApiBase.replace(/\/api\/?$/, '')
+
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud/api',
+      apiBase: resolvedApiBase,
       echo: {
         key: 'dA6V4f6Gn3QYA7NDgd6t',
         wsHost: 'ws-a14d3d63-48f2-43f1-a933-d3e4cfde010c-reverb.laravel.cloud',
         wsPort: 443,
         wssPort: 443,
         forceTLS: true,
-        authBaseUrl: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
+        authBaseUrl: resolvedEchoAuthBaseUrl,
         authEndpoint: '/api/broadcasting/auth',
       },
     },
