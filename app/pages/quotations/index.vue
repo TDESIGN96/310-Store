@@ -634,8 +634,8 @@ const goToPage = (page: number) => {
                 <TableRowActions
                   :actions="[
                     { key: `edit-${row.id}`, label: t('common.edit'), type: canEditRow(row) ? 'link' : 'button', to: canEditRow(row) ? `/quotations/edit/${row.id}` : undefined, icon: Pencil, tone: 'default', disabled: !canEditRow(row) },
-                    { key: `copy-${row.id}`, label: t('common.copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateQuotation, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneQuotation(row) },
-                    { key: `convert-${row.id}`, label: t('quotations_page.action_convert'), type: 'button', icon: FilePlus2, tone: 'default', disabled: convertingId === row.id || loading, loading: convertingId === row.id, onClick: () => convertToInvoice(row) },
+                    // { key: `copy-${row.id}`, label: t('common.copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateQuotation, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneQuotation(row) },
+                    // { key: `convert-${row.id}`, label: t('quotations_page.action_convert'), type: 'button', icon: FilePlus2, tone: 'default', disabled: convertingId === row.id || loading, loading: convertingId === row.id, onClick: () => convertToInvoice(row) },
                     { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteQuotation || !isDeletable(row), onClick: () => requestDelete(row) },
                   ]"
                   variant="invoice"
