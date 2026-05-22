@@ -33,7 +33,16 @@ const deliveryFeeValue = computed(() => {
   const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
   return asNumber(district?.delivery_fee)
 })
+const otherFeeValue = computed(() => {
+  const current = invoice.value
+  if (!current) return 0
+  const direct = asNumber(current.other_fees)
+  if (direct > 0) return direct
+  const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
+  return asNumber(district?.other_fees)
+})
 const showDeliveryFee = computed(() => deliveryFeeValue.value > 0)
+const showOtherFee = computed(() => otherFeeValue.value > 0)
 const items = computed(() => {
   const raw = invoice.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []
@@ -169,6 +178,7 @@ onMounted(async () => {
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(invoice.subtotal) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(invoice.total_discount) }}</p></div>
             <div v-if="showDeliveryFee"><p class="text-xs text-muted-foreground">{{ t('invoices_page.delivery_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(deliveryFeeValue) }}</p></div>
+            <div v-if="showOtherFee"><p class="text-xs text-muted-foreground">{{ t('invoices_page.other_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(otherFeeValue) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ money(invoice.grand_total) }}</p></div>
           </div>
         </CardContent>
