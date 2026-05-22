@@ -404,15 +404,13 @@ export const useInvoicesStore = defineStore('invoices', () => {
     item: Record<string, unknown>,
     qty: number,
   ): { mode: 'fixed' | 'percentage', value: number } => {
-    const explicitModeRaw = String(item.discount_mode ?? item.discount_type ?? '').trim().toLowerCase()
-
     const discountPercent = toNumber(item.discount_percentage ?? item.discount_percent, NaN)
-    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
-    const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
-
-    if (explicitModeRaw === 'percentage' && Number.isFinite(discountPercent)) {
+    if (Number.isFinite(discountPercent)) {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
+
+    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
+    const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
 
     // Fixed discount is row-level (group qty), so hydrate as total line discount.
     if (Number.isFinite(perUnitDiscount)) {
@@ -421,10 +419,6 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
     if (Number.isFinite(lineDiscount)) {
       return { mode: 'fixed', value: lineDiscount }
-    }
-
-    if (Number.isFinite(discountPercent)) {
-      return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
 
     return { mode: 'percentage', value: 0 }
@@ -820,10 +814,6 @@ export const useInvoicesStore = defineStore('invoices', () => {
       .filter(item => item.product_id)
       .map((item) => {
         const totals = rowMath(item)
-        const fixedDiscountValue = Math.max(0, Number(item.discount_value) || 0)
-        const lineDiscountValue = item.discount_mode === 'fixed'
-          ? Math.min(fixedDiscountValue, totals.gross)
-          : totals.lineDiscount
         const discountPercentage = rowDiscountPercentage(item.unit_price, totals.discount)
         return {
           product_id: item.product_id,
@@ -831,10 +821,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
           description: item.description || undefined,
           qty: item.qty,
           unit_price: item.unit_price,
-          discount: formatTo2DecimalString(totals.discount),
-          line_discount: formatTo2DecimalString(lineDiscountValue),
+          discount: formatTo2DecimalString(totals.lineDiscount),
           discount_percentage: discountPercentage,
-          row_total: formatTo2DecimalString(totals.rowTotal),
+          row_total: totals.rowTotal,
         }
       }),
   })
