@@ -1012,6 +1012,7 @@ export default {
     edit_subtitle: 'Update variation details',
     show_title: 'Variation details',
     variation_sku: 'SKU',
+    show_variation_label: 'Variation label',
     variation_barcode: 'Barcode',
     variation_price: 'Price',
     buying_price: 'Buying price',

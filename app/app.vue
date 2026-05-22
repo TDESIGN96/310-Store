@@ -2,8 +2,10 @@
 import 'vue-sonner/style.css'
 import { ConfigProvider } from 'reka-ui'
 import { Toaster } from '@/components/ui/sonner'
+import { getBreadcrumbForPath } from '@/config/navigation'
 
-const { locale, localeProperties } = useI18n()
+const route = useRoute()
+const { locale, localeProperties, t } = useI18n()
 
 /** Reka UI + HTML: follow each locale’s `dir` in nuxt.config / i18n (e.g. ar → rtl, en → ltr) */
 const htmlDir = computed<'ltr' | 'rtl'>(() =>
@@ -15,9 +17,15 @@ const toasterPosition = computed(() =>
   htmlDir.value === 'rtl' ? 'bottom-left' : 'bottom-right',
 )
 
+const navTitle = computed(() => {
+  const breadcrumb = getBreadcrumbForPath(route.path)
+  if (!breadcrumb?.item?.labelKey) return ''
+  return String(t(breadcrumb.item.labelKey)).trim()
+})
+
 useHead(() => ({
-  title: 'KAMU',
-  titleTemplate: (titleChunk?: string) => titleChunk ? `${titleChunk} | KAMU` : 'KAMU',
+  title: navTitle.value || undefined,
+  titleTemplate: (titleChunk?: string) => titleChunk ? `KAMU | ${titleChunk}` : 'KAMU',
   htmlAttrs: {
     lang: String(localeProperties.value.language ?? locale.value).split('-')[0],
     dir: htmlDir.value,

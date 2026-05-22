@@ -210,19 +210,20 @@ export const useQuotationsStore = defineStore('quotations', () => {
     item: Record<string, unknown>,
     qty: number,
   ): { mode: 'fixed' | 'percentage', value: number } => {
-    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
-    if (Number.isFinite(perUnitDiscount)) {
-      return { mode: 'fixed', value: perUnitDiscount }
-    }
-
     const discountPercent = toNumber(item.discount_percent, NaN)
     if (Number.isFinite(discountPercent)) {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
 
+    // Fixed discount is now row-level (group qty), so hydrate as total line discount.
+    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
+    if (Number.isFinite(perUnitDiscount)) {
+      return { mode: 'fixed', value: perUnitDiscount * Math.max(1, qty) }
+    }
+
     const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
-    if (Number.isFinite(lineDiscount) && qty > 0) {
-      return { mode: 'fixed', value: lineDiscount / qty }
+    if (Number.isFinite(lineDiscount)) {
+      return { mode: 'fixed', value: lineDiscount }
     }
 
     return { mode: 'percentage', value: 0 }

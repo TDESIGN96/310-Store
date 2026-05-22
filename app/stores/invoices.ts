@@ -404,22 +404,63 @@ export const useInvoicesStore = defineStore('invoices', () => {
     item: Record<string, unknown>,
     qty: number,
   ): { mode: 'fixed' | 'percentage', value: number } => {
-    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
-    if (Number.isFinite(perUnitDiscount)) {
-      return { mode: 'fixed', value: perUnitDiscount }
-    }
-
     const discountPercent = toNumber(item.discount_percentage ?? item.discount_percent, NaN)
     if (Number.isFinite(discountPercent)) {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
 
+    // Fixed discount is now row-level (group qty), so hydrate as total line discount.
+    const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
+    if (Number.isFinite(perUnitDiscount)) {
+      return { mode: 'fixed', value: perUnitDiscount * Math.max(1, qty) }
+    }
+
     const lineDiscount = Math.max(0, toNumber(item.line_discount, NaN))
-    if (Number.isFinite(lineDiscount) && qty > 0) {
-      return { mode: 'fixed', value: lineDiscount / qty }
+    if (Number.isFinite(lineDiscount)) {
+      return { mode: 'fixed', value: lineDiscount }
     }
 
     return { mode: 'percentage', value: 0 }
+  }
+
+  const normalizeVariationOption = (raw: Record<string, unknown>) => ({
+    id: toNumber(raw.id, 0),
+    sku: String(raw.sku ?? ''),
+    barcode: String(raw.barcode ?? ''),
+    price: toNumber(raw.price, 0),
+    resolved_price: toNumber(raw.resolved_price ?? raw.price, 0),
+    is_active: true,
+    label: String(raw.label ?? raw.sku ?? ''),
+    tiered_prices: (Array.isArray(raw.tiered_prices) ? raw.tiered_prices : []).map((tierRaw) => {
+      const tier = tierRaw as Record<string, unknown>
+      return {
+        quantity_from: toNumber(tier.quantity_from, 0),
+        quantity_to: toNumber(tier.quantity_to, 0),
+        price: toNumber(tier.price, 0),
+      }
+    }),
+  })
+
+  const loadVariationMapForProducts = async (productIds: number[]): Promise<Map<number, ReturnType<typeof normalizeVariationOption>[]>> => {
+    const uniqueIds = [...new Set(productIds.filter(id => Number.isFinite(id) && id > 0))]
+    const entries = await Promise.all(uniqueIds.map(async (productId) => {
+      try {
+        const response = await $api(`/products/${productId}/variations`)
+        const root = (response && typeof response === 'object') ? response as Record<string, unknown> : {}
+        const nested = (root.data && typeof root.data === 'object') ? root.data as Record<string, unknown> : null
+        const rows = (nested?.variations ?? root.variations ?? []) as unknown[]
+        const mapped = Array.isArray(rows)
+          ? rows
+            .map(row => normalizeVariationOption((row ?? {}) as Record<string, unknown>))
+            .filter(variation => variation.id > 0)
+          : []
+        return [productId, mapped] as [number, ReturnType<typeof normalizeVariationOption>[]]
+      }
+      catch {
+        return [productId, [] as ReturnType<typeof normalizeVariationOption>[]] as [number, ReturnType<typeof normalizeVariationOption>[]]
+      }
+    }))
+    return new Map(entries)
   }
 
   const hydrateDraftFromInvoice = (invoice: Record<string, unknown>) => {
@@ -541,66 +582,45 @@ export const useInvoicesStore = defineStore('invoices', () => {
     }
   }
 
-  const hydrateDraftFromQuotationForConvert = (quotation: Record<string, unknown>) => {
-    const items = (Array.isArray(quotation.items) ? quotation.items : [])
+  const hydrateDraftFromQuotationForConvert = async (quotation: Record<string, unknown>) => {
+    const sourceItems = Array.isArray(quotation.items) ? quotation.items : []
+    const productIds = sourceItems
+      .map((rawItem) => {
+        const item = rawItem as Record<string, unknown>
+        const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
+        return toNumber(item.product_id ?? productRaw?.id, 0)
+      })
+      .filter(id => id > 0)
+    const variationMap = await loadVariationMapForProducts(productIds)
+
+    const items = sourceItems
       .map((rawItem) => {
         const item = rawItem as Record<string, unknown>
         const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
         const variationRaw = (item.variation && typeof item.variation === 'object' ? item.variation : null) as Record<string, unknown> | null
-        const mappedVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
-          .map((rawVariation) => {
-            const variation = rawVariation as Record<string, unknown>
-            return {
-              id: toNumber(variation.id, 0),
-              sku: String(variation.sku ?? ''),
-              barcode: String(variation.barcode ?? ''),
-              price: toNumber(variation.price, 0),
-              resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
-              is_active: true,
-              label: String(variation.label ?? variation.sku ?? ''),
-              tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
-                const tier = tierRaw as Record<string, unknown>
-                return {
-                  quantity_from: toNumber(tier.quantity_from, 0),
-                  quantity_to: toNumber(tier.quantity_to, 0),
-                  price: toNumber(tier.price, 0),
-                }
-              }),
-            }
-          })
+        const productId = toNumber(item.product_id ?? productRaw?.id, 0)
+        const fallbackVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
+          .map(rawVariation => normalizeVariationOption(rawVariation as Record<string, unknown>))
           .filter(v => v.id > 0)
+        const mappedVariations = [...(variationMap.get(productId) ?? fallbackVariations)]
 
         const selectedVariationId = toNumber(item.variation_id ?? variationRaw?.id, 0)
         const hasSelectedVariation = selectedVariationId > 0 && mappedVariations.some(v => v.id === selectedVariationId)
         if (!hasSelectedVariation && variationRaw && selectedVariationId > 0) {
-          mappedVariations.unshift({
-            id: selectedVariationId,
-            sku: String(variationRaw.sku ?? ''),
-            barcode: String(variationRaw.barcode ?? ''),
-            price: toNumber(variationRaw.price, 0),
-            resolved_price: toNumber(variationRaw.resolved_price ?? variationRaw.price, 0),
-            is_active: true,
-            label: String(variationRaw.label ?? variationRaw.sku ?? ''),
-            tiered_prices: (Array.isArray(variationRaw.tiered_prices) ? variationRaw.tiered_prices : []).map((tierRaw) => {
-              const tier = tierRaw as Record<string, unknown>
-              return {
-                quantity_from: toNumber(tier.quantity_from, 0),
-                quantity_to: toNumber(tier.quantity_to, 0),
-                price: toNumber(tier.price, 0),
-              }
-            }),
-          })
+          mappedVariations.unshift(normalizeVariationOption(variationRaw))
         }
 
-        const product: QuotationProductOption | null = productRaw
+        const nameAr = String(productRaw?.name_ar ?? item.product_name_ar ?? item.product_name ?? '')
+        const nameEn = String(productRaw?.name_en ?? item.product_name_en ?? item.product_name ?? '')
+        const product: QuotationProductOption | null = productId > 0
           ? {
-              id: toNumber(productRaw.id, 0),
-              name_ar: String(productRaw.name_ar ?? ''),
-              name_en: String(productRaw.name_en ?? ''),
-              barcode: String(productRaw.barcode ?? ''),
-              price: toNumber(productRaw.price, 0),
+              id: productId,
+              name_ar: nameAr,
+              name_en: nameEn,
+              barcode: String(productRaw?.barcode ?? ''),
+              price: toNumber(productRaw?.price ?? item.unit_price, 0),
               is_available: true,
-              is_combo: Boolean(productRaw.is_combo),
+              is_combo: Boolean(productRaw?.is_combo),
               variations: mappedVariations,
             }
           : null

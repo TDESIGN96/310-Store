@@ -381,7 +381,7 @@ const convertToInvoice = async (row: QuotationListItem) => {
       return
     }
 
-    invoicesStore.hydrateDraftFromQuotationForConvert(source)
+    await invoicesStore.hydrateDraftFromQuotationForConvert(source)
     const resolvedDeliveryFees = resolveQuotationDeliveryFeesForConvert(source)
     invoicesStore.draft.delivery_fees = resolvedDeliveryFees
     invoicesStore.draft.warehouse_id = warehouseId

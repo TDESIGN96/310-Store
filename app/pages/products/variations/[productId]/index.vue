@@ -65,7 +65,7 @@ const isIndeterminate = computed(
 const canDeleteSelected = computed(
   () => canDeleteVariation.value && selectedRows.value.length > 0,
 )
-const tableColspan = computed(() => (isDistributorUser.value ? 8 : 9))
+const tableColspan = computed(() => (isDistributorUser.value ? 9 : 10))
 
 const toggleSelectAll = () => {
   const next = new Set(selectedIds.value)
@@ -234,6 +234,7 @@ onMounted(() => {
               />
             </TableHead>
             <TableHead class="text-start">{{ t('products_variations.variation_sku') }}</TableHead>
+            <TableHead class="text-start">{{ t('products_variations.show_variation_label') }}</TableHead>
             <TableHead class="text-start">{{ t('products_variations.variation_barcode') }}</TableHead>
             <TableHead class="text-center">{{ t('products_variations.variation_price') }}</TableHead>
             <TableHead class="text-center">{{ t('products_variations.variation_qty') }}</TableHead>
@@ -273,6 +274,7 @@ onMounted(() => {
               </NuxtLink>
               <span v-else>{{ row.sku || '—' }}</span>
             </TableCell>
+            <TableCell class="text-start">{{ row.label || '—' }}</TableCell>
             <TableCell class="text-start">{{ row.barcode || '—' }}</TableCell>
             <TableCell class="text-center">{{ row.price || '—' }}</TableCell>
             <TableCell class="text-center">{{ row.stock_quantity ?? 0 }}</TableCell>

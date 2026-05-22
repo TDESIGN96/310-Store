@@ -93,7 +93,7 @@ const productImageUrl = (row: Record<string, unknown>) => {
 const variationLabel = (row: Record<string, unknown>) => {
   const variation = (row.variation && typeof row.variation === 'object' ? row.variation : null) as Record<string, unknown> | null
   if (!variation) return '—'
-  return String(variation.label ?? variation.sku ?? '—')
+  return String(variation.label ?? '—')
 }
 
 const itemDiscount = (row: Record<string, unknown>) => {

@@ -328,7 +328,6 @@ onMounted(async () => {
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.subtotal) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.totalDiscount) }}</p></div>
             <div class="space-y-1"><label class="text-xs text-muted-foreground">{{ t('invoices_page.delivery_fees') }}</label><Input :model-value="draft.delivery_fees" type="number" min="0" class="tabular-nums" @update:model-value="value => draft.delivery_fees = Math.max(0, Number(value) || 0)" /></div>
-            <div v-if="draft.other_fees > 0" class="space-y-1"><label class="text-xs text-muted-foreground">{{ t('invoices_page.other_fees') }}</label><Input :model-value="draft.other_fees" type="number" min="0" class="tabular-nums" @update:model-value="value => draft.other_fees = Math.max(0, Number(value) || 0)" /></div>
             <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ formatMoney(summary.grandTotal) }}</p></div>
           </div>
         </CardContent>

@@ -1011,6 +1011,7 @@ export default {
     edit_subtitle: 'تحديث تفاصيل المتغير',
     show_title: 'تفاصيل المتغير',
     variation_sku: 'SKU',
+    show_variation_label: 'اسم المتغير',
     variation_barcode: 'الباركود',
     variation_price: 'السعر',
     buying_price: 'سعر الشراء',
