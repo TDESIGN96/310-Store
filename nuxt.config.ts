@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: 'https://api.kamu-erp.com/',
+      apiBase: 'https://api.kamu-erp.com/api',
       echo: {
         key: 'dA6V4f6Gn3QYA7NDgd6t',
         wsHost: 'ws-a14d3d63-48f2-43f1-a933-d3e4cfde010c-reverb.laravel.cloud',
