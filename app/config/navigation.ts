@@ -129,13 +129,13 @@ export const navItems: NavGroup[] = [
   {
     groupKey: 'nav.groups.administration',
     items: [
-      // {
-      //   labelKey: 'nav.items.distributors',
-      //   icon: Users,
-      //   path: '/distributors',
-      //   module: 'distributors',
-      //   createPath: '/distributors/create',
-      // },
+      {
+        labelKey: 'nav.items.distributors',
+        icon: Users,
+        path: '/distributors',
+        module: 'distributors',
+        createPath: '/distributors/create',
+      },
       {
         labelKey: 'nav.items.users',
         icon: Users,
