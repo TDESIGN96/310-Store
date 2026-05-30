@@ -119,6 +119,13 @@ export const navItems: NavGroup[] = [
         createPath: '/invoices/create',
       },
       {
+        labelKey: 'nav.items.purchase_bills',
+        icon: FileText,
+        path: '/purchase-bills',
+        module: 'purchase_bills',
+        createPath: '/purchase-bills/create',
+      },
+      {
         labelKey: 'nav.items.invoice_returns',
         icon: FileText,
         path: '/invoice-returns',
