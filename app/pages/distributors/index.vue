@@ -372,10 +372,10 @@ onMounted(() => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead class="font-medium">{{ t('distributors_page.col_name') }}</TableHead>
-            <TableHead class="font-medium">{{ t('distributors_page.col_admin_name') }}</TableHead>
-            <TableHead class="font-medium">{{ t('distributors_page.col_location') }}</TableHead>
-            <TableHead class="font-medium">{{ t('distributors_page.col_status') }}</TableHead>
+            <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_name') }}</TableHead>
+            <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_admin_name') }}</TableHead>
+            <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_location') }}</TableHead>
+            <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_status') }}</TableHead>
             <TableHead class="text-end font-medium">{{ t('distributors_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
@@ -435,7 +435,6 @@ onMounted(() => {
             <TableCell class="text-end">
               <TableRowActions
                 :actions="[
-                  { key: `view-${row.id}`, label: t('common.view'), type: 'button', icon: Eye, tone: 'muted', visible: canShowDistributor, onClick: () => navigateTo(`/distributors/show/${row.id}`) },
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditDistributor, onClick: () => navigateTo(`/distributors/edit/${row.id}`) },
                   { key: `stock-allocation-${row.id}`, label: t('distributors_page.stock_allocation'), type: 'button', icon: Boxes, tone: 'muted', visible: canShowDistributor, onClick: () => navigateTo({ path: `/distributors/show/${row.id}`, query: { tab: 'stock-allocation' } }) },
                   { key: `deactivate-${row.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditDistributor && row.status === 'active', disabled: togglingId === row.id || deletingId === row.id, loading: togglingId === row.id, onClick: () => { distributorToDeactivate = row } },

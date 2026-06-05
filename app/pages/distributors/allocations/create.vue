@@ -659,15 +659,17 @@ const submitAllocation = async () => {
       .filter(row => row.product_id && row.variation_id && row.warehouse_id)
       .map(row => buildRowPayload(row))
 
-    await Promise.all(items.map(item => $api('/distributors/allocations', {
+    await $api('/distributors/allocations', {
       method: 'POST',
       body: {
-        distributor_id: Number(distributorId.value),
-        variation_id: item.variation_id,
-        warehouse_id: item.warehouse_id,
-        quantity: item.quantity,
+        allocations: items.map(item => ({
+          distributor_id: Number(distributorId.value),
+          variation_id: item.variation_id,
+          warehouse_id: item.warehouse_id,
+          quantity: item.quantity,
+        })),
       },
-    })))
+    })
 
     toast.success(t('distributors_show.allocation_create_success'))
     await navigateTo({

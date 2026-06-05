@@ -80,6 +80,12 @@ const variationLabel = (row: Record<string, unknown>) => {
   if (!variation) return '—'
   return String(variation.label ?? '—')
 }
+const productDescription = (row: Record<string, unknown>) => {
+  const direct = String(row.description ?? '').trim()
+  if (direct) return direct
+  const product = (row.product && typeof row.product === 'object' ? row.product : null) as Record<string, unknown> | null
+  return String(product?.description ?? '').trim()
+}
 const itemDiscountPercentage = (row: Record<string, unknown>) => {
   const direct = asNumber(row.discount_percentage)
   if (direct > 0) return direct
@@ -159,7 +165,7 @@ onMounted(async () => {
                 </TableRow></TableHeader>
                 <TableBody>
                   <TableRow v-for="(item, idx) in items" :key="String(item.id ?? idx)">
-                    <TableCell><div class="flex items-center gap-2"><img v-if="productImageUrl(item)" :src="productImageUrl(item)" :alt="productLabel(item)" class="size-10 shrink-0 rounded-md border object-cover" loading="lazy"><span>{{ productLabel(item) }}</span></div></TableCell>
+                    <TableCell><div class="flex items-center gap-2"><img v-if="productImageUrl(item)" :src="productImageUrl(item)" :alt="productLabel(item)" class="size-10 shrink-0 rounded-md border object-cover" loading="lazy"><div class="min-w-0"><span class="block">{{ productLabel(item) }}</span><span v-if="productDescription(item)" class="block text-xs text-muted-foreground whitespace-normal">{{ productDescription(item) }}</span></div></div></TableCell>
                     <TableCell>{{ variationLabel(item) }}</TableCell>
                     <TableCell class="rtl:text-start text-end tabular-nums">{{ asNumber(item.qty) }}</TableCell>
                     <TableCell class="rtl:text-start text-end tabular-nums">{{ money(item.unit_price) }}</TableCell>

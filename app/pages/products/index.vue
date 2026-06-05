@@ -108,6 +108,7 @@ interface ProductRow {
   isIncomplete: boolean
   productType: 'single' | 'combo' | 'unknown'
   createdBy?: ProductAuthor | number | null
+  canBeDeleted: boolean
 }
 
 interface ProductsResponse {
@@ -285,6 +286,7 @@ function normalizeProductRow(raw: Record<string, unknown>, loc: string, multiple
     isIncomplete: raw.is_incomplete === true || raw.is_incomplete === 1 || raw.is_incomplete === '1',
     productType,
     createdBy: (raw.created_by ?? raw.createdBy ?? null) as ProductRow['createdBy'],
+    canBeDeleted: raw.can_be_deleted === true || raw.can_be_deleted === 1 || raw.can_be_deleted === '1',
   }
 }
 
@@ -778,7 +780,7 @@ onMounted(async () => {
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditProduct },
                   { key: `variations-${row.id}`, label: t('products_page.manage_variations'), type: 'link', to: `/products/variations/${row.id}`, tone: 'default', visible: row.productType !== 'combo' },
-                  { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: false, onClick: () => openDelete(row) },
+                  { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteProduct && row.canBeDeleted, onClick: () => openDelete(row) },
                 ]"
                 variant="invoice"
                 align="end"

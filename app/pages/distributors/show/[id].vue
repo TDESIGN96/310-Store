@@ -37,13 +37,13 @@ interface DistributorDetail {
   id: number
   name_en: string
   name_ar: string
-  mobile_number: string
+  mobile: string
   email: string
   address: string
   location: string
   description: string
   admin_name: string
-  admin_mobile_number: string
+  admin_mobile: string
   status: 'active' | 'inactive'
 }
 
@@ -136,13 +136,13 @@ const normalizeDistributor = (raw: unknown): DistributorDetail | null => {
     id,
     name_en: getString(raw.name_en || raw.distributor_name_en || raw.name || raw.company_name_en),
     name_ar: getString(raw.name_ar || raw.distributor_name_ar || raw.company_name_ar),
-    mobile_number: getString(raw.mobile_number || raw.phone),
+    mobile: getString(raw.mobile || raw.phone),
     email: getString(raw.email),
     address: getString(raw.address),
     location: getString(raw.location || raw.city || raw.location_city),
     description: getString(raw.description),
     admin_name: getString(raw.admin_name || admin?.name || user?.name),
-    admin_mobile_number: getString(raw.admin_mobile_number || admin?.mobile || admin?.phone || user?.mobile || user?.phone),
+    admin_mobile: getString(raw.admin_mobile || admin?.mobile || admin?.phone || user?.mobile || user?.phone),
     status: normalizeStatus(raw.status ?? raw.is_active),
   }
 }
@@ -622,8 +622,8 @@ onMounted(async () => {
               <p class="font-medium">{{ distributor.name_ar || '—' }}</p>
             </div>
             <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('distributors_show.mobile_number') }}</p>
-              <p class="font-medium">{{ distributor.mobile_number || '—' }}</p>
+              <p class="text-xs text-muted-foreground">{{ t('distributors_show.mobile') }}</p>
+              <p class="font-medium">{{ distributor.mobile || '—' }}</p>
             </div>
             <div class="space-y-1">
               <p class="text-xs text-muted-foreground">{{ t('distributors_show.email') }}</p>
@@ -642,8 +642,8 @@ onMounted(async () => {
               <p class="font-medium">{{ distributor.admin_name || '—' }}</p>
             </div>
             <div class="space-y-1">
-              <p class="text-xs text-muted-foreground">{{ t('distributors_show.admin_mobile_number') }}</p>
-              <p class="font-medium">{{ distributor.admin_mobile_number || '—' }}</p>
+              <p class="text-xs text-muted-foreground">{{ t('distributors_show.admin_mobile') }}</p>
+              <p class="font-medium">{{ distributor.admin_mobile || '—' }}</p>
             </div>
             <div class="space-y-1 md:col-span-2">
               <p class="text-xs text-muted-foreground">{{ t('distributors_show.description') }}</p>

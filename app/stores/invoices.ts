@@ -38,6 +38,7 @@ export interface InvoiceListItem {
   grand_total: number
   return_reference: string
   return_reference_number: string
+  can_be_edited: boolean
 }
 
 export interface InvoiceReturnFormItem {
@@ -275,6 +276,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
       grand_total: toNumber(payload.grand_total, 0),
       return_reference: returnReference,
       return_reference_number: returnReference,
+      can_be_edited: payload.can_be_edited === true
+        || payload.can_be_edited === 1
+        || payload.can_be_edited === '1',
     }
   }
 

@@ -179,6 +179,7 @@ const createDistributor = async () => {
 
     <div class="rounded-lg border p-5 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 class="text-base font-semibold md:col-span-2">{{ t('distributors_form.section_distributor_details') }}</h2>
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.name_en') }} <span class="text-red-500">*</span></label>
           <Input v-model="nameEn" :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.name_en = ''" />
@@ -229,7 +230,7 @@ const createDistributor = async () => {
       <Separator class="my-2" />
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <h2 class="text-base font-semibold md:col-span-2">Login Details</h2>
+        <h2 class="text-base font-semibold md:col-span-2">{{ t('distributors_form.section_login_details') }}</h2>
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.admin_name') }} <span class="text-red-500">*</span></label>
           <Input v-model="adminName" :class="fieldErrors.admin_name ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.admin_name = ''" />

@@ -30,7 +30,7 @@ import {
   firstStocktakingValidationToastDescription,
   validateStocktakingDraft,
 } from '@/composables/useStocktakingDraftValidation'
-import { fetchAllCategoriesPages } from '@/utils/categoryList'
+import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryList'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import { useQuotationProducts } from '@/composables/useQuotationProducts'
 
@@ -145,6 +145,13 @@ const warehouseDisplayName = (warehouse: InvoiceWarehouseOption): string => {
   return warehouse.name_en || warehouse.name_ar || `#${warehouse.id}`
 }
 
+const selectedWarehouseName = computed(() => {
+  const id = draft.value.warehouse_id
+  if (!id) return ''
+  const match = warehouseOptions.value.find(warehouse => warehouse.id === id)
+  return match ? warehouseDisplayName(match) : ''
+})
+
 const categoryLabel = (category: CategoryOption): string => {
   if (locale.value === 'ar') return category.name_ar || category.name_en || `#${category.id}`
   return category.name_en || category.name_ar || `#${category.id}`
@@ -255,7 +262,7 @@ const addProductRow = async (product: QuotationProductOption, variationId: numbe
     return
   }
 
-  const raw = await $api(`/products/${product.id}`) as Record<string, unknown>
+  const raw = await $api<Record<string, unknown>>(`/products/${product.id}`)
   const nested = raw.data && typeof raw.data === 'object' ? raw.data as Record<string, unknown> : null
   const rawProduct = (nested?.product ?? raw.product ?? nested ?? raw) as Record<string, unknown>
   const loc = locale.value === 'ar' ? 'ar' : 'en'
@@ -517,7 +524,7 @@ onMounted(async () => {
   draft.value.stocktaking_date = formatTodayPickerDate()
   warehouseOptions.value = await loadActiveWarehouses()
   counterOptions.value = await loadAvailableCounters()
-  categoryOptions.value = await fetchAllCategoriesPages<CategoryOption>($api, { status: 'active' })
+  categoryOptions.value = await fetchAllCategoriesPages<CategoryOption>($api as CategoriesApi, { status: 'active' })
 })
 </script>
 
@@ -883,7 +890,7 @@ onMounted(async () => {
                       </div>
                     </TableCell>
                     <TableCell class="align-top text-sm text-muted-foreground py-3">{{ row.categoryLabel }}</TableCell>
-                    <TableCell class="align-top text-sm tabular-nums py-3">{{ row.warehouseQty }}</TableCell>
+                    <TableCell class="align-top text-sm py-3">{{ selectedWarehouseName || '—' }}</TableCell>
                     <TableCell class="align-top py-3">
                       <Button type="button" variant="ghost" size="icon" class="size-8" @click="removeProductRow(idx)">
                         <Trash2 class="size-4 text-red-600" />
