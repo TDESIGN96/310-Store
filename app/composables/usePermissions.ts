@@ -33,14 +33,17 @@ export function usePermissions() {
   }
 
   /** Can see list or module area (index or show permission from API) */
-  const canAccess = (module: PermissionModule) =>
-    !isModuleBlockedForDistributor(module)
-    && (
-    can(`${module}.index`) || can(`${module}.show`)
-    )
+  const canAccess = (module: PermissionModule) => {
+    if (isModuleBlockedForDistributor(module)) return false
+    if (module === 'stocktaking') return can('stocktaking.view')
+    return can(`${module}.index`) || can(`${module}.show`)
+  }
 
-  const canCreate = (module: PermissionModule) =>
-    !isModuleBlockedForDistributor(module) && can(`${module}.store`)
+  const canCreate = (module: PermissionModule) => {
+    if (isModuleBlockedForDistributor(module)) return false
+    if (module === 'stocktaking') return can('stocktaking.create')
+    return can(`${module}.store`)
+  }
 
   const canEdit = (module: PermissionModule) =>
     !isModuleBlockedForDistributor(module) && can(`${module}.update`)

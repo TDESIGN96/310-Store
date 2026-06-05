@@ -71,6 +71,13 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
 
   // Activity log
   { pattern: /^\/activities\/?$/, permission: ['activities.index', 'activities.show'] },
+
+  // Stocktaking orders
+  { pattern: /^\/stocktaking-orders\/review\/[^/]+\/?$/, permission: 'stocktaking.review' },
+  { pattern: /^\/stocktaking-orders\/count\/[^/]+\/?$/, permission: 'stocktaking.count' },
+  { pattern: /^\/stocktaking-orders\/create\/?$/, permission: 'stocktaking.create' },
+  { pattern: /^\/stocktaking-orders\/show\/[^/]+\/?$/, permission: 'stocktaking.view' },
+  { pattern: /^\/stocktaking-orders\/?$/, permission: 'stocktaking.view' },
 ]
 
 /**

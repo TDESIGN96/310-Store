@@ -16,10 +16,17 @@ export type PermissionModule =
   | 'reports'
   | 'warehouses'
   | 'activities'
+  | 'stocktaking'
 export type PermissionKey = `${PermissionModule}.${PermissionAction}`
+export type StocktakingPermissionKey =
+  | 'stocktaking.view'
+  | 'stocktaking.create'
+  | 'stocktaking.count'
+  | 'stocktaking.review'
+  | 'stocktaking.cancel'
 
 export interface PermissionItem {
-  id: PermissionKey
+  id: PermissionKey | StocktakingPermissionKey
 }
 
 export interface PermissionGroup {
@@ -183,6 +190,16 @@ export const permissionGroups: PermissionGroup[] = [
     permissions: [
       { id: 'activities.index' },
       { id: 'activities.show' },
+    ],
+  },
+  {
+    id: 'stocktaking',
+    permissions: [
+      { id: 'stocktaking.view' },
+      { id: 'stocktaking.create' },
+      { id: 'stocktaking.count' },
+      { id: 'stocktaking.review' },
+      { id: 'stocktaking.cancel' },
     ],
   },
 ]

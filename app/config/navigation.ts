@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Warehouse,
   History,
+  ClipboardList,
 } from 'lucide-vue-next'
 import type { PermissionModule } from '@/config/permissions'
 
@@ -99,6 +100,13 @@ export const navItems: NavGroup[] = [
         module: 'warehouses',
         createPath: '/warehouses/create',
       },
+      {
+        labelKey: 'nav.items.stocktaking_orders',
+        icon: ClipboardList,
+        path: '/stocktaking-orders',
+        module: 'stocktaking',
+        createPath: '/stocktaking-orders/create',
+      },
     ],
   },
   {
@@ -119,17 +127,22 @@ export const navItems: NavGroup[] = [
         createPath: '/invoices/create',
       },
       {
+        labelKey: 'nav.items.invoice_returns',
+        icon: FileText,
+        path: '/invoice-returns',
+        module: 'invoice_returns',
+      },
+    ],
+  },
+  {
+    groupKey: 'nav.groups.purchasing',
+    items: [
+      {
         labelKey: 'nav.items.purchase_bills',
         icon: FileText,
         path: '/purchase-bills',
         module: 'purchase_bills',
         createPath: '/purchase-bills/create',
-      },
-      {
-        labelKey: 'nav.items.invoice_returns',
-        icon: FileText,
-        path: '/invoice-returns',
-        module: 'invoice_returns',
       },
     ],
   },

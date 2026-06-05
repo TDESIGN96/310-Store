@@ -89,12 +89,32 @@ const extractProductDetail = (payload: unknown): QuotationProductOption | null =
   return normalized.id > 0 ? normalized : null
 }
 
+export interface SearchProductsOptions {
+  warehouseId?: number
+  categoryId?: number
+}
+
+const appendListFilter = (
+  params: Record<string, string | number>,
+  index: number,
+  column: string,
+  value: string | number,
+) => {
+  params[`filters[${index}][column]`] = column
+  params[`filters[${index}][value]`] = value
+  params[`filters[${index}][condition]`] = '='
+  params[`filters[${index}][operator]`] = 'and'
+}
+
 export const useQuotationProducts = () => {
   const { $api } = useApi()
   const loadingProducts = ref(false)
   const resolvingBarcode = ref(false)
 
-  const searchProducts = async (query: string): Promise<QuotationProductOption[]> => {
+  const searchProducts = async (
+    query: string,
+    options?: SearchProductsOptions,
+  ): Promise<QuotationProductOption[]> => {
     const text = query.trim()
     loadingProducts.value = true
     try {
@@ -105,6 +125,13 @@ export const useQuotationProducts = () => {
       if (text) {
         params.search = text
         params.name = text
+      }
+      let filterIndex = 0
+      if (options?.warehouseId) {
+        appendListFilter(params, filterIndex++, 'warehouse_id', options.warehouseId)
+      }
+      if (options?.categoryId) {
+        appendListFilter(params, filterIndex++, 'category_id', options.categoryId)
       }
       const res = await $api('/products', {
         params,
@@ -127,12 +154,13 @@ export const useQuotationProducts = () => {
 
   const lookupBarcode = async (
     barcode: string,
+    options?: SearchProductsOptions,
   ): Promise<{ product: QuotationProductOption; variationId: number | null } | null> => {
     const normalizedBarcode = barcode.trim()
     if (!normalizedBarcode) return null
     resolvingBarcode.value = true
     try {
-      const matches = await searchProducts(normalizedBarcode)
+      const matches = await searchProducts(normalizedBarcode, options)
       for (const match of matches) {
         const full = await getProductById(match.id)
         if (!full) continue

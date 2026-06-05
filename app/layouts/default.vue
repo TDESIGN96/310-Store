@@ -6,10 +6,10 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 <template>
   <SidebarProvider>
     <AppSidebar variant="inset" />
-    <SidebarInset>
+    <SidebarInset class="min-w-0">
       <AppHeader />
 
-      <main class="p-4">
+      <main class="p-4 min-w-0">
         <slot />
       </main>
     </SidebarInset>
