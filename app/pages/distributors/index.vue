@@ -81,6 +81,7 @@ const currentPage = ref(1)
 const search = ref('')
 const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
 const filterLocation = ref('all')
+const allLocations = ref<string[]>([])
 const { listLoadError, clearListLoadError, setListLoadErrorFromException } = useResourceListLoadError('distributors_page')
 
 const distributorToDelete = ref<DistributorItem | null>(null)
@@ -147,12 +148,7 @@ const statusConfig = (status: string) => {
 }
 
 const locationOptions = computed(() => {
-  const set = new Set<string>()
-  rows.value.forEach((row) => {
-    const value = row.location.trim()
-    if (value) set.add(value)
-  })
-  return [...set].sort((a, b) => a.localeCompare(b))
+  return allLocations.value
 })
 
 const loadDistributors = async (page = currentPage.value, query = search.value.trim()) => {
@@ -180,7 +176,7 @@ const loadDistributors = async (page = currentPage.value, query = search.value.t
       filterIndex += 1
     }
     if (filterLocation.value !== 'all') {
-      params[`filters[${filterIndex}][column]`] = 'location'
+      params[`filters[${filterIndex}][column]`] = 'city'
       params[`filters[${filterIndex}][value]`] = filterLocation.value
       params[`filters[${filterIndex}][condition]`] = '='
       params[`filters[${filterIndex}][operator]`] = 'and'
@@ -190,6 +186,12 @@ const loadDistributors = async (page = currentPage.value, query = search.value.t
     const listRaw = res.data?.distributors ?? res.distributors ?? []
     const list = listRaw.map(item => normalizeDistributor(item)).filter((v): v is DistributorItem => !!v)
     rows.value = list
+    
+    // Update allLocations only when loading without location filter to capture complete list
+    if (filterLocation.value === 'all') {
+      const uniqueLocations = [...new Set(list.map(r => r.location.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+      allLocations.value = uniqueLocations
+    }
     pagination.value = res.data?.pagination ?? res.pagination ?? null
     currentPage.value = pagination.value?.current_page ?? page
   }

@@ -15,7 +15,6 @@ import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
 import { DatePickerInput } from '@/components/ui/date-picker'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -115,16 +114,6 @@ const warehouseLabel = (row: PurchaseBillListItem) => {
   const nameEn = row.warehouse_name_en || ''
   return locale.value === 'ar' ? (nameAr || nameEn || '—') : (nameEn || nameAr || '—')
 }
-const statusLabel = (row: PurchaseBillListItem) => {
-  if (row.status_label) return row.status_label
-  if (row.status === 'pending') return t('purchase_bills_page.status_pending')
-  if (row.status === 'in_delivery') return t('purchase_bills_page.status_in_delivery')
-  if (row.status === 'complete') return t('purchase_bills_page.status_complete')
-  if (row.status === 'returned') return t('purchase_bills_page.status_returned')
-  if (row.status === 'partially_returned') return t('purchase_bills_page.status_partially_returned')
-  return row.status || '—'
-}
-
 const loadRows = async (page = currentPage.value) => {
   if (!canViewPurchaseBills.value) return
   currentPage.value = page
@@ -304,15 +293,14 @@ const goToPage = (page: number) => {
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_bill_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_supply_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.warehouse') }}</TableHead>
-              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_status') }}</TableHead>
               <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_discount_amount') }}</TableHead>
               <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_total') }}</TableHead>
               <TableHead class="font-medium min-w-[220px] text-end">{{ t('purchase_bills_page.col_actions') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loading"><TableCell :colspan="10" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
-            <TableRow v-else-if="!sortedList.length"><TableCell :colspan="10" class="py-14 text-center text-sm text-muted-foreground">{{ t('purchase_bills_page.empty') }}</TableCell></TableRow>
+            <TableRow v-if="loading"><TableCell :colspan="9" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
+            <TableRow v-else-if="!sortedList.length"><TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">{{ t('purchase_bills_page.empty') }}</TableCell></TableRow>
             <TableRow v-for="row in sortedList" :key="row.id" class="hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(row.id) }">
               <TableCell class="w-10">
                 <Checkbox :model-value="selectedIds.has(row.id)" class="mt-0.5 mx-4" @update:model-value="toggleSelect(row.id)" />
@@ -336,7 +324,6 @@ const goToPage = (page: number) => {
               <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.bill_date) }}</TableCell>
               <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
               <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
-              <TableCell><Badge variant="outline">{{ statusLabel(row) }}</Badge></TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
               <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
               <TableCell class="text-end">

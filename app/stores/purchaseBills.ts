@@ -68,13 +68,18 @@ export interface PurchaseBillDraft {
   supply_date: string
   terms: string
   notes: string
-  delivery_fees: number
   other_fees: number
   additional_costs: PurchaseBillAdditionalCost[]
   items: PurchaseBillDraftItem[]
 }
 
 const todayIso = (): string => new Date().toISOString().slice(0, 10)
+
+const toDateInputValue = (value: unknown): string => {
+  if (typeof value !== 'string') return ''
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value.trim())
+  return match ? match[1]! : ''
+}
 
 const normalizePercent = (value: number): number => {
   if (!Number.isFinite(value)) return 0
@@ -114,16 +119,26 @@ const createEmptyDraft = (): PurchaseBillDraft => ({
   supply_date: todayIso(),
   terms: '',
   notes: '',
-  delivery_fees: 0,
   other_fees: 0,
   additional_costs: [],
   items: [createEmptyItem()],
 })
 
+// Purchase-bill-only cache of variation buying prices (keyed by variation id),
+// populated from the product detail endpoint. Kept local to this store so the
+// shared product composable / quotations / invoices stay untouched.
+const buyingPriceByVariation: Record<number, number> = {}
+const buyingPriceFetchByProduct: Record<number, Promise<void>> = {}
+
 const getVariationPrice = (item: PurchaseBillDraftItem): number => {
   if (!item.product) return 0
-  if (!item.variation_id) return item.product.price
-  const variation = item.product.variations.find(v => v.id === item.variation_id)
+  const variationId = item.variation_id
+  if (variationId) {
+    const buyingPrice = buyingPriceByVariation[variationId]
+    if (buyingPrice && buyingPrice > 0) return buyingPrice
+  }
+  if (!variationId) return item.product.price
+  const variation = item.product.variations.find(v => v.id === variationId)
   if (!variation) return item.product.price
   return getTieredUnitPrice(
     item.qty,
@@ -156,6 +171,41 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     if (typeof value === 'string' && value.trim() === '') return undefined
     const num = Number(value)
     return Number.isFinite(num) ? num : undefined
+  }
+
+  const cacheBuyingPricesFromRawVariations = (rawVariations: unknown) => {
+    if (!Array.isArray(rawVariations)) return
+    for (const raw of rawVariations) {
+      if (!raw || typeof raw !== 'object') continue
+      const variation = raw as Record<string, unknown>
+      const id = toNumber(variation.id, 0)
+      if (id > 0) buyingPriceByVariation[id] = toNumber(variation.buying_price, 0)
+    }
+  }
+
+  const ensureBuyingPricesForProduct = async (productId: number) => {
+    if (!productId) return
+    const cached = buyingPriceFetchByProduct[productId]
+    if (cached) {
+      await cached
+      return
+    }
+    const fetchPromise = (async () => {
+      try {
+        const res = await $api<Record<string, unknown>>(`/products/${productId}`)
+        const nested = res.data && typeof res.data === 'object' ? res.data as Record<string, unknown> : null
+        const product = (nested?.product ?? res.product ?? nested ?? res) as Record<string, unknown>
+        cacheBuyingPricesFromRawVariations(product.variations)
+      }
+      catch {
+        return
+      }
+      finally {
+        delete buyingPriceFetchByProduct[productId]
+      }
+    })()
+    buyingPriceFetchByProduct[productId] = fetchPromise
+    await fetchPromise
   }
 
   const normalizeStatus = (value: unknown): PurchaseBillStatus => {
@@ -258,6 +308,8 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
         const item = rawItem as Record<string, unknown>
         const productRaw = (item.product && typeof item.product === 'object' ? item.product : null) as Record<string, unknown> | null
         const variationRaw = (item.variation && typeof item.variation === 'object' ? item.variation : null) as Record<string, unknown> | null
+        cacheBuyingPricesFromRawVariations(productRaw?.variations)
+        if (variationRaw) cacheBuyingPricesFromRawVariations([variationRaw])
         const mappedVariations = (Array.isArray(productRaw?.variations) ? productRaw.variations : [])
           .map((rawVariation) => {
             const variation = rawVariation as Record<string, unknown>
@@ -343,33 +395,28 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
       })
       .filter(cost => cost.name || cost.amount > 0)
 
+    const supplier = (bill.supplier && typeof bill.supplier === 'object' ? bill.supplier : null) as Record<string, unknown> | null
+    const district = (bill.district && typeof bill.district === 'object' ? bill.district : null) as Record<string, unknown> | null
+
     draft.value = {
       id: toNumber(bill.id, 0) || null,
       reference_number: String(bill.reference_number ?? ''),
       warehouse_id: toNumber(bill.warehouse_id ?? ((bill.warehouse as Record<string, unknown> | null)?.id), 0) || null,
       district_id: toNumber(
         bill.district_id
-        ?? ((bill.district as Record<string, unknown> | null)?.id),
+        ?? district?.id,
         0,
       ) || null,
       status: normalizeStatus(bill.status),
       description: String(bill.description ?? ''),
-      address: String(bill.address ?? ''),
-      customer_name: String(bill.customer_name ?? ''),
-      customer_mobile: String(bill.customer_mobile ?? ''),
-      customer_email: String(bill.customer_email ?? ''),
-      bill_date: String(bill.bill_date ?? bill.invoice_date ?? todayIso()),
-      supply_date: String(bill.supply_date ?? todayIso()),
+      address: String(bill.address ?? supplier?.address ?? ''),
+      customer_name: String(bill.customer_name ?? supplier?.name ?? bill.supplier_name ?? ''),
+      customer_mobile: String(bill.customer_mobile ?? supplier?.mobile ?? supplier?.phone ?? bill.supplier_mobile ?? ''),
+      customer_email: String(bill.customer_email ?? supplier?.email ?? bill.supplier_email ?? ''),
+      bill_date: toDateInputValue(bill.bill_date ?? bill.invoice_date) || todayIso(),
+      supply_date: toDateInputValue(bill.supply_date) || todayIso(),
       terms: String(bill.terms ?? ''),
       notes: String(bill.notes ?? ''),
-      delivery_fees: Math.max(
-        0,
-        toNumber(
-          bill.delivery_fees
-          ?? ((bill.district as Record<string, unknown> | null)?.delivery_fee),
-          0,
-        ),
-      ),
       other_fees: Math.max(
         0,
         toNumber(
@@ -399,7 +446,7 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     }))
     return calculateQuotationSummary({
       rows,
-      deliveryFees: draft.value.delivery_fees,
+      deliveryFees: 0,
       otherFees: draft.value.other_fees,
     })
   })
@@ -433,7 +480,7 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     draft.value.items = [createEmptyItem()]
   }
 
-  const setRowProduct = (index: number, product: QuotationProductOption, variationId: number | null = null) => {
+  const setRowProduct = async (index: number, product: QuotationProductOption, variationId: number | null = null) => {
     const row = draft.value.items[index]
     if (!row) return
     row.product = product
@@ -443,14 +490,16 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     if (product.variations.length === 1 && !variationId) {
       row.variation_id = product.variations[0]?.id ?? null
     }
+    await ensureBuyingPricesForProduct(product.id)
     row.unit_price = getVariationPrice(row)
   }
 
-  const setRowVariation = (index: number, variationId: number | null) => {
+  const setRowVariation = async (index: number, variationId: number | null) => {
     const row = draft.value.items[index]
     if (!row) return
     row.variation_id = variationId
     if (shouldAutoUpdateUnitPrice(row.unit_price_manual)) {
+      if (row.product_id) await ensureBuyingPricesForProduct(row.product_id)
       row.unit_price = getVariationPrice(row)
     }
   }
@@ -510,7 +559,6 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     supply_date: draft.value.supply_date || undefined,
     terms: draft.value.terms || undefined,
     notes: draft.value.notes || undefined,
-    delivery_fees: draft.value.delivery_fees || 0,
     other_fees: draft.value.other_fees || 0,
     additional_costs: draft.value.additional_costs,
     subtotal: summary.value.subtotal,

@@ -30,7 +30,7 @@ const { t, locale } = useI18n()
 const { canCreate } = usePermissions()
 const canCreatePurchaseBill = computed(() => canCreate('purchase_bills'))
 const purchaseBillsStore = usePurchaseBillsStore()
-const { searchProducts, lookupBarcode, loadingProducts } = useQuotationProducts()
+const { searchProducts, lookupBarcode, getProductById, loadingProducts } = useQuotationProducts()
 const { loadActiveWarehouses, loadingWarehouses } = useInvoiceWarehouses()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
@@ -70,10 +70,10 @@ const firstEmptyRowIndex = computed(() => {
   return found >= 0 ? found : draft.value.items.length
 })
 
-const addProductToRows = (product: QuotationProductOption, variationId: number | null) => {
+const addProductToRows = async (product: QuotationProductOption, variationId: number | null) => {
   const targetIndex = firstEmptyRowIndex.value
   if (targetIndex === draft.value.items.length) purchaseBillsStore.addRow()
-  purchaseBillsStore.setRowProduct(targetIndex, product, variationId)
+  await purchaseBillsStore.setRowProduct(targetIndex, product, variationId)
 }
 
 const handleBarcodeSubmit = async () => {
@@ -86,14 +86,25 @@ const handleBarcodeSubmit = async () => {
     })
     return
   }
-  addProductToRows(matched.product, matched.variationId)
+  await addProductToRows(matched.product, matched.variationId)
   barcodeInput.value = ''
 }
 
 const selectProductResult = async (productId: number) => {
   const picked = searchResults.value.find(row => row.id === productId)
   if (!picked) return
-  addProductToRows(picked, null)
+  const code = productSearch.value.trim()
+  const full = await getProductById(productId)
+  const product = full ?? picked
+  let variationId: number | null = null
+  if (code) {
+    const matchedVariation = product.variations.find(variation => variation.barcode === code)
+    if (matchedVariation) variationId = matchedVariation.id
+  }
+  if (!variationId && product.variations.length === 1) {
+    variationId = product.variations[0]?.id ?? null
+  }
+  await addProductToRows(product, variationId)
   searchResults.value = []
   productSearch.value = ''
 }
@@ -143,13 +154,11 @@ const onDistrictChange = (value: unknown) => {
   const selectedId = Number(value ?? 0)
   draft.value.district_id = Number.isFinite(selectedId) && selectedId > 0 ? selectedId : null
   if (!draft.value.district_id) {
-    draft.value.delivery_fees = 0
     draft.value.other_fees = 0
     return
   }
   const selected = districtOptions.value.find(item => item.id === draft.value.district_id)
   if (!selected) return
-  draft.value.delivery_fees = Math.max(0, Number(selected.delivery_fee) || 0)
   draft.value.other_fees = Math.max(0, Number(selected.other_fees) || 0)
 }
 
@@ -446,7 +455,7 @@ onMounted(() => {
             </Button>
           </div>
 
-          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.subtotal') }}</p>
               <p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.subtotal) }}</p>
@@ -456,10 +465,6 @@ onMounted(() => {
               <p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.totalDiscount) }}</p>
             </div>
             <div class="space-y-1">
-              <label class="text-xs text-muted-foreground">{{ t('purchase_bills_page.delivery_fees') }}</label>
-              <Input :model-value="draft.delivery_fees" type="number" min="0" class="tabular-nums" @update:model-value="value => draft.delivery_fees = Math.max(0, Number(value) || 0)" />
-            </div>
-            <div v-if="draft.other_fees > 0" class="space-y-1">
               <label class="text-xs text-muted-foreground">{{ t('purchase_bills_page.other_fees') }}</label>
               <Input :model-value="draft.other_fees" type="number" min="0" class="tabular-nums" @update:model-value="value => draft.other_fees = Math.max(0, Number(value) || 0)" />
             </div>

@@ -25,14 +25,6 @@ const districtName = computed(() => {
   const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
   return String(district?.district ?? current.district_name ?? '').trim()
 })
-const deliveryFeeValue = computed(() => {
-  const current = purchaseBill.value
-  if (!current) return 0
-  const direct = asNumber(current.delivery_fees)
-  if (direct > 0) return direct
-  const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
-  return asNumber(district?.delivery_fee)
-})
 const otherFeeValue = computed(() => {
   const current = purchaseBill.value
   if (!current) return 0
@@ -41,7 +33,6 @@ const otherFeeValue = computed(() => {
   const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
   return asNumber(district?.other_fees)
 })
-const showDeliveryFee = computed(() => deliveryFeeValue.value > 0)
 const showOtherFee = computed(() => otherFeeValue.value > 0)
 const items = computed(() => {
   const raw = purchaseBill.value?.items
@@ -82,9 +73,8 @@ const variationLabel = (row: Record<string, unknown>) => {
 }
 const productDescription = (row: Record<string, unknown>) => {
   const direct = String(row.description ?? '').trim()
-  if (direct) return direct
-  const product = (row.product && typeof row.product === 'object' ? row.product : null) as Record<string, unknown> | null
-  return String(product?.description ?? '').trim()
+  if (direct && direct !== 'null' && direct !== 'undefined') return direct
+  return ''
 }
 const itemDiscountPercentage = (row: Record<string, unknown>) => {
   const direct = asNumber(row.discount_percentage)
@@ -177,10 +167,9 @@ onMounted(async () => {
               </Table>
             </div>
           </div>
-          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-4">
+          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(purchaseBill.subtotal) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(purchaseBill.total_discount) }}</p></div>
-            <div v-if="showDeliveryFee"><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.delivery_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(deliveryFeeValue) }}</p></div>
             <div v-if="showOtherFee"><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.other_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(otherFeeValue) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ money(purchaseBill.grand_total) }}</p></div>
           </div>

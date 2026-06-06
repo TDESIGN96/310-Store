@@ -82,9 +82,8 @@ const variationLabel = (row: Record<string, unknown>) => {
 }
 const productDescription = (row: Record<string, unknown>) => {
   const direct = String(row.description ?? '').trim()
-  if (direct) return direct
-  const product = (row.product && typeof row.product === 'object' ? row.product : null) as Record<string, unknown> | null
-  return String(product?.description ?? '').trim()
+  if (direct && direct !== 'null' && direct !== 'undefined') return direct
+  return ''
 }
 const itemDiscountPercentage = (row: Record<string, unknown>) => {
   const direct = asNumber(row.discount_percentage)

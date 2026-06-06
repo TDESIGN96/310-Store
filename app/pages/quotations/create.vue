@@ -56,7 +56,7 @@ const { t, locale } = useI18n()
 const { canCreate } = usePermissions()
 const canCreateQuotation = computed(() => canCreate('quotations'))
 const quotationsStore = useQuotationsStore()
-const { searchProducts, lookupBarcode, resolvingBarcode, loadingProducts } = useQuotationProducts()
+const { searchProducts, lookupBarcode, getProductById, resolvingBarcode, loadingProducts } = useQuotationProducts()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 

@@ -50,7 +50,7 @@ export default {
       main: 'Home',
       inventory: 'Inventory',
       sales: 'Sales',
-      purchasing: 'Purchasing',
+      purchasing: 'Purchases',
       administration: 'Administration',
     },
     items: {
@@ -2128,12 +2128,14 @@ export default {
     general_information: 'General Information',
     name_en: 'Distributor Name - EN',
     name_ar: 'Distributor Name - AR',
+    mobile: 'Mobile Number',
     mobile_number: 'Mobile Number',
     email: 'Email',
     address: 'Address',
     location: 'Location / City',
     description: 'Description',
     admin_name: 'Admin Name',
+    admin_mobile: 'Admin Mobile Number',
     admin_mobile_number: 'Admin Mobile Number',
   },
 
