@@ -173,8 +173,8 @@ onMounted(async () => {
     </div>
 
     <template v-else>
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="relative min-w-[220px] max-w-sm">
+      <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
+        <div class="relative w-full sm:min-w-[220px] sm:max-w-sm">
           <Search class="pointer-events-none absolute top-1/2 right-3 z-[1] size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             v-model="search"
@@ -186,7 +186,7 @@ onMounted(async () => {
 
       <div class="rounded-lg border overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader class="hidden md:table-header-group">
             <TableRow class="bg-muted/40 hover:bg-muted/40">
               <TableHead class="text-start">{{ t('invoice_returns_page.col_id') }}</TableHead>
               <TableHead class="text-start">{{ t('invoice_returns_page.col_ref_id') }}</TableHead>
@@ -197,7 +197,7 @@ onMounted(async () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loadingReturns">
+            <TableRow v-if="loadingReturns" class="md:table-row">
               <TableCell :colspan="6" class="py-14 text-center">
                 <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 class="size-4 animate-spin" />
@@ -205,18 +205,39 @@ onMounted(async () => {
                 </div>
               </TableCell>
             </TableRow>
-            <TableRow v-else-if="!rows.length">
+            <TableRow v-else-if="!rows.length" class="md:table-row">
               <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
                 {{ t('invoice_returns_page.empty') }}
               </TableCell>
             </TableRow>
-            <TableRow v-for="row in rows" :key="row.id">
-              <TableCell>{{ row.id }}</TableCell>
-              <TableCell class="font-medium">{{ row.return_reference || `#${row.id}` }}</TableCell>
-              <TableCell>{{ row.invoice_id }}</TableCell>
-              <TableCell>{{ formatDisplayDate(row.return_date) }}</TableCell>
-              <TableCell>{{ createdByLabel(row) }}</TableCell>
-              <TableCell class="text-end">
+            <TableRow
+              v-for="row in rows"
+              :key="row.id"
+              class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
+                     md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
+                     hover:bg-muted/30 transition-colors align-middle"
+            >
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.col_id') }}</span>
+                <span>{{ row.id }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.col_ref_id') }}</span>
+                <span class="font-medium">{{ row.return_reference || `#${row.id}` }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.col_invoice_id') }}</span>
+                <span>{{ row.invoice_id }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.col_return_date') }}</span>
+                <span>{{ formatDisplayDate(row.return_date) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.col_created_by') }}</span>
+                <span>{{ createdByLabel(row) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions
                   :actions="[
                     { key: `show-${row.id}`, label: t('common.view'), type: 'link', to: `/invoice-returns/show/${row.id}`, icon: Eye, tone: 'default' },

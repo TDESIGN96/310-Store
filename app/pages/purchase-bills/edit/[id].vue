@@ -282,7 +282,7 @@ onMounted(async () => {
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader class="hidden md:table-header-group">
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
                     <TableHead class="min-w-[200px] text-start">{{ t('purchase_bills_page.col_product') }}</TableHead>
                     <TableHead class="min-w-[180px] text-start">{{ t('purchase_bills_page.row_description') }}</TableHead>
@@ -294,26 +294,61 @@ onMounted(async () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-for="(item, idx) in draft.items" :key="item.key" class="align-top">
-                    <TableCell class="min-w-[220px] space-y-2">
-                      <p class="text-sm font-medium">{{ productDisplayName(item.product) }}</p>
-                      <Select v-if="item.product?.variations.length" :model-value="item.variation_id ? String(item.variation_id) : ''" @update:model-value="value => purchaseBillsStore.setRowVariation(idx, Number(value))">
-                        <SelectTrigger><SelectValue :placeholder="t('purchase_bills_page.select_variation')" /></SelectTrigger>
-                        <SelectContent><SelectItem v-for="variation in item.product.variations" :key="variation.id" :value="String(variation.id)">{{ variation.label }}</SelectItem></SelectContent>
-                      </Select>
+                  <TableRow
+                    v-for="(item, idx) in draft.items"
+                    :key="item.key"
+                    class="flex flex-col gap-2 border-2 rounded-lg p-4 mb-4 shadow-sm
+                           md:table-row md:border-0 md:rounded-none md:p-0 md:mb-0 md:shadow-none md:align-top"
+                  >
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[220px]">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.col_product') }}
+                      </span>
+                      <div class="space-y-2">
+                        <p class="text-sm font-medium">{{ productDisplayName(item.product) }}</p>
+                        <Select v-if="item.product?.variations.length" :model-value="item.variation_id ? String(item.variation_id) : ''" @update:model-value="value => purchaseBillsStore.setRowVariation(idx, Number(value))">
+                          <SelectTrigger><SelectValue :placeholder="t('purchase_bills_page.select_variation')" /></SelectTrigger>
+                          <SelectContent><SelectItem v-for="variation in item.product.variations" :key="variation.id" :value="String(variation.id)">{{ variation.label }}</SelectItem></SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
-                    <TableCell class="min-w-[200px] ltr:text-start rtl:text-end text-start"><Input v-model="item.description" /></TableCell>
-                    <TableCell class="min-w-[90px] text-start rtl:text-end"><Input :model-value="item.qty" type="number" min="1" class="text-start rtl:text-end tabular-nums" @update:model-value="value => purchaseBillsStore.setRowQty(idx, Number(value))" /></TableCell>
-                    <TableCell class="min-w-[120px] text-start rtl:text-end"><Input :model-value="item.unit_price" type="number" min="0" class="text-start rtl:text-end tabular-nums" @update:model-value="value => purchaseBillsStore.setRowUnitPrice(idx, Number(value))" /></TableCell>
-                    <TableCell class="min-w-[220px] text-start rtl:text-end">
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[200px] md:ltr:text-start md:rtl:text-end md:text-start">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.row_description') }}
+                      </span>
+                      <Input v-model="item.description" />
+                    </TableCell>
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[90px] md:text-start md:rtl:text-end">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.qty') }}
+                      </span>
+                      <Input :model-value="item.qty" type="number" min="1" class="text-start rtl:text-end tabular-nums" @update:model-value="value => purchaseBillsStore.setRowQty(idx, Number(value))" />
+                    </TableCell>
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[120px] md:text-start md:rtl:text-end">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.unit_price') }}
+                      </span>
+                      <Input :model-value="item.unit_price" type="number" min="0" class="text-start rtl:text-end tabular-nums" @update:model-value="value => purchaseBillsStore.setRowUnitPrice(idx, Number(value))" />
+                    </TableCell>
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[220px] md:text-start md:rtl:text-end">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.discount_percent') }}
+                      </span>
                       <Select :model-value="item.discount_mode" @update:model-value="value => purchaseBillsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))">
                         <SelectTrigger class="h-9 w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="fixed">{{ t('purchase_bills_page.discount_mode_fixed') }}</SelectItem><SelectItem value="percentage">{{ t('purchase_bills_page.discount_mode_percentage') }}</SelectItem></SelectContent>
                       </Select>
                       <Input :model-value="item.discount_value" type="number" step="0.01" class="mt-2 text-start rtl:text-end tabular-nums" @update:model-value="value => purchaseBillsStore.setRowDiscountValue(idx, Number(value))" />
                     </TableCell>
-                    <TableCell class="text-start rtl:text-end font-medium tabular-nums">{{ formatMoney(rowTotals(idx).rowTotal) }}</TableCell>
-                    <TableCell class="text-end"><Button type="button" variant="ghost" size="icon" class="size-8 text-red-600" @click="purchaseBillsStore.removeRow(idx)"><Trash2 class="size-4" /></Button></TableCell>
+                    <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:text-start md:rtl:text-end md:font-medium md:tabular-nums">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">
+                        {{ t('purchase_bills_page.row_total') }}
+                      </span>
+                      <span class="font-medium">{{ formatMoney(rowTotals(idx).rowTotal) }}</span>
+                    </TableCell>
+                    <TableCell class="flex justify-end pt-2 border-t mt-1 md:table-cell md:border-0 md:pt-0 md:mt-0 md:text-end">
+                      <Button type="button" variant="ghost" size="icon" class="size-8 text-red-600" @click="purchaseBillsStore.removeRow(idx)"><Trash2 class="size-4" /></Button>
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

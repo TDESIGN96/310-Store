@@ -547,17 +547,17 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="flex items-center justify-between gap-4">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
 <!-- Left side — search + filters -->
-<div class="flex flex-wrap items-center gap-2 flex-1">
+<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 sm:flex-1">
 
-  <div class="relative min-w-[200px] max-w-sm">
+  <div class="relative w-full sm:min-w-[200px] sm:max-w-sm">
     <Search class="pointer-events-none absolute top-1/2 right-3 z-[1] size-4 -translate-y-1/2 text-muted-foreground" />
     <Input
       v-model="search"
       :placeholder="t('products_page.search_placeholder')"
-      class="h-9 pr-9"
+      class="h-9 pr-9 w-full"
     />
     <Loader2
       v-if="loading && search.trim()"
@@ -566,7 +566,7 @@ onMounted(async () => {
   </div>
 
   <Select :key="`product-category-${locale}`" :model-value="filterCategoryId" @update:model-value="onCategoryFilterChange">
-    <SelectTrigger class="h-9 w-[200px] gap-2">
+    <SelectTrigger class="h-9 w-full sm:w-[200px] gap-2">
       <Filter class="size-3.5 shrink-0 text-muted-foreground" />
       <SelectValue :placeholder="t('products_page.filter_category')" />
     </SelectTrigger>
@@ -583,7 +583,7 @@ onMounted(async () => {
   </Select>
 
   <Select :key="`product-warehouse-${locale}`" :model-value="filterWarehouseId" @update:model-value="onWarehouseFilterChange">
-    <SelectTrigger class="h-9 w-[200px] gap-2">
+    <SelectTrigger class="h-9 w-full sm:w-[200px] gap-2">
       <Filter class="size-3.5 shrink-0 text-muted-foreground" />
       <SelectValue :placeholder="t('products_page.filter_warehouse')" />
     </SelectTrigger>
@@ -603,7 +603,7 @@ onMounted(async () => {
     v-if="hasActiveFilters"
     variant="ghost"
     size="sm"
-    class="h-9 gap-1.5 text-muted-foreground"
+    class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto"
     :disabled="loading"
     @click="clearFilters"
   >
@@ -616,7 +616,7 @@ onMounted(async () => {
 <!-- Right side — create dropdown -->
 <DropdownMenu v-if="canCreateProduct">
   <DropdownMenuTrigger as-child>
-    <Button class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] shrink-0">
+    <Button class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] w-full sm:w-auto">
       <Plus class="size-4" />
       {{ t('products_page.new_product') }}
     </Button>
@@ -665,7 +665,7 @@ onMounted(async () => {
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead v-if="canSelectProductsForDelete" class="w-10 text-center">
               <Checkbox
@@ -695,7 +695,7 @@ onMounted(async () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="canSelectProductsForDelete ? 7 : 6" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
@@ -703,7 +703,7 @@ onMounted(async () => {
               </div>
             </TableCell>
           </TableRow>
-          <TableRow v-else-if="listLoadError">
+          <TableRow v-else-if="listLoadError" class="md:table-row">
             <TableCell :colspan="canSelectProductsForDelete ? 7 : 6" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
@@ -717,7 +717,7 @@ onMounted(async () => {
               </div>
             </TableCell>
           </TableRow>
-          <TableRow v-else-if="rows.length === 0">
+          <TableRow v-else-if="rows.length === 0" class="md:table-row">
             <TableCell :colspan="canSelectProductsForDelete ? 7 : 6" class="py-14 text-center text-sm text-muted-foreground">
               {{ t('products_page.no_products') }}
             </TableCell>
@@ -726,56 +726,66 @@ onMounted(async () => {
             <TableRow
               v-for="row in rows"
               :key="row.id"
-              class="hover:bg-muted/30 transition-colors align-middle"
+              class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle"
               :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
             >
-            <TableCell v-if="canSelectProductsForDelete" class="w-10">
+            <TableCell v-if="canSelectProductsForDelete" class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox
                 :model-value="selectedIds.has(row.id)"
-                class="mt-0.5 mx-4"
+                class="md:mt-0.5 md:mx-4"
                 @update:model-value="toggleSelect(row.id)"
               />
             </TableCell>
-            <TableCell class="text-sm font-medium">
-              <div class="inline-flex items-center gap-2">
-                <button
-                  v-if="canShowProduct"
-                  type="button"
-                  class="max-w-[260px] truncate text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
-                  @click="navigateTo(row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`)"
-                >
-                  {{ row.name }}
-                </button>
-                <span v-else class="max-w-[260px] truncate">{{ row.name }}</span>
-                <Badge
-                  v-if="row.productType === 'combo'"
-                  variant="secondary"
-                  class="text-[10px] uppercase tracking-wide"
-                >
-                  {{ t('products_page.combo_badge') }}
-                </Badge>
-                <Badge
-                  v-if="row.isIncomplete"
-                  variant="destructive"
-                  class="text-[10px] uppercase tracking-wide"
-                >
-                  {{ t('products_page.warning_badge') }}
-                </Badge>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.col_name') }}</span>
+              <div class="flex flex-col items-end md:items-start gap-1">
+                <div class="inline-flex items-center gap-2">
+                  <button
+                    v-if="canShowProduct"
+                    type="button"
+                    class="max-w-[260px] truncate text-sm font-medium text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-end md:text-start cursor-pointer"
+                    @click="navigateTo(row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`)"
+                  >
+                    {{ row.name }}
+                  </button>
+                  <span v-else class="max-w-[260px] truncate text-sm font-medium">{{ row.name }}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <Badge
+                    v-if="row.productType === 'combo'"
+                    variant="secondary"
+                    class="text-[10px] uppercase tracking-wide"
+                  >
+                    {{ t('products_page.combo_badge') }}
+                  </Badge>
+                  <Badge
+                    v-if="row.isIncomplete"
+                    variant="destructive"
+                    class="text-[10px] uppercase tracking-wide"
+                  >
+                    {{ t('products_page.warning_badge') }}
+                  </Badge>
+                </div>
               </div>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">
-              {{ row.categoryLabel }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.col_category') }}</span>
+              <span class="text-sm text-muted-foreground">{{ row.categoryLabel }}</span>
             </TableCell>
-            <TableCell class="text-sm tabular-nums text-center">
-              {{ row.qty }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-center">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.col_qty') }}</span>
+              <span class="text-sm tabular-nums">{{ row.qty }}</span>
             </TableCell>
-            <TableCell class="text-sm text-center">
-              {{ row.variationsCount }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-center">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.variations_col') }}</span>
+              <span class="text-sm">{{ row.variationsCount }}</span>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">
-              {{ createdByDisplay(row.createdBy) }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.added_by') }}</span>
+              <span class="text-sm text-muted-foreground">{{ createdByDisplay(row.createdBy) }}</span>
             </TableCell>
-            <TableCell class="text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
               <TableRowActions
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditProduct },

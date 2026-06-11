@@ -213,15 +213,15 @@ const goToPage = (page: number) => {
     <div v-if="!canViewPurchaseBills" class="rounded-xl bg-amber-50 px-6 py-10 text-center text-sm text-amber-800">{{ t('purchase_bills_page.no_permission') }}</div>
 
     <template v-else>
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex flex-wrap items-center gap-2 flex-1">
-          <div class="relative min-w-[200px] max-w-sm">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 sm:flex-1">
+          <div class="relative w-full sm:min-w-[200px] sm:max-w-sm">
             <Search class="pointer-events-none absolute top-1/2 right-3 z-[1] size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input v-model="search" :placeholder="t('purchase_bills_page.list_search_placeholder')" class="h-9 pr-9" />
+            <Input v-model="search" :placeholder="t('purchase_bills_page.list_search_placeholder')" class="h-9 pr-9 w-full" />
             <Loader2 v-if="loading && search.trim()" class="absolute top-1/2 left-3 z-[1] size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
           </div>
           <Select v-model="filterStatus">
-            <SelectTrigger class="h-9 w-[220px] gap-2"><Filter class="size-3.5 shrink-0 text-muted-foreground" /><SelectValue :placeholder="t('purchase_bills_page.filter_status')" /></SelectTrigger>
+            <SelectTrigger class="h-9 w-full sm:w-[220px] gap-2"><Filter class="size-3.5 shrink-0 text-muted-foreground" /><SelectValue :placeholder="t('purchase_bills_page.filter_status')" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{{ t('purchase_bills_page.filter_status_all') }}</SelectItem>
               <SelectItem value="pending">{{ t('purchase_bills_page.status_pending') }}</SelectItem>
@@ -231,9 +231,9 @@ const goToPage = (page: number) => {
               <SelectItem value="partially_returned">{{ t('purchase_bills_page.status_partially_returned') }}</SelectItem>
             </SelectContent>
           </Select>
-          <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('purchase_bills_page.reset_filters') }}</Button>
+          <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('purchase_bills_page.reset_filters') }}</Button>
         </div>
-        <Button v-if="canCreatePurchaseBill" class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+        <Button v-if="canCreatePurchaseBill" class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] w-full sm:w-auto" as-child>
           <NuxtLink to="/purchase-bills/create"><Plus class="size-4" />{{ t('purchase_bills_page.new_purchase_bill') }}</NuxtLink>
         </Button>
       </div>
@@ -279,7 +279,7 @@ const goToPage = (page: number) => {
 
       <div class="rounded-lg border overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader class="hidden md:table-header-group">
             <TableRow class="bg-muted/40 hover:bg-muted/40">
               <TableHead class="w-10 text-center">
                 <Checkbox
@@ -299,34 +299,52 @@ const goToPage = (page: number) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loading"><TableCell :colspan="9" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
-            <TableRow v-else-if="!sortedList.length"><TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">{{ t('purchase_bills_page.empty') }}</TableCell></TableRow>
-            <TableRow v-for="row in sortedList" :key="row.id" class="hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(row.id) }">
-              <TableCell class="w-10">
-                <Checkbox :model-value="selectedIds.has(row.id)" class="mt-0.5 mx-4" @update:model-value="toggleSelect(row.id)" />
+            <TableRow v-if="loading" class="md:table-row"><TableCell :colspan="9" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
+            <TableRow v-else-if="!sortedList.length" class="md:table-row"><TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">{{ t('purchase_bills_page.empty') }}</TableCell></TableRow>
+            <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(row.id) }">
+              <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
+                <Checkbox :model-value="selectedIds.has(row.id)" class="md:mt-0.5 md:mx-4" @update:model-value="toggleSelect(row.id)" />
               </TableCell>
-              <TableCell class="text-sm font-medium">
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_ref_id') }}</span>
                 <NuxtLink
                   :to="`/purchase-bills/show/${row.id}`"
-                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                  class="text-sm font-medium text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
                 >
                   {{ row.reference_number || `#${row.id}` }}
                 </NuxtLink>
               </TableCell>
-              <TableCell class="text-sm text-muted-foreground">
-                <div class="flex flex-col gap-0.5">
-                  <span>{{ row.customer_name || '—' }}</span>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_customer') }}</span>
+                <div class="flex flex-col gap-0.5 text-end md:text-start">
+                  <span class="text-sm text-muted-foreground">{{ row.customer_name || '—' }}</span>
                   <span class="text-xs text-muted-foreground/80">
                     {{ t('purchase_bills_page.district') }}: {{ row.district_name || t('purchase_bills_page.district_unassigned') }}
                   </span>
                 </div>
               </TableCell>
-              <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.bill_date) }}</TableCell>
-              <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.supply_date) }}</TableCell>
-              <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
-              <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.total_discount) }}</TableCell>
-              <TableCell class="rtl:text-start text-end text-sm tabular-nums">{{ fmtMoney(row.grand_total) }}</TableCell>
-              <TableCell class="text-end">
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_bill_date') }}</span>
+                <span class="text-sm tabular-nums rtl:text-start">{{ fmtDate(row.bill_date) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_supply_date') }}</span>
+                <span class="text-sm tabular-nums rtl:text-start">{{ fmtDate(row.supply_date) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.warehouse') }}</span>
+                <span class="text-sm text-muted-foreground rtl:text-start">{{ warehouseLabel(row) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_discount_amount') }}</span>
+                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtMoney(row.total_discount) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_total') }}</span>
+                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtMoney(row.grand_total) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions
                   :actions="[
                     { key: `edit-${row.id}`, label: t('purchase_bills_page.action_edit'), type: 'link', to: `/purchase-bills/edit/${row.id}`, icon: Pencil, tone: 'default', disabled: !canEditPurchaseBill },

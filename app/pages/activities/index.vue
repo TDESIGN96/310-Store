@@ -10,10 +10,18 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Filter,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -48,6 +56,22 @@ interface ActivitiesResponse {
   message?: string | null
 }
 
+/** User list item for filter dropdown. */
+interface UserListItem {
+  id: number
+  name: string
+}
+
+/** API envelope for GET `/users`. */
+interface UsersResponse {
+  users?: UserListItem[]
+  pagination?: { last_page?: number }
+  data?: {
+    users?: UserListItem[]
+    pagination?: { last_page?: number }
+  }
+}
+
 /** Sortable columns for `sortBy[column]` / `sortBy[direction]`. */
 type SortField = 'created_at' | 'user_name'
 
@@ -78,6 +102,9 @@ const dateFrom = ref('')
 const dateTo = ref('')
 const sortBy = ref<SortField | ''>('')
 const sortOrder = ref<'asc' | 'desc'>('asc')
+const filterUserId = ref<'all' | string>('all')
+const userOptions = ref<{ id: number; name: string }[]>([])
+const loadingUsers = ref(false)
 
 /** Today as `YYYY-MM-DD` in UTC (matches interpreting filter dates as UTC calendar days). */
 function utcYmd(d: Date): string {
@@ -115,7 +142,7 @@ function civilYmdToIsoBoundary(ymd: string, endOfDay: boolean): string {
 type ActivitiesQueryParams = Record<string, string | number | (string | null)[]>
 
 /**
- * Builds query params for GET `/activities`: pagination, optional search, date range, and sort.
+ * Builds query params for GET `/activities`: pagination, optional search, date range, user filter, and sort.
  */
 function buildActivitiesQueryParams(page: number): { params: ActivitiesQueryParams } {
   const params: ActivitiesQueryParams = { page }
@@ -124,14 +151,25 @@ function buildActivitiesQueryParams(page: number): { params: ActivitiesQueryPara
     params.search = q
     params.name = q
   }
+
+  let filterIndex = 0
+
   if (dateFrom.value || dateTo.value) {
-    params['filters[0][column]'] = 'created_at'
+    params[`filters[${filterIndex}][column]`] = 'created_at'
     const fromYmd = dateFrom.value.trim() || utcYmd(new Date())
     const toYmd = dateTo.value.trim() || utcYmd(new Date())
-    params['filters[0][value][0]'] = civilYmdToIsoBoundary(fromYmd, false)
-    params['filters[0][value][1]'] = civilYmdToIsoBoundary(toYmd, true)
-    params['filters[0][condition]'] = 'between'
-    params['filters[0][operator]'] = 'and'
+    params[`filters[${filterIndex}][value][0]`] = civilYmdToIsoBoundary(fromYmd, false)
+    params[`filters[${filterIndex}][value][1]`] = civilYmdToIsoBoundary(toYmd, true)
+    params[`filters[${filterIndex}][condition]`] = 'between'
+    params[`filters[${filterIndex}][operator]`] = 'and'
+    filterIndex++
+  }
+
+  if (filterUserId.value !== 'all') {
+    params[`filters[${filterIndex}][column]`] = 'user_id'
+    params[`filters[${filterIndex}][value]`] = filterUserId.value
+    params[`filters[${filterIndex}][condition]`] = '='
+    params[`filters[${filterIndex}][operator]`] = 'and'
   }
 
   if (sortBy.value) {
@@ -197,6 +235,46 @@ async function loadActivities(page = currentPage.value): Promise<void> {
   }
 }
 
+/**
+ * Loads user options for the filter dropdown from GET /users (paginated).
+ */
+async function loadUserOptions(): Promise<void> {
+  loadingUsers.value = true
+  try {
+    const aggregated: UserListItem[] = []
+    let page = 1
+    let lastPage = 1
+    const maxPages = 50
+
+    do {
+      const data = await $api<UsersResponse>('/users', {
+        params: {
+          page,
+          per_page: 100,
+        },
+      })
+      const list = data.users ?? data.data?.users ?? []
+      aggregated.push(...list)
+      lastPage = data.pagination?.last_page ?? data.data?.pagination?.last_page ?? 1
+      page++
+    } while (page <= lastPage && page <= maxPages)
+
+    userOptions.value = aggregated
+      .map(user => ({
+        id: user.id,
+        name: user.name,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }
+  catch {
+    // Fail silently - dropdown stays on "All users" only
+    userOptions.value = []
+  }
+  finally {
+    loadingUsers.value = false
+  }
+}
+
 /** Resets to page 1 and reloads (used after filters/sort change). */
 function resetPageAndLoad(): void {
   currentPage.value = 1
@@ -227,7 +305,14 @@ function toggleSort(field: SortField): void {
 
 watchDebounced(
   search,
-  () => {
+  (newSearch) => {
+    // If the user manually types something that doesn't match the selected user, clear the dropdown
+    if (filterUserId.value !== 'all') {
+      const selectedUser = userOptions.value.find(u => u.id === Number(filterUserId.value))
+      if (!selectedUser || selectedUser.name !== newSearch.trim()) {
+        filterUserId.value = 'all'
+      }
+    }
     currentPage.value = 1
     void loadActivities(1)
   },
@@ -235,6 +320,20 @@ watchDebounced(
 )
 
 watch([dateFrom, dateTo], () => {
+  resetPageAndLoad()
+})
+
+watch(filterUserId, (newUserId) => {
+  // When a user is selected from dropdown, also populate the search box with their name
+  if (newUserId !== 'all') {
+    const selectedUser = userOptions.value.find(u => u.id === Number(newUserId))
+    if (selectedUser) {
+      search.value = selectedUser.name
+    }
+  }
+  else {
+    search.value = ''
+  }
   resetPageAndLoad()
 })
 
@@ -257,8 +356,10 @@ const emptyMessage = computed(() => {
 })
 
 onMounted(() => {
-  if (canViewLog.value)
+  if (canViewLog.value) {
     void loadActivities()
+    void loadUserOptions()
+  }
 })
 </script>
 
@@ -299,6 +400,22 @@ onMounted(() => {
             class="absolute top-1/2 left-3 z-[1] size-3.5 -translate-y-1/2 animate-spin text-muted-foreground"
           />
         </div>
+        <Select v-model="filterUserId">
+          <SelectTrigger class="h-9 w-full sm:w-[200px] gap-2">
+            <Filter class="size-3.5 shrink-0 text-muted-foreground" />
+            <SelectValue :placeholder="t('activities_page.filter_user')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{{ t('activities_page.filter_user_all') }}</SelectItem>
+            <SelectItem
+              v-for="user in userOptions"
+              :key="user.id"
+              :value="String(user.id)"
+            >
+              {{ user.name }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
         <div class="flex flex-wrap items-center gap-3">
           <div class="flex items-center gap-2">
             <label class="shrink-0 text-xs text-muted-foreground whitespace-nowrap" for="activities-date-from">

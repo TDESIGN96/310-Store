@@ -224,7 +224,7 @@ onMounted(() => {
 
     <div v-else class="rounded-lg border overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead class="w-10 text-center">
               <Checkbox
@@ -245,52 +245,85 @@ onMounted(() => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="tableColspan" class="py-10 ">
               <Loader2 class="size-4 animate-spin inline-block mr-2" />
               {{ t('common.loading') }}
             </TableCell>
           </TableRow>
-          <TableRow v-else-if="rows.length === 0">
+          <TableRow v-else-if="rows.length === 0" class="md:table-row">
             <TableCell :colspan="tableColspan" class="py-10 text-center text-muted-foreground">
               {{ t('products_variations.no_variations') }}
             </TableCell>
           </TableRow>
-          <TableRow v-for="row in rows" :key="String(row.id)" v-else class="hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(Number(row.id)) }">
-            <TableCell class="w-10">
+          <TableRow
+            v-for="row in rows"
+            :key="String(row.id)"
+            v-else
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
+                   md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
+                   hover:bg-muted/30 transition-colors align-middle"
+            :class="{ 'bg-muted/20': selectedIds.has(Number(row.id)) }"
+          >
+            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:border-0 md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox
                 :model-value="selectedIds.has(Number(row.id))"
-                class="mt-0.5 mx-4"
+                class="md:mt-0.5 md:mx-4"
                 @update:model-value="toggleSelect(Number(row.id))"
               />
             </TableCell>
-            <TableCell class="text-start font-medium">
-              <NuxtLink
-                v-if="canShowVariation"
-                :to="`/products/variations/${productId}/show/${row.id}`"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
-              >
-                {{ row.sku || '—' }}
-              </NuxtLink>
-              <span v-else>{{ row.sku || '—' }}</span>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_sku') }}</span>
+              <div class="font-medium">
+                <NuxtLink
+                  v-if="canShowVariation"
+                  :to="`/products/variations/${productId}/show/${row.id}`"
+                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                >
+                  {{ row.sku || '—' }}
+                </NuxtLink>
+                <span v-else>{{ row.sku || '—' }}</span>
+              </div>
             </TableCell>
-            <TableCell class="text-start">{{ row.label || '—' }}</TableCell>
-            <TableCell class="text-start">{{ row.barcode || '—' }}</TableCell>
-            <TableCell class="text-center">{{ row.price || '—' }}</TableCell>
-            <TableCell class="text-center">{{ row.stock_quantity ?? 0 }}</TableCell>
-            <TableCell class="text-center">{{ tieredCount(row) }}</TableCell>
-            <TableCell class="max-w-[220px] truncate text-start">{{ inventorySummary(row) }}</TableCell>
-            <TableCell class="text-start">{{ isActive(row) ? t('common.active') : t('common.inactive') }}</TableCell>
-            <TableCell v-if="!isDistributorUser" class="text-end">
-              <div class="flex flex-wrap gap-1 justify-end">
-                <Button v-if="canEditVariation" variant="outline" size="sm" as-child>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.show_variation_label') }}</span>
+              <span>{{ row.label || '—' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_barcode') }}</span>
+              <span>{{ row.barcode || '—' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-center">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_price') }}</span>
+              <span>{{ row.price || '—' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-center">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_qty') }}</span>
+              <span>{{ row.stock_quantity ?? 0 }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-center">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.tiered_prices') }}</span>
+              <span>{{ tieredCount(row) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.col_warehouse') }}</span>
+              <span class="md:max-w-[220px] md:truncate">{{ inventorySummary(row) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.status') }}</span>
+              <span>{{ isActive(row) ? t('common.active') : t('common.inactive') }}</span>
+            </TableCell>
+            <TableCell v-if="!isDistributorUser" class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+              <div class="flex flex-wrap gap-1 justify-end w-full sm:w-auto">
+                <Button v-if="canEditVariation" variant="outline" size="sm" as-child class="flex-1 sm:flex-none">
                   <NuxtLink :to="`/products/variations/${productId}/edit/${row.id}`"><Pencil class="size-3.5" /></NuxtLink>
                 </Button>
                 <Button
                   v-if="canDeleteVariation"
                   variant="outline"
                   size="sm"
-                  class="text-red-600 border-red-200"
+                  class="flex-1 sm:flex-none text-red-600 border-red-200"
                   @click="deleteTarget = row"
                 >
                   <Trash2 class="size-3.5" />

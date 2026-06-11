@@ -10,6 +10,7 @@ import {
   Plus,
   ClipboardCheck,
   ClipboardList,
+  Trash2,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ const router = useRouter()
 const { t, locale } = useI18n()
 const { can, canCreate } = usePermissions()
 const { getErrorMessage } = useApiError()
+const authStore = useAuthStore()
 const stocktakingOrdersStore = useStocktakingOrdersStore()
 const { loadActiveWarehouses } = useInvoiceWarehouses()
 
@@ -40,6 +42,10 @@ const canCreateStocktaking = computed(() => canCreate('stocktaking'))
 const canStartStocktaking = computed(() => can('stocktaking.count'))
 const canCancelStocktaking = computed(() => can('stocktaking.cancel'))
 const canReviewStocktaking = computed(() => can('stocktaking.review'))
+const isAdmin = computed(() => {
+  const me = authStore.user as { is_admin?: boolean } | null
+  return me?.is_admin === true
+})
 
 const search = ref('')
 const filterStatus = ref<'all' | 'scheduled' | 'in_progress' | 'pending_review' | 'completed' | 'cancelled'>('all')
@@ -51,6 +57,9 @@ const currentPage = ref(1)
 const cancelTarget = ref<StocktakingOrderListItem | null>(null)
 const cancelDialogOpen = ref(false)
 const cancelling = ref(false)
+const deleteTarget = ref<StocktakingOrderListItem | null>(null)
+const deleteDialogOpen = ref(false)
+const deleting = ref(false)
 const actionLoadingId = ref<number | null>(null)
 const warehouseOptions = ref<InvoiceWarehouseOption[]>([])
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -225,6 +234,29 @@ const confirmCancel = async () => {
   }
 }
 
+const requestDelete = (row: StocktakingOrderListItem) => {
+  deleteTarget.value = row
+  deleteDialogOpen.value = true
+}
+
+const confirmDelete = async () => {
+  if (!deleteTarget.value) return
+  deleting.value = true
+  try {
+    await stocktakingOrdersStore.deleteOrder(deleteTarget.value.id)
+    toast.success(t('stocktaking_orders_page.delete_success'))
+    deleteDialogOpen.value = false
+    deleteTarget.value = null
+    await loadRows(currentPage.value)
+  }
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error) || t('stocktaking_orders_page.delete_error'))
+  }
+  finally {
+    deleting.value = false
+  }
+}
+
 watch(
   [search, filterStatus, filterType, filterWarehouseId, dateFrom, dateTo],
   () => {
@@ -273,9 +305,9 @@ const goToPage = (page: number) => {
     </div>
 
     <template v-else>
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex flex-wrap items-center gap-2 flex-1">
-          <div class="relative min-w-[200px] max-w-sm">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 flex-1 w-full sm:w-auto">
+          <div class="relative w-full sm:min-w-[200px] sm:max-w-sm">
             <Search class="pointer-events-none absolute top-1/2 right-3 z-[1] size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               v-model="search"
@@ -288,7 +320,7 @@ const goToPage = (page: number) => {
             />
           </div>
           <Select v-model="filterStatus">
-            <SelectTrigger class="h-9 w-[220px] gap-2">
+            <SelectTrigger class="h-9 w-full sm:w-[220px] gap-2">
               <Filter class="size-3.5 shrink-0 text-muted-foreground" />
               <SelectValue :placeholder="t('stocktaking_orders_page.filter_status')" />
             </SelectTrigger>
@@ -302,7 +334,7 @@ const goToPage = (page: number) => {
             </SelectContent>
           </Select>
           <Select v-model="filterType">
-            <SelectTrigger class="h-9 w-[200px] gap-2">
+            <SelectTrigger class="h-9 w-full sm:w-[200px] gap-2">
               <Filter class="size-3.5 shrink-0 text-muted-foreground" />
               <SelectValue :placeholder="t('stocktaking_orders_page.filter_type')" />
             </SelectTrigger>
@@ -313,7 +345,7 @@ const goToPage = (page: number) => {
             </SelectContent>
           </Select>
           <Select v-model="filterWarehouseId">
-            <SelectTrigger class="h-9 w-[220px] gap-2">
+            <SelectTrigger class="h-9 w-full sm:w-[220px] gap-2">
               <Filter class="size-3.5 shrink-0 text-muted-foreground" />
               <SelectValue :placeholder="t('stocktaking_orders_page.filter_warehouse')" />
             </SelectTrigger>
@@ -332,7 +364,7 @@ const goToPage = (page: number) => {
             v-if="hasActiveFilters"
             variant="ghost"
             size="sm"
-            class="h-9 gap-1.5 text-muted-foreground"
+            class="w-full sm:w-auto h-9 gap-1.5 text-muted-foreground"
             :disabled="loading"
             @click="resetFilters"
           >
@@ -361,7 +393,7 @@ const goToPage = (page: number) => {
 
       <div class="rounded-lg border overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader class="hidden md:table-header-group">
             <TableRow class="bg-muted/40 hover:bg-muted/40">
               <TableHead class="text-start font-medium min-w-[120px]">{{ t('stocktaking_orders_page.col_ref_id') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('stocktaking_orders_page.col_warehouse') }}</TableHead>
@@ -372,7 +404,7 @@ const goToPage = (page: number) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loading">
+            <TableRow v-if="loading" class="md:table-row">
               <TableCell :colspan="6" class="py-14 text-center">
                 <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 class="size-4 animate-spin" />
@@ -380,7 +412,7 @@ const goToPage = (page: number) => {
                 </div>
               </TableCell>
             </TableRow>
-            <TableRow v-else-if="!sortedList.length">
+            <TableRow v-else-if="!sortedList.length" class="md:table-row">
               <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
                 {{ t('stocktaking_orders_page.empty') }}
               </TableCell>
@@ -388,21 +420,38 @@ const goToPage = (page: number) => {
             <TableRow
               v-for="row in sortedList"
               :key="row.id"
-              class="hover:bg-muted/30 transition-colors align-middle"
+              class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
+                     md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
+                     hover:bg-muted/30 transition-colors align-middle"
             >
-              <TableCell class="text-sm font-medium">
-                <NuxtLink
-                  :to="`/stocktaking-orders/show/${row.id}`"
-                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
-                >
-                  {{ row.reference_number || `#${row.id}` }}
-                </NuxtLink>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('stocktaking_orders_page.col_ref_id') }}</span>
+                <div class="text-sm font-medium">
+                  <NuxtLink
+                    :to="`/stocktaking-orders/show/${row.id}`"
+                    class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                  >
+                    {{ row.reference_number || `#${row.id}` }}
+                  </NuxtLink>
+                </div>
               </TableCell>
-              <TableCell class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</TableCell>
-              <TableCell class="rtl:text-start text-sm">{{ typeLabel(row) }}</TableCell>
-              <TableCell class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.stocktaking_date) }}</TableCell>
-              <TableCell><Badge variant="outline" :class="statusBadgeClass(row)">{{ statusLabel(row) }}</Badge></TableCell>
-              <TableCell class="text-end">
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('stocktaking_orders_page.col_warehouse') }}</span>
+                <span class="rtl:text-start text-sm text-muted-foreground">{{ warehouseLabel(row) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('stocktaking_orders_page.col_type') }}</span>
+                <span class="rtl:text-start text-sm">{{ typeLabel(row) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('stocktaking_orders_page.col_date') }}</span>
+                <span class="rtl:text-start text-sm tabular-nums">{{ fmtDate(row.stocktaking_date) }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('stocktaking_orders_page.col_status') }}</span>
+                <Badge variant="outline" :class="statusBadgeClass(row)">{{ statusLabel(row) }}</Badge>
+              </TableCell>
+              <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions
                   :actions="[
                     {
@@ -443,6 +492,16 @@ const goToPage = (page: number) => {
                       visible: canCancelRow(row),
                       disabled: cancelling,
                       onClick: () => requestCancel(row),
+                    },
+                    {
+                      key: `delete-${row.id}`,
+                      label: t('stocktaking_orders_page.action_delete'),
+                      type: 'button',
+                      icon: Trash2,
+                      tone: 'danger',
+                      visible: isAdmin,
+                      disabled: deleting,
+                      onClick: () => requestDelete(row),
                     },
                   ]"
                   variant="invoice"
@@ -494,6 +553,26 @@ const goToPage = (page: number) => {
           >
             <Loader2 v-if="cancelling" class="me-2 size-4 animate-spin" />
             {{ t('stocktaking_orders_page.action_cancel') }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('stocktaking_orders_page.delete_title') }}</AlertDialogTitle>
+          <AlertDialogDescription>{{ t('stocktaking_orders_page.delete_body') }}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleting">{{ t('common.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-red-600 text-white hover:bg-red-700"
+            :disabled="deleting"
+            @click="confirmDelete"
+          >
+            <Loader2 v-if="deleting" class="me-2 size-4 animate-spin" />
+            {{ t('stocktaking_orders_page.action_delete') }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

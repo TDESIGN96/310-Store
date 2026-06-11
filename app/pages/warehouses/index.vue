@@ -454,13 +454,13 @@ onMounted(() => loadWarehouses())
     </div>
 
     <div class="flex flex-col gap-3">
-      <div class="flex items-center gap-2 flex-wrap">
-        <div class="relative flex-1 min-w-[200px] max-w-sm">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+        <div class="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
           <Input
             v-model="search"
             :placeholder="t('warehouses_page.search_placeholder')"
-            class="pr-9 h-9"
+            class="pr-9 h-9 w-full"
           />
           <Loader2
             v-if="loading && search"
@@ -469,7 +469,7 @@ onMounted(() => loadWarehouses())
         </div>
 
         <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
-          <SelectTrigger class="w-[180px] h-9">
+          <SelectTrigger class="w-full sm:w-[180px] h-9">
             <Filter class="size-4 text-muted-foreground ml-1" />
             <SelectValue :placeholder="t('warehouses_page.filter_status')" />
           </SelectTrigger>
@@ -506,7 +506,7 @@ onMounted(() => loadWarehouses())
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead class="w-10 text-center">
               <Checkbox
@@ -557,7 +557,7 @@ onMounted(() => loadWarehouses())
         </TableHeader>
 
         <TableBody>
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="8" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
@@ -566,7 +566,7 @@ onMounted(() => loadWarehouses())
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="listLoadError">
+          <TableRow v-else-if="listLoadError" class="md:table-row">
             <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
@@ -581,7 +581,7 @@ onMounted(() => loadWarehouses())
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="warehouses.length === 0">
+          <TableRow v-else-if="warehouses.length === 0" class="md:table-row">
             <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
               {{ emptyListMessage }}
             </TableCell>
@@ -591,30 +591,37 @@ onMounted(() => loadWarehouses())
             v-for="wh in warehouses"
             v-else
             :key="wh.id"
-            class="hover:bg-muted/30 transition-colors align-middle"
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle"
             :class="{ 'bg-muted/20': selectedIds.has(wh.id) }"
           >
-            <TableCell class="w-10">
-              <Checkbox :model-value="selectedIds.has(wh.id)" class="mt-0.5 mx-4" @update:model-value="toggleSelect(wh.id)" />
+            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
+              <Checkbox :model-value="selectedIds.has(wh.id)" class="md:mt-0.5 md:mx-4" @update:model-value="toggleSelect(wh.id)" />
             </TableCell>
-            <TableCell class="font-medium">
-              <button
-                v-if="canShowWarehouse"
-                type="button"
-                class="inline-flex max-w-full min-w-0 text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
-                @click="handleView(wh)"
-              >
-                <span class="min-w-0">{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>
-              </button>
-              <span v-else>{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('warehouses_page.col_name') }}</span>
+              <div class="font-medium">
+                <button
+                  v-if="canShowWarehouse"
+                  type="button"
+                  class="inline-flex max-w-full min-w-0 text-sm text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-end md:text-start cursor-pointer"
+                  @click="handleView(wh)"
+                >
+                  <span class="min-w-0">{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>
+                </button>
+                <span v-else class="text-sm">{{ truncateWarehouseName(warehouseDisplayName(wh)) }}</span>
+              </div>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">
-              {{ wh.location || '—' }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('warehouses_page.col_location') }}</span>
+              <span class="text-sm text-muted-foreground">{{ wh.location || '—' }}</span>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">
-              {{ wh.manager?.name || '—' }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('warehouses_page.col_manager') }}</span>
+              <span class="text-sm text-muted-foreground">{{ wh.manager?.name || '—' }}</span>
             </TableCell>
-            <TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('warehouses_page.col_status') }}</span>
               <span
                 class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                 :class="statusConfig(wh.status).class"
@@ -622,14 +629,16 @@ onMounted(() => loadWarehouses())
                 {{ statusConfig(wh.status).label }}
               </span>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">
-              {{ createdByDisplay(wh.created_by) }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.added_by') }}</span>
+              <span class="text-sm text-muted-foreground">{{ createdByDisplay(wh.created_by) }}</span>
             </TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">
-              {{ formatDate(wh.created_at) }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.created_at') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ formatDate(wh.created_at) }}</span>
             </TableCell>
             
-            <TableCell class="text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
               <TableRowActions
                 :actions="[
                   { key: `edit-${wh.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditWarehouse, disabled: deletingId === wh.id, onClick: () => handleEdit(wh) },

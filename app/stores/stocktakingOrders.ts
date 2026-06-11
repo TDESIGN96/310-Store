@@ -921,6 +921,10 @@ export const useStocktakingOrdersStore = defineStore('stocktakingOrders', () => 
     return await $api(`${STOCKTAKING_ORDERS_ENDPOINT}/${id}/cancel`, { method: 'PATCH' })
   }
 
+  const deleteOrder = async (id: string | number) => {
+    return await $api(`${STOCKTAKING_ORDERS_ENDPOINT}/${id}`, { method: 'DELETE' })
+  }
+
   const extractCreatedOrderId = (payload: unknown): number | null => {
     if (!payload || typeof payload !== 'object') return null
     const root = payload as Record<string, unknown>
@@ -972,6 +976,7 @@ export const useStocktakingOrdersStore = defineStore('stocktakingOrders', () => 
     loadList,
     startOrder,
     cancelOrder,
+    deleteOrder,
     getCount,
     scanBarcode,
     updateItemQuantity,

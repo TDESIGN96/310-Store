@@ -260,8 +260,8 @@ onMounted(() => {
       </Button>
     </div>
 
-    <div class="flex items-center gap-2 flex-wrap">
-      <div class="relative min-w-[220px] max-w-sm flex-1">
+    <div class="flex flex-col sm:flex-row items-center gap-2 flex-wrap">
+      <div class="relative w-full sm:min-w-[220px] sm:max-w-sm sm:flex-1">
         <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
         <Input
           v-model="search"
@@ -299,7 +299,7 @@ onMounted(() => {
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead class="w-10 text-center">
               <Checkbox
@@ -342,7 +342,7 @@ onMounted(() => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="6" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
@@ -351,7 +351,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="listLoadError">
+          <TableRow v-else-if="listLoadError" class="md:table-row">
             <TableCell :colspan="6" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
@@ -366,7 +366,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="rows.length === 0">
+          <TableRow v-else-if="rows.length === 0" class="md:table-row">
             <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
               {{ search ? t('attributes_page.no_results') : t('attributes_page.no_attributes') }}
             </TableCell>
@@ -376,26 +376,33 @@ onMounted(() => {
             v-for="row in rows"
             v-else
             :key="row.id"
-            class="hover:bg-muted/30 transition-colors align-middle"
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
+                   md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
+                   hover:bg-muted/30 transition-colors align-middle"
             :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
           >
-            <TableCell class="w-10">
+            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:border-0 md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox
                 :model-value="selectedIds.has(row.id)"
-                class="mt-0.5 mx-4"
+                class="md:mt-0.5 md:mx-4"
                 @update:model-value="toggleSelect(row.id)"
               />
             </TableCell>
-            <TableCell class="font-medium">
-              <button
-                type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
-                @click="navigateTo(`/attributes/show/${row.id}`)"
-              >
-                {{ row.name || '—' }}
-              </button>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('attributes_page.col_name') }}</span>
+              <div class="font-medium text-start">
+                <button
+                  type="button"
+                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
+                  @click="navigateTo(`/attributes/show/${row.id}`)"
+                >
+                  {{ row.name || '—' }}
+                </button>
+              </div>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">
+            <TableCell class="flex flex-col gap-1 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('attributes_page.col_values') }}</span>
               <div class="flex flex-wrap items-center gap-1.5">
                 <Badge
                   v-for="value in valuePreview(row.values || [])"
@@ -415,9 +422,15 @@ onMounted(() => {
                 <span v-if="!row.values || row.values.length === 0" class="text-sm text-muted-foreground">—</span>
               </div>
             </TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ row.products_count ?? 0 }}</TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums whitespace-nowrap">{{ formatDate(row.created_at) }}</TableCell>
-            <TableCell class="text-end">
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('attributes_page.col_products_count') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ row.products_count ?? 0 }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('attributes_page.col_created_at') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums whitespace-nowrap">{{ formatDate(row.created_at) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
               <TableRowActions
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', onClick: () => navigateTo(`/attributes/edit/${row.id}`) },

@@ -398,7 +398,7 @@ onMounted(() => {
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader class="hidden md:table-header-group">
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
                     <TableHead class="min-w-[200px] text-start">{{ t('quotations_page.col_product') }}</TableHead>
                     <TableHead class="min-w-[180px] text-start">{{ t('quotations_page.row_description') }}</TableHead>
@@ -410,8 +410,16 @@ onMounted(() => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-for="(item, idx) in draft.items" :key="item.key">
-                    <TableCell class="align-top whitespace-normal min-w-[200px] py-3">
+                  <TableRow
+                    v-for="(item, idx) in draft.items"
+                    :key="item.key"
+                    class="flex flex-col gap-2 border-2 rounded-lg p-4 mb-4 shadow-sm
+                           md:table-row md:border-0 md:rounded-none md:p-0 md:mb-0 md:shadow-none"
+                  >
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:whitespace-normal md:min-w-[200px] md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.col_product') }}
+                      </span>
                       <div class="flex min-w-0 flex-col gap-2">
                         <p class="text-sm font-medium leading-snug break-words">
                           {{ productDisplayName(item.product) }}
@@ -437,11 +445,17 @@ onMounted(() => {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell class="align-top min-w-[180px] py-3">
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[180px] md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.row_description') }}
+                      </span>
                       <Input v-model="item.description" class="w-full" />
                     </TableCell>
-                    <TableCell class="align-top py-3">
-                      <div class="ms-auto flex w-full max-w-24 flex-col items-end gap-1">
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.qty') }}
+                      </span>
+                      <div class="flex w-full flex-col gap-1 md:ms-auto md:max-w-24 md:items-end">
                         <Input
                           :model-value="item.qty"
                           type="number"
@@ -454,8 +468,11 @@ onMounted(() => {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell class="align-top py-3">
-                      <div class="ms-auto flex w-full max-w-32 flex-col items-end gap-1">
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.unit_price') }}
+                      </span>
+                      <div class="flex w-full flex-col gap-1 md:ms-auto md:max-w-32 md:items-end">
                         <Input
                           :model-value="item.unit_price"
                           type="number"
@@ -477,8 +494,11 @@ onMounted(() => {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell class="align-top py-3">
-                      <div class="ms-auto w-full max-w-44 space-y-2">
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.discount_percent') }}
+                      </span>
+                      <div class="w-full space-y-2 md:ms-auto md:max-w-44">
                         <Select
                           :model-value="item.discount_mode"
                           @update:model-value="value => quotationsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))"
@@ -501,12 +521,15 @@ onMounted(() => {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell class="align-top py-3 text-start tabular-nums">
-                      <div class="ms-auto flex h-9 max-w-32 items-center justify-start font-medium">
+                    <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:align-top md:py-3 md:text-start md:tabular-nums">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">
+                        {{ t('quotations_page.row_total') }}
+                      </span>
+                      <div class="font-medium md:ms-auto md:flex md:h-9 md:max-w-32 md:items-center md:justify-start">
                         {{ formatMoney(rowTotals(idx).rowTotal) }}
                       </div>
                     </TableCell>
-                    <TableCell class="align-top py-3 text-start">
+                    <TableCell class="flex justify-end pt-2 border-t mt-1 md:table-cell md:border-0 md:align-top md:pt-3 md:mt-0 md:text-start">
                       <div class="flex h-9 items-center justify-end">
                         <Button
                           type="button"

@@ -132,6 +132,7 @@ export interface InvoiceDraft {
   customer_email: string
   invoice_date: string
   supply_date: string
+  send_to_shipping: boolean
   terms: string
   notes: string
   delivery_fees: number
@@ -176,6 +177,7 @@ const createEmptyDraft = (): InvoiceDraft => ({
   customer_email: '',
   invoice_date: todayIso(),
   supply_date: todayIso(),
+  send_to_shipping: false,
   terms: '',
   notes: '',
   delivery_fees: 0,
@@ -564,6 +566,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       customer_email: String(invoice.customer_email ?? ''),
       invoice_date: String(invoice.invoice_date ?? todayIso()),
       supply_date: String(invoice.supply_date ?? todayIso()),
+      send_to_shipping: Boolean(invoice.send_to_shipping),
       terms: String(invoice.terms ?? ''),
       notes: String(invoice.notes ?? ''),
       delivery_fees: Math.max(
@@ -674,6 +677,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       customer_email: String(quotation.customer_email ?? ''),
       invoice_date: String(quotation.issue_date ?? todayIso()),
       supply_date: String(quotation.expiry_date ?? todayIso()),
+      send_to_shipping: false,
       terms: String(quotation.terms ?? ''),
       notes: String(quotation.notes ?? ''),
       delivery_fees: Math.max(0, resolvedConvertedDeliveryFees),
@@ -806,6 +810,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     customer_email: draft.value.customer_email || undefined,
     invoice_date: draft.value.invoice_date,
     supply_date: draft.value.supply_date || undefined,
+    send_to_shipping: draft.value.send_to_shipping ? true : undefined,
     terms: draft.value.terms || undefined,
     notes: draft.value.notes || undefined,
     delivery_fees: draft.value.delivery_fees || 0,

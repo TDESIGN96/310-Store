@@ -171,8 +171,8 @@ onMounted(() => {
       </Button>
     </div>
 
-    <div class="flex items-center gap-2 flex-wrap">
-      <div class="relative min-w-[220px] max-w-sm flex-1">
+    <div class="flex flex-col sm:flex-row items-center gap-2 flex-wrap">
+      <div class="relative w-full sm:min-w-[220px] sm:max-w-sm sm:flex-1">
         <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
         <Input
           v-model="search"
@@ -188,7 +188,7 @@ onMounted(() => {
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead class="text-start font-medium min-w-[180px]">{{ t('districts_page.col_district') }}</TableHead>
             <TableHead class="text-end font-medium whitespace-nowrap">{{ t('districts_page.col_delivery_fee') }}</TableHead>
@@ -199,7 +199,7 @@ onMounted(() => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="6" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
@@ -208,7 +208,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="listLoadError">
+          <TableRow v-else-if="listLoadError" class="md:table-row">
             <TableCell :colspan="6" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
@@ -223,7 +223,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="rows.length === 0">
+          <TableRow v-else-if="rows.length === 0" class="md:table-row">
             <TableCell :colspan="6" class="py-14 text-center text-sm text-muted-foreground">
               {{ search ? t('districts_page.no_results') : t('districts_page.no_districts') }}
             </TableCell>
@@ -233,24 +233,41 @@ onMounted(() => {
             v-for="row in rows"
             v-else
             :key="row.id"
-            class="hover:bg-muted/30 transition-colors align-middle"
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
+                   md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
+                   hover:bg-muted/30 transition-colors align-middle"
           >
-            <TableCell class="font-medium">
-              <button
-                v-if="canShowDistrict"
-                type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
-                @click="navigateTo(`/districts/show/${row.id}`)"
-              >
-                {{ row.district || '—' }}
-              </button>
-              <span v-else>{{ row.district || '—' }}</span>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('districts_page.col_district') }}</span>
+              <div class="font-medium text-start">
+                <button
+                  v-if="canShowDistrict"
+                  type="button"
+                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
+                  @click="navigateTo(`/districts/show/${row.id}`)"
+                >
+                  {{ row.district || '—' }}
+                </button>
+                <span v-else>{{ row.district || '—' }}</span>
+              </div>
             </TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ row.delivery_fee || '0' }}</TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ row.other_fees || '0' }}</TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ authorDisplay(row.created_by) }}</TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ formatDate(row.created_at) }}</TableCell>
-            <TableCell class="text-end">
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('districts_page.col_delivery_fee') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ row.delivery_fee || '0' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('districts_page.col_other_fees') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ row.other_fees || '0' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.added_by') }}</span>
+              <span class="text-sm text-muted-foreground">{{ authorDisplay(row.created_by) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.created_at') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ formatDate(row.created_at) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
               <TableRowActions
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditDistrict, onClick: () => navigateTo(`/districts/edit/${row.id}`) },

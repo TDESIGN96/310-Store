@@ -65,11 +65,11 @@ interface AllocationRow {
   warehouse_id: string
   product_name: string
   variation: string
-  unit: string
+  description: string
+  unit_price: number | null
   allocated_quantity: number
   sold_quantity: number
   remaining_quantity: number
-  custom_price: number | null
   source_warehouse: string
   allocation_date: string
   status: 'active' | 'returned' | 'partially_returned' | string
@@ -79,7 +79,7 @@ interface AllocationRow {
 const route = useRoute()
 const distributorId = computed(() => String(route.params.id ?? ''))
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 const { canAccess, canEdit, canDelete } = usePermissions()
@@ -194,17 +194,17 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
   const id = String(raw.id ?? '').trim()
   if (!id) return null
 
+  const product_name = productObj
+    ? (locale.value === 'ar'
+      ? getString(productObj.name_ar || productObj.name_en || productObj.name || raw.product_name || raw.product)
+      : getString(productObj.name_en || productObj.name_ar || productObj.name || raw.product_name || raw.product))
+    : getString(raw.product_name || raw.product || raw.variation)
+
   return {
     id,
     variation_id: String(raw.variation_id ?? variationObj?.id ?? '').trim(),
     warehouse_id: String(raw.warehouse_id ?? warehouseObj?.id ?? '').trim(),
-    product_name: getString(
-      raw.product_name
-      || productObj?.name_en
-      || productObj?.name_ar
-      || raw.product
-      || raw.variation,
-    ),
+    product_name,
     variation: getString(
       raw.variation_label
       || variationObj?.label
@@ -212,13 +212,13 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
       || variationObj?.sku
       || raw.variation,
     ),
-    unit: getString(raw.unit || raw.unit_name || variationObj?.unit || variationObj?.unit_name),
+    description: getString(raw.description),
+    unit_price: Number.isFinite(Number(raw.unit_price ?? raw.price ?? raw.custom_price ?? raw.distributor_price))
+      ? Number(raw.unit_price ?? raw.price ?? raw.custom_price ?? raw.distributor_price)
+      : null,
     allocated_quantity: toNumber(raw.allocated_quantity, 0),
     sold_quantity: toNumber(raw.consumed_quantity ?? raw.sold_quantity, 0),
     remaining_quantity: toNumber(raw.remaining_quantity, 0),
-    custom_price: Number.isFinite(Number(raw.custom_price ?? raw.price ?? raw.distributor_price))
-      ? Number(raw.custom_price ?? raw.price ?? raw.distributor_price)
-      : null,
     source_warehouse: sourceWarehouse,
     allocation_date: getString(raw.allocation_date || raw.created_at),
     status,
@@ -272,7 +272,7 @@ const loadAllocations = async (page = allocationsPage.value) => {
       page,
       distributor_id: distributorId.value,
       search: allocationsSearch.value.trim() || undefined,
-      product_name: allocationsSearch.value.trim() || undefined,
+      name: allocationsSearch.value.trim() || undefined,
       status: allocationsStatus.value === 'all' ? undefined : allocationsStatus.value,
       warehouse_id: allocationsWarehouse.value === 'all' ? undefined : allocationsWarehouse.value,
       source_warehouse_id: allocationsWarehouse.value === 'all' ? undefined : allocationsWarehouse.value,
@@ -655,8 +655,8 @@ onMounted(async () => {
         <div v-else class="space-y-4">
           <div class="rounded-lg border p-4">
             <div class="flex flex-col gap-3">
-              <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <div class="relative flex-1">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div class="relative w-full sm:flex-1">
                   <Search class="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                   <Input
                     v-model="allocationsSearch"
@@ -665,7 +665,7 @@ onMounted(async () => {
                   />
                 </div>
                 <Select v-model="allocationsWarehouse">
-                  <SelectTrigger class="w-full lg:w-[220px] h-9">
+                  <SelectTrigger class="w-full sm:w-[220px] h-9">
                     <SelectValue :placeholder="t('distributors_show.stock_allocation_filter_warehouse')" />
                   </SelectTrigger>
                   <SelectContent>
@@ -680,7 +680,7 @@ onMounted(async () => {
                   </SelectContent>
                 </Select>
                 <Select v-model="allocationsStatus">
-                  <SelectTrigger class="w-full lg:w-[220px] h-9">
+                  <SelectTrigger class="w-full sm:w-[220px] h-9">
                     <SelectValue :placeholder="t('distributors_show.stock_allocation_filter_status')" />
                   </SelectTrigger>
                   <SelectContent>
@@ -692,28 +692,28 @@ onMounted(async () => {
                 </Select>
               </div>
 
-              <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-                <div class="w-full lg:w-[220px]">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div class="w-full sm:w-[220px]">
                   <label class="text-xs text-muted-foreground">{{ t('distributors_show.stock_allocation_date_from') }}</label>
                   <DatePickerInput v-model="allocationsDateFrom" class="w-full mt-1" />
                 </div>
-                <div class="w-full lg:w-[220px]">
+                <div class="w-full sm:w-[220px]">
                   <label class="text-xs text-muted-foreground">{{ t('distributors_show.stock_allocation_date_to') }}</label>
                   <DatePickerInput v-model="allocationsDateTo" class="w-full mt-1" />
                 </div>
-                <div class="flex items-center gap-2 lg:ms-auto">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:ms-auto w-full sm:w-auto">
                   <Button
                     v-if="hasAllocationFilters"
                     variant="ghost"
                     size="sm"
-                    class="h-9 gap-1.5 text-muted-foreground"
+                    class="w-full sm:w-auto h-9 gap-1.5 text-muted-foreground"
                     :disabled="allocationsLoading"
                     @click="resetAllocationFilters"
                   >
                     <X class="size-3.5" />
                     {{ t('distributors_show.stock_allocation_reset_filters') }}
                   </Button>
-                  <Button class="h-9 gap-2 bg-[#215260] hover:bg-[#184754]" @click="goToAllocateProducts">
+                  <Button class="w-full sm:w-auto h-9 gap-2 bg-[#215260] hover:bg-[#184754]" @click="goToAllocateProducts">
                     <Boxes class="size-4" />
                     {{ t('distributors_show.stock_allocation_allocate_products') }}
                   </Button>
@@ -724,32 +724,31 @@ onMounted(async () => {
 
           <div class="rounded-lg border overflow-hidden">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                  <TableHead>{{ t('distributors_show.stock_allocation_col_variation') }}</TableHead>
-                  <TableHead>{{ t('distributors_show.stock_allocation_col_unit') }}</TableHead>
-                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_allocated_quantity') }}</TableHead>
-                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
-                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
-                  <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_custom_price') }}</TableHead>
-                  <TableHead>{{ t('distributors_show.stock_allocation_col_source_warehouse') }}</TableHead>
+              <TableHeader class="hidden md:table-header-group">
+                <TableRow class="bg-muted/40 hover:bg-muted/40">
+                  <TableHead class="min-w-[220px]">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
+                  <TableHead class="min-w-[140px]">{{ t('distributors_show.allocation_row_description') }}</TableHead>
+                  <TableHead class="w-24 text-end">{{ t('distributors_show.allocation_quantity') }}</TableHead>
+                  <TableHead class="w-28 text-end">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
+                  <TableHead class="w-28 text-end">{{ t('distributors_show.allocation_row_total') }}</TableHead>
+                  <TableHead class="text-end w-24">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
+                  <TableHead class="text-end w-24">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
                   <TableHead>{{ t('distributors_show.stock_allocation_col_allocation_date') }}</TableHead>
                   <TableHead>{{ t('distributors_show.stock_allocation_col_status') }}</TableHead>
                   <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_actions') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow v-if="allocationsLoading">
-                  <TableCell :colspan="11" class="py-14 text-center">
+                <TableRow v-if="allocationsLoading" class="md:table-row">
+                  <TableCell :colspan="10" class="py-14 text-center">
                     <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 class="size-4 animate-spin" />
                       {{ t('distributors_show.stock_allocation_loading') }}
                     </div>
                   </TableCell>
                 </TableRow>
-                <TableRow v-else-if="allocationsError">
-                  <TableCell :colspan="11" class="py-14 text-center">
+                <TableRow v-else-if="allocationsError" class="md:table-row">
+                  <TableCell :colspan="10" class="py-14 text-center">
                     <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                       <ShieldAlert class="size-6" />
                       <p class="font-medium">{{ t('distributors_show.stock_allocation_error_title') }}</p>
@@ -762,8 +761,8 @@ onMounted(async () => {
                     </div>
                   </TableCell>
                 </TableRow>
-                <TableRow v-else-if="allocations.length === 0">
-                  <TableCell :colspan="11" class="py-14 text-center text-sm text-muted-foreground">
+                <TableRow v-else-if="allocations.length === 0" class="md:table-row">
+                  <TableCell :colspan="10" class="py-14 text-center text-sm text-muted-foreground">
                     <div class="flex flex-col items-center gap-2">
                       <Boxes class="size-6 text-muted-foreground" />
                       <p class="font-medium">{{ t('distributors_show.stock_allocation_empty_title') }}</p>
@@ -779,18 +778,67 @@ onMounted(async () => {
                   v-for="row in allocations"
                   v-else
                   :key="row.id"
-                  class="hover:bg-muted/30 transition-colors align-middle"
+                  class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
+                         md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
+                         hover:bg-muted/30 transition-colors align-middle"
                 >
-                  <TableCell class="font-medium">{{ row.product_name || '—' }}</TableCell>
-                  <TableCell>{{ row.variation || '—' }}</TableCell>
-                  <TableCell>{{ row.unit || '—' }}</TableCell>
-                  <TableCell class="text-end tabular-nums">{{ formatQty(row.allocated_quantity) }}</TableCell>
-                  <TableCell class="text-end tabular-nums">{{ formatQty(row.sold_quantity) }}</TableCell>
-                  <TableCell class="text-end tabular-nums">{{ formatQty(row.remaining_quantity) }}</TableCell>
-                  <TableCell class="text-end tabular-nums">{{ formatMoney(row.custom_price) }}</TableCell>
-                  <TableCell>{{ row.source_warehouse || '—' }}</TableCell>
-                  <TableCell>{{ row.allocation_date || '—' }}</TableCell>
-                  <TableCell>
+                  <!-- Product (with nested variation + warehouse) -->
+                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:align-top md:py-4">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_product_name') }}</span>
+                    <div class="flex min-w-0 flex-col gap-1">
+                      <span class="font-medium">{{ row.product_name || '—' }}</span>
+                      <span class="text-xs text-muted-foreground">{{ row.variation || '—' }}</span>
+                      <span class="text-xs text-muted-foreground">{{ row.source_warehouse || '—' }}</span>
+                    </div>
+                  </TableCell>
+
+                  <!-- Description -->
+                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:align-top md:py-4">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_row_description') }}</span>
+                    <span class="text-sm text-muted-foreground">{{ row.description || '—' }}</span>
+                  </TableCell>
+
+                  <!-- Qty (allocated) -->
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_quantity') }}</span>
+                    <span class="tabular-nums">{{ formatQty(row.allocated_quantity) }}</span>
+                  </TableCell>
+
+                  <!-- Unit Price -->
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_unit_price') }}</span>
+                    <span class="tabular-nums">{{ formatMoney(row.unit_price) }}</span>
+                  </TableCell>
+
+                  <!-- Row Total -->
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_row_total') }}</span>
+                    <span class="tabular-nums font-medium">
+                      {{ row.unit_price != null ? (row.allocated_quantity * row.unit_price).toFixed(2) : '—' }}
+                    </span>
+                  </TableCell>
+
+                  <!-- Sold Qty -->
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</span>
+                    <span class="tabular-nums">{{ formatQty(row.sold_quantity) }}</span>
+                  </TableCell>
+
+                  <!-- Remaining Qty -->
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</span>
+                    <span class="tabular-nums">{{ formatQty(row.remaining_quantity) }}</span>
+                  </TableCell>
+
+                  <!-- Date -->
+                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_allocation_date') }}</span>
+                    <span>{{ row.allocation_date || '—' }}</span>
+                  </TableCell>
+
+                  <!-- Status -->
+                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_status') }}</span>
                     <span
                       class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                       :class="statusBadgeClass(row)"
@@ -798,13 +846,15 @@ onMounted(async () => {
                       {{ statusLabel(row) }}
                     </span>
                   </TableCell>
-                  <TableCell class="text-end">
-                    <div class="inline-flex items-center gap-2">
+
+                  <!-- Actions -->
+                  <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto md:inline-flex">
                       <Button
                         v-if="canEditAllocation(row)"
                         variant="outline"
                         size="sm"
-                        class="h-8"
+                        class="w-full sm:w-auto h-8"
                         @click="goToEditAllocation(row)"
                       >
                         {{ t('distributors_show.stock_allocation_action_edit') }}
@@ -813,7 +863,7 @@ onMounted(async () => {
                         v-if="canReturnAllocation(row)"
                         variant="outline"
                         size="sm"
-                        class="h-8"
+                        class="w-full sm:w-auto h-8"
                         @click="goToReturnAllocation(row)"
                       >
                         {{ t('distributors_show.stock_allocation_action_return') }}

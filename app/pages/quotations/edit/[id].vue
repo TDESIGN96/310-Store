@@ -423,7 +423,7 @@ onMounted(async () => {
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader class="hidden md:table-header-group">
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
                     <TableHead class="rtl:text-start">{{ t('quotations_page.col_product') }}</TableHead>
                     <TableHead class="rtl:text-start">{{ t('quotations_page.row_description') }}</TableHead>
@@ -435,30 +435,54 @@ onMounted(async () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-for="(item, idx) in draft.items" :key="item.key" class="align-top">
-                    <TableCell class="min-w-[220px] space-y-2">
-                      <p class="text-sm font-medium">{{ productDisplayName(item.product) }}</p>
-                      <Select
-                        v-if="item.product?.variations.length"
-                        :model-value="item.variation_id ? String(item.variation_id) : ''"
-                        @update:model-value="value => quotationsStore.setRowVariation(idx, Number(value))"
-                      >
-                        <SelectTrigger><SelectValue :placeholder="t('quotations_page.select_variation')" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem v-for="variation in item.product.variations" :key="variation.id" :value="String(variation.id)">
-                            {{ variation.label }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <TableRow
+                    v-for="(item, idx) in draft.items"
+                    :key="item.key"
+                    class="flex flex-col gap-2 border-2 rounded-lg p-4 mb-4 shadow-sm
+                           md:table-row md:border-0 md:rounded-none md:p-0 md:mb-0 md:shadow-none md:align-top"
+                  >
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[220px]">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.col_product') }}
+                      </span>
+                      <div class="space-y-2">
+                        <p class="text-sm font-medium">{{ productDisplayName(item.product) }}</p>
+                        <Select
+                          v-if="item.product?.variations.length"
+                          :model-value="item.variation_id ? String(item.variation_id) : ''"
+                          @update:model-value="value => quotationsStore.setRowVariation(idx, Number(value))"
+                        >
+                          <SelectTrigger><SelectValue :placeholder="t('quotations_page.select_variation')" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem v-for="variation in item.product.variations" :key="variation.id" :value="String(variation.id)">
+                              {{ variation.label }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
-                    <TableCell class="min-w-[200px]"><Input v-model="item.description" /></TableCell>
-                    <TableCell class="min-w-[90px] text-end">
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[200px]">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.row_description') }}
+                      </span>
+                      <Input v-model="item.description" />
+                    </TableCell>
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[90px] md:text-end">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.qty') }}
+                      </span>
                       <Input :model-value="item.qty" type="number" min="1" class="text-end tabular-nums" @update:model-value="value => quotationsStore.setRowQty(idx, Number(value))" />
                     </TableCell>
-                    <TableCell class="min-w-[120px] text-end">
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[120px] md:text-end">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.unit_price') }}
+                      </span>
                       <Input :model-value="item.unit_price" type="number" min="0" class="text-end tabular-nums" @update:model-value="value => quotationsStore.setRowUnitPrice(idx, Number(value))" />
                     </TableCell>
-                    <TableCell class="min-w-[220px] text-end">
+                    <TableCell class="block py-1.5 md:table-cell md:min-w-[220px] md:text-end">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('quotations_page.discount_percent') }}
+                      </span>
                       <Select
                         :model-value="item.discount_mode"
                         @update:model-value="value => quotationsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))"
@@ -481,9 +505,14 @@ onMounted(async () => {
                       <p v-if="formErrors[`row_${idx}_discount`]" class="mt-1 text-xs text-red-600">
                         {{ formErrors[`row_${idx}_discount`] }}
                       </p>
-                    </TableCell> 
-                    <TableCell class="text-end rtl:text-start font-medium tabular-nums">{{ formatMoney(rowTotals(idx).rowTotal) }}</TableCell>
-                    <TableCell class="text-end">
+                    </TableCell>
+                    <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:text-end md:rtl:text-start md:font-medium md:tabular-nums">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">
+                        {{ t('quotations_page.row_total') }}
+                      </span>
+                      <span class="font-medium">{{ formatMoney(rowTotals(idx).rowTotal) }}</span>
+                    </TableCell>
+                    <TableCell class="flex justify-end pt-2 border-t mt-1 md:table-cell md:border-0 md:pt-0 md:mt-0 md:text-end">
                       <Button type="button" variant="ghost" size="icon" class="size-8 text-red-600" @click="quotationsStore.removeRow(idx)">
                         <Trash2 class="size-4" />
                       </Button>

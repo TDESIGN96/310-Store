@@ -479,14 +479,14 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div class="flex items-center gap-2 flex-col sm:flex-row">
-        <div class="relative">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 sm:flex-1">
+        <div class="relative w-full sm:w-80">
           <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
           <Input
             v-model="search"
             :placeholder="t('users_page.search_placeholder')"
-            class="pr-9 w-80 h-9"
+            class="pr-9 w-full h-9"
           />
           <Loader2
             v-if="loading && search"
@@ -495,7 +495,7 @@ onMounted(() => {
         </div>
 
         <Select :model-value="filterRoleId" @update:model-value="onRoleFilterChange">
-          <SelectTrigger class="w-full sm:w-[min(100%,14rem)] h-9 gap-2" :disabled="loadingRolesFilter">
+          <SelectTrigger class="w-full sm:w-[14rem] h-9 gap-2" :disabled="loadingRolesFilter">
             <Filter class="size-3.5 shrink-0 text-muted-foreground" />
             <SelectValue :placeholder="t('users_page.filter_role')" />
           </SelectTrigger>
@@ -512,7 +512,7 @@ onMounted(() => {
         </Select>
 
         <Select :model-value="filterStatus" @update:model-value="onStatusFilterChange">
-          <SelectTrigger class="w-full sm:w-[min(100%,11rem)] h-9">
+          <SelectTrigger class="w-full sm:w-[11rem] h-9">
             <SelectValue :placeholder="t('users_page.filter_status')" />
           </SelectTrigger>
           <SelectContent>
@@ -524,7 +524,7 @@ onMounted(() => {
       </div>
       <Button
         v-if="canCreateUser"
-        class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+        class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] w-full sm:w-auto"
         as-child
       >
         <NuxtLink to="/users/create">
@@ -558,7 +558,7 @@ onMounted(() => {
 
     <div class="rounded-lg border overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <TableHead class="w-10 text-center">
               <Checkbox
@@ -579,7 +579,7 @@ onMounted(() => {
         </TableHeader>
 
         <TableBody>
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="9" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
@@ -588,7 +588,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="listLoadError">
+          <TableRow v-else-if="listLoadError" class="md:table-row">
             <TableCell :colspan="9" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
@@ -601,7 +601,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="users.length === 0">
+          <TableRow v-else-if="users.length === 0" class="md:table-row">
             <TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
@@ -615,30 +615,44 @@ onMounted(() => {
             v-for="user in users"
             v-else
             :key="user.id"
-            class="hover:bg-muted/30 transition-colors align-middle"
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle"
             :class="{ 'bg-muted/20': selectedIds.has(user.id) }"
           >
-            <TableCell class="w-10">
+            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox
                 :model-value="selectedIds.has(user.id)"
-                class="mt-0.5 mx-4"
+                class="md:mt-0.5 md:mx-4"
                 @update:model-value="toggleSelect(user.id)"
               />
             </TableCell>
-            <TableCell class="font-medium">
-              <NuxtLink
-                v-if="canShowUser"
-                :to="`/users/show/${user.id}`"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
-              >
-                {{ user.name }}
-              </NuxtLink>
-              <span v-else>{{ user.name }}</span>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_name') }}</span>
+              <div class="font-medium">
+                <NuxtLink
+                  v-if="canShowUser"
+                  :to="`/users/show/${user.id}`"
+                  class="text-sm text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-end md:text-start cursor-pointer"
+                >
+                  {{ user.name }}
+                </NuxtLink>
+                <span v-else class="text-sm">{{ user.name }}</span>
+              </div>
             </TableCell>
-            <TableCell>{{ user.email }}</TableCell>
-            <TableCell>{{ user.phone || '—' }}</TableCell>
-            <TableCell class="text-sm">{{ rolesDisplay(user.roles) }}</TableCell>
-            <TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_email') }}</span>
+              <span class="text-sm">{{ user.email }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_phone') }}</span>
+              <span class="text-sm">{{ user.phone || '—' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_roles') }}</span>
+              <span class="text-sm">{{ rolesDisplay(user.roles) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_active') }}</span>
               <span
                 class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                 :class="statusConfig(user.is_active).class"
@@ -646,9 +660,15 @@ onMounted(() => {
                 {{ statusConfig(user.is_active).label }}
               </span>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ createdByDisplay(user.created_by) }}</TableCell>
-            <TableCell class="text-end text-sm text-muted-foreground tabular-nums">{{ formatDate(user.created_at) }}</TableCell>
-            <TableCell class="text-end">
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_added_by') }}</span>
+              <span class="text-sm text-muted-foreground">{{ createdByDisplay(user.created_by) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_created') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ formatDate(user.created_at) }}</span>
+            </TableCell>
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
               <TableRowActions
                 :actions="[
                   { key: `deactivate-${user.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditUser && user.is_active && !cannotToggleUserActivation(user), disabled: togglingActiveId === user.id || deletingId === user.id, loading: togglingActiveId === user.id, onClick: () => openDeactivateConfirm(user) },

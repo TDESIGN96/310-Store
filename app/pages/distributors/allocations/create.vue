@@ -11,6 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 definePageMeta({ layout: 'default' })
 
@@ -37,7 +45,8 @@ interface LookupVariation {
 
 interface LookupProduct {
   id: string
-  name: string
+  name_en: string
+  name_ar: string
   barcode: string
   variations: LookupVariation[]
 }
@@ -54,6 +63,7 @@ interface AllocationRowDraft {
   product_id: string
   variation_id: string
   warehouse_id: string
+  description: string
   quantity: number
   unit: string
   available_stock: number
@@ -76,7 +86,7 @@ interface RowFieldErrors {
 }
 
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 const { canEdit } = usePermissions()
@@ -117,6 +127,7 @@ const createEmptyRow = (): AllocationRowDraft => ({
   product_id: '',
   variation_id: '',
   warehouse_id: '',
+  description: '',
   quantity: 1,
   unit: '',
   available_stock: 0,
@@ -135,8 +146,13 @@ const ensureRows = () => {
 
 const productDisplayName = (product: LookupProduct | null): string => {
   if (!product) return '—'
-  return product.name || '—'
+  if (locale.value === 'ar') return product.name_ar || product.name_en || '—'
+  return product.name_en || product.name_ar || '—'
 }
+
+const formatMoney = (value: number): string => value.toFixed(2)
+
+const rowTotal = (row: AllocationRowDraft): number => row.quantity * row.standard_price
 
 const getVariationOptions = (row: AllocationRowDraft): LookupVariation[] => row.product?.variations ?? []
 
@@ -228,7 +244,8 @@ const normalizeProduct = (raw: unknown): LookupProduct | null => {
   if (!isRecord(raw)) return null
   const id = String(raw.id ?? raw.product_id ?? '').trim()
   if (!id) return null
-  const name = getString(raw.name || raw.name_en || raw.name_ar || raw.product || raw.product_name || id)
+  const name_en = getString(raw.name_en || raw.name || raw.product || raw.product_name || id)
+  const name_ar = getString(raw.name_ar || raw.name || raw.product || raw.product_name || id)
   const rawVariations = Array.isArray(raw.variations)
     ? raw.variations
     : isRecord(raw.variation)
@@ -240,7 +257,8 @@ const normalizeProduct = (raw: unknown): LookupProduct | null => {
   const barcode = getString(raw.barcode || raw.code || variations[0]?.barcode)
   return {
     id,
-    name,
+    name_en,
+    name_ar,
     barcode,
     variations,
   }
@@ -330,7 +348,8 @@ const extractLookupProducts = (payload: unknown): LookupProduct[] => {
       if (!variation) return null
       const product = normalizeProduct({
         id: productId,
-        name: item.product_name || item.product,
+        name_en: item.product_name_en || item.product_name || item.product,
+        name_ar: item.product_name_ar || item.product_name || item.product,
         barcode: item.barcode,
         variations: [variation],
       })
@@ -348,7 +367,7 @@ const loadLookupProducts = async (params: { search?: string, barcode?: string } 
     const response = await $api<Record<string, unknown>>('/products', {
       params: {
         search: params.search?.trim() || undefined,
-        product_name: params.search?.trim() || undefined,
+        name: params.search?.trim() || undefined,
         barcode: params.barcode?.trim() || undefined,
         per_page: 100,
       },
@@ -635,6 +654,7 @@ const buildRowPayload = (row: AllocationRowDraft) => ({
   variation_id: Number(row.variation_id),
   warehouse_id: Number(row.warehouse_id),
   quantity: Number(row.quantity),
+  description: row.description || undefined,
 })
 
 const submitAllocation = async () => {
@@ -775,145 +795,197 @@ onMounted(async () => {
         <p v-if="formError" class="text-sm text-red-600">{{ formError }}</p>
       </div>
 
-      <div class="rounded-xl border overflow-hidden">
+      <div class="overflow-hidden rounded-xl border">
         <div class="bg-muted/40 px-4 py-3 border-b flex items-center justify-between">
           <h2 class="font-semibold flex items-center gap-2">
             <Boxes class="size-4" />
             {{ $t('distributors_show.stock_allocation_allocate_products') }}
           </h2>
-          <Button type="button" variant="outline" class="h-8 gap-1.5" @click="addRow">
+          <Button type="button" variant="outline" class="h-8 gap-1.5 w-full sm:w-auto" @click="addRow">
             <Plus class="size-4" />
             {{ $t('distributors_show.allocation_add_row') }}
           </Button>
         </div>
 
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[1220px] text-sm">
-            <thead class="bg-muted/20">
-              <tr>
-                <th class="px-3 py-2 text-start font-medium">{{ $t('distributors_show.stock_allocation_col_product_name') }}</th>
-                <th class="px-3 py-2 text-start font-medium">{{ $t('distributors_show.stock_allocation_col_variation') }}</th>
-                <th class="px-3 py-2 text-start font-medium">{{ $t('distributors_show.stock_allocation_col_source_warehouse') }}</th>
-                <th class="px-3 py-2 text-end font-medium">{{ $t('distributors_show.allocation_available_stock') }}</th>
-                <th class="px-3 py-2 text-end font-medium">{{ $t('distributors_show.allocation_quantity') }}</th>
-                <th class="px-3 py-2 text-start font-medium">{{ $t('distributors_show.stock_allocation_col_unit') }}</th>
-                <th class="px-3 py-2 text-start font-medium">{{ $t('distributors_show.allocation_pricing_method') }}</th>
-                <th class="px-3 py-2 text-end font-medium">{{ $t('distributors_show.stock_allocation_col_actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, idx) in rows" :key="row.key" class="border-t align-top">
-                <td class="px-3 py-3">
-                  <div class="space-y-1">
-                    <p class="font-medium">{{ productDisplayName(row.product) }}</p>
+          <Table>
+            <TableHeader class="hidden md:table-header-group">
+              <TableRow class="bg-muted/40 hover:bg-muted/40">
+                <TableHead class="min-w-[280px] text-start">{{ $t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
+                <TableHead class="min-w-[160px] text-start">{{ $t('distributors_show.allocation_row_description') }}</TableHead>
+                <TableHead class="w-24 text-start">{{ $t('distributors_show.allocation_quantity') }}</TableHead>
+                <TableHead class="w-32 text-start">{{ $t('distributors_show.allocation_unit_price') }}</TableHead>
+                <TableHead class="w-28 text-start">{{ $t('distributors_show.allocation_row_total') }}</TableHead>
+                <TableHead class="w-12 text-start">{{ $t('distributors_show.stock_allocation_col_actions') }}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow
+                v-for="(row, idx) in rows"
+                :key="row.key"
+                class="flex flex-col gap-2 border-2 rounded-lg p-4 mb-4 shadow-sm
+                       md:table-row md:border-0 md:rounded-none md:p-0 md:mb-0 md:shadow-none"
+              >
+                <!-- Product cell (nested: variation, warehouse, stock, pricing) -->
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[280px] md:py-3">
+                  <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                    {{ $t('distributors_show.stock_allocation_col_product_name') }}
+                  </span>
+                  <div class="flex min-w-0 flex-col gap-2">
+                    <p class="text-sm font-medium leading-snug break-words">
+                      {{ productDisplayName(row.product) }}
+                    </p>
                     <p v-if="getRowError(row).product_id" class="text-xs text-red-600">{{ getRowError(row).product_id }}</p>
-                  </div>
-                </td>
-                <td class="px-3 py-3">
-                  <Select
-                    :model-value="row.variation_id"
-                    @update:model-value="value => { row.variation_id = String(value ?? ''); onVariationChange(row) }"
-                  >
-                    <SelectTrigger class="h-9 w-full"><SelectValue :placeholder="$t('distributors_show.stock_allocation_col_variation')" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        v-for="variation in getVariationOptions(row)"
-                        :key="variation.id"
-                        :value="variation.id"
-                      >
-                        {{ variation.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p v-if="getRowError(row).variation_id" class="mt-1 text-xs text-red-600">{{ getRowError(row).variation_id }}</p>
-                </td>
-                <td class="px-3 py-3">
-                  <Select
-                    :model-value="row.warehouse_id"
-                    @update:model-value="value => { row.warehouse_id = String(value ?? ''); onWarehouseChange(row) }"
-                  >
-                    <SelectTrigger class="h-9 w-full"><SelectValue :placeholder="$t('distributors_show.stock_allocation_filter_warehouse')" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        v-for="warehouse in getWarehouseOptions(row)"
-                        :key="warehouse.id"
-                        :value="warehouse.id"
-                      >
-                        {{ warehouse.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p v-if="getRowError(row).warehouse_id" class="mt-1 text-xs text-red-600">{{ getRowError(row).warehouse_id }}</p>
-                </td>
-                <td class="px-3 py-3 text-end tabular-nums">{{ row.available_stock }}</td>
-                <td class="px-3 py-3">
-                  <Input
-                    :model-value="row.quantity"
-                    type="number"
-                    min="1"
-                    class="h-9 text-end"
-                    @update:model-value="value => row.quantity = Math.max(0, Number(value) || 0)"
-                  />
-                  <p v-if="getRowError(row).quantity" class="mt-1 text-xs text-red-600">{{ getRowError(row).quantity }}</p>
-                </td>
-                <td class="px-3 py-3">{{ row.unit || '—' }}</td>
-                <td class="px-3 py-3">
-                  <Select
-                    :model-value="row.pricing_method"
-                    @update:model-value="value => row.pricing_method = (String(value ?? 'standard') === 'tiered' ? 'tiered' : 'standard')"
-                  >
-                    <SelectTrigger class="h-9 w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="standard">{{ $t('distributors_show.allocation_pricing_standard') }}</SelectItem>
-                      <SelectItem value="tiered">{{ $t('distributors_show.allocation_pricing_tiered') }}</SelectItem>
-                    </SelectContent>
-                  </Select>
 
-                  <div v-if="row.pricing_method === 'standard'" class="mt-2 space-y-1">
+                    <!-- Variation -->
+                    <Select
+                      :model-value="row.variation_id"
+                      @update:model-value="value => { row.variation_id = String(value ?? ''); onVariationChange(row) }"
+                    >
+                      <SelectTrigger class="h-8 w-full text-xs">
+                        <SelectValue :placeholder="$t('distributors_show.stock_allocation_col_variation')" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          v-for="variation in getVariationOptions(row)"
+                          :key="variation.id"
+                          :value="variation.id"
+                        >
+                          {{ variation.label }}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p v-if="getRowError(row).variation_id" class="text-xs text-red-600">{{ getRowError(row).variation_id }}</p>
+
+                    <!-- Warehouse -->
+                    <Select
+                      :model-value="row.warehouse_id"
+                      @update:model-value="value => { row.warehouse_id = String(value ?? ''); onWarehouseChange(row) }"
+                    >
+                      <SelectTrigger class="h-8 w-full text-xs">
+                        <SelectValue :placeholder="$t('distributors_show.stock_allocation_filter_warehouse')" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          v-for="warehouse in getWarehouseOptions(row)"
+                          :key="warehouse.id"
+                          :value="warehouse.id"
+                        >
+                          {{ warehouse.label }}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p v-if="getRowError(row).warehouse_id" class="text-xs text-red-600">{{ getRowError(row).warehouse_id }}</p>
+
+                    <!-- Available Stock -->
+                    <p class="text-xs text-muted-foreground">
+                      {{ $t('distributors_show.allocation_available_stock') }}: <span class="tabular-nums font-medium">{{ row.available_stock }}</span>
+                      <span v-if="row.unit" class="ms-1">{{ row.unit }}</span>
+                    </p>
+
+                    <!-- Pricing Method -->
+                    <div class="space-y-1.5 border-t pt-2 mt-1">
+                      <Select
+                        :model-value="row.pricing_method"
+                        @update:model-value="value => row.pricing_method = (String(value ?? 'standard') === 'tiered' ? 'tiered' : 'standard')"
+                      >
+                        <SelectTrigger class="h-8 w-full text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="standard">{{ $t('distributors_show.allocation_pricing_standard') }}</SelectItem>
+                          <SelectItem value="tiered">{{ $t('distributors_show.allocation_pricing_tiered') }}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div v-if="row.pricing_method === 'tiered'" class="space-y-1.5">
+                        <div v-for="(tier, tierIdx) in row.tiers" :key="`${row.key}-tier-${tierIdx}`" class="grid grid-cols-3 gap-1.5">
+                          <Input :model-value="tier.from" type="number" min="1" class="h-7 text-xs" :placeholder="$t('distributors_show.allocation_tier_from')" @update:model-value="v => tier.from = Math.max(1, Number(v) || 1)" />
+                          <Input :model-value="tier.to" type="number" min="1" class="h-7 text-xs" :placeholder="$t('distributors_show.allocation_tier_to')" @update:model-value="v => tier.to = Math.max(1, Number(v) || 1)" />
+                          <div class="flex items-center gap-1">
+                            <Input :model-value="tier.price" type="number" min="0" step="0.01" class="h-7 text-xs" :placeholder="$t('distributors_show.allocation_tier_price')" @update:model-value="v => tier.price = Math.max(0, Number(v) || 0)" />
+                            <Button type="button" variant="ghost" size="icon" class="size-6 shrink-0" @click="removeTier(row, tierIdx)">
+                              <Trash2 class="size-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" class="h-7 text-xs" @click="addTier(row)">
+                          {{ $t('distributors_show.allocation_add_tier') }}
+                        </Button>
+                        <p v-if="getRowError(row).tiers" class="text-xs text-red-600">{{ getRowError(row).tiers }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+
+                <!-- Description -->
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[160px] md:py-3">
+                  <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                    {{ $t('distributors_show.allocation_row_description') }}
+                  </span>
+                  <Input v-model="row.description" class="w-full" />
+                </TableCell>
+
+                <!-- Qty -->
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                  <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                    {{ $t('distributors_show.allocation_quantity') }}
+                  </span>
+                  <div class="flex w-full flex-col gap-1 md:ms-auto md:max-w-24 md:items-end">
+                    <Input
+                      :model-value="row.quantity"
+                      type="number"
+                      min="1"
+                      class="h-9 w-full text-start tabular-nums"
+                      @update:model-value="value => row.quantity = Math.max(0, Number(value) || 0)"
+                    />
+                    <p v-if="getRowError(row).quantity" class="w-full text-start text-xs text-red-600">{{ getRowError(row).quantity }}</p>
+                  </div>
+                </TableCell>
+
+                <!-- Unit Price -->
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                  <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                    {{ $t('distributors_show.allocation_unit_price') }}
+                  </span>
+                  <div class="flex w-full flex-col gap-1 md:ms-auto md:max-w-32 md:items-end">
                     <Input
                       :model-value="row.standard_price"
                       type="number"
                       min="0"
                       step="0.01"
-                      class="h-9 text-end"
-                      :placeholder="$t('distributors_show.allocation_standard_price')"
+                      class="h-9 w-full text-start tabular-nums"
                       @update:model-value="value => row.standard_price = Math.max(0, Number(value) || 0)"
                     />
-                    <p v-if="getRowError(row).standard_price" class="text-xs text-red-600">{{ getRowError(row).standard_price }}</p>
+                    <p v-if="getRowError(row).standard_price" class="w-full text-start text-xs text-red-600">{{ getRowError(row).standard_price }}</p>
                   </div>
+                </TableCell>
 
-                  <div v-else class="mt-2 space-y-2">
-                    <div v-for="(tier, tierIdx) in row.tiers" :key="`${row.key}-tier-${tierIdx}`" class="grid grid-cols-3 gap-2">
-                      <Input :model-value="tier.from" type="number" min="1" class="h-8" :placeholder="$t('distributors_show.allocation_tier_from')" @update:model-value="v => tier.from = Math.max(1, Number(v) || 1)" />
-                      <Input :model-value="tier.to" type="number" min="1" class="h-8" :placeholder="$t('distributors_show.allocation_tier_to')" @update:model-value="v => tier.to = Math.max(1, Number(v) || 1)" />
-                      <div class="flex items-center gap-1">
-                        <Input :model-value="tier.price" type="number" min="0" step="0.01" class="h-8" :placeholder="$t('distributors_show.allocation_tier_price')" @update:model-value="v => tier.price = Math.max(0, Number(v) || 0)" />
-                        <Button type="button" variant="ghost" size="icon" class="size-7" @click="removeTier(row, tierIdx)">
-                          <Trash2 class="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Button type="button" variant="outline" size="sm" class="h-8" @click="addTier(row)">
-                      {{ $t('distributors_show.allocation_add_tier') }}
-                    </Button>
-                    <p v-if="getRowError(row).tiers" class="text-xs text-red-600">{{ getRowError(row).tiers }}</p>
+                <!-- Total -->
+                <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:align-top md:py-3 md:text-start md:tabular-nums">
+                  <span class="text-xs font-medium text-muted-foreground md:hidden">
+                    {{ $t('distributors_show.allocation_row_total') }}
+                  </span>
+                  <div class="font-medium md:ms-auto md:flex md:h-9 md:max-w-28 md:items-center md:justify-start tabular-nums">
+                    {{ formatMoney(rowTotal(row)) }}
                   </div>
-                </td>
-                <td class="px-3 py-3 text-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    class="size-8 text-red-600"
-                    :disabled="rows.length <= 1"
-                    @click="removeRow(idx)"
-                  >
-                    <Trash2 class="size-4" />
-                  </Button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </TableCell>
+
+                <!-- Delete -->
+                <TableCell class="flex justify-end pt-2 border-t mt-1 md:table-cell md:border-0 md:align-top md:pt-3 md:mt-0 md:text-start">
+                  <div class="flex h-9 items-center justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      class="size-8 shrink-0 text-red-600"
+                      :disabled="rows.length <= 1"
+                      @click="removeRow(idx)"
+                    >
+                      <Trash2 class="size-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       </div>
 
@@ -921,7 +993,7 @@ onMounted(async () => {
         <Button
           type="button"
           variant="outline"
-          class="h-10"
+          class="h-10 w-full sm:w-auto"
           :disabled="submitting || distributorLoading"
           as-child
         >
@@ -931,7 +1003,7 @@ onMounted(async () => {
         </Button>
         <Button
           type="button"
-          class="h-10 gap-2 bg-[#215260] hover:bg-[#184754]"
+          class="h-10 gap-2 bg-[#215260] hover:bg-[#184754] w-full sm:w-auto"
           :disabled="submitting || distributorLoading || !distributorActive"
           @click="submitAllocation"
         >

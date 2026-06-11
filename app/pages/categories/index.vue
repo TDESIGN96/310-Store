@@ -565,9 +565,9 @@ onMounted(() => {
 
     <!-- Toolbar -->
     <div class="flex flex-col gap-3">
-      <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex flex-col sm:flex-row items-center gap-2 flex-wrap">
         <!-- Search -->
-        <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <div class="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search class="absolute top-1/2 -translate-y-1/2 right-3 size-4 text-muted-foreground" />
           <Input
             v-model="search"
@@ -582,7 +582,7 @@ onMounted(() => {
 
         <!-- Status Filter -->
         <Select :key="`status-${locale}`" :model-value="filterStatus" @update:model-value="onStatusFilterChange">
-          <SelectTrigger class="w-[min(100%,11rem)] h-9">
+          <SelectTrigger class="w-full sm:w-[11rem] h-9">
             <Filter class="size-3.5 shrink-0 text-muted-foreground ml-1" />
             <SelectValue :placeholder="t('common.status')" />
           </SelectTrigger>
@@ -595,7 +595,7 @@ onMounted(() => {
 
         <!-- Parent Category Filter -->
         <Select :key="`parent-${locale}`" :model-value="filterParentId" @update:model-value="onParentFilterChange">
-          <SelectTrigger class="w-[min(100%,13rem)] h-9">
+          <SelectTrigger class="w-full sm:w-[13rem] h-9">
             <Tag class="size-3.5 shrink-0 text-muted-foreground ml-1" />
             <SelectValue :placeholder="t('categories_page.filter_parent')" />
           </SelectTrigger>
@@ -616,7 +616,7 @@ onMounted(() => {
           v-if="hasActiveFilters || search"
           variant="ghost"
           size="sm"
-          class="h-9 gap-1.5 text-muted-foreground"
+          class="w-full sm:w-auto h-9 gap-1.5 text-muted-foreground"
           @click="clearAllFilters"
         >
           <X class="size-3.5" />
@@ -624,14 +624,14 @@ onMounted(() => {
         </Button>
 
         <!-- Export Buttons -->
-        <Button variant="outline" size="sm" class="h-9 gap-2" @click="exportCSV">
+        <Button variant="outline" size="sm" class="w-full sm:w-auto h-9 gap-2" @click="exportCSV">
           <Download class="size-3.5" />
           CSV
         </Button>
 
-        <div class="flex-1" />
+        <div class="hidden sm:block sm:flex-1" />
 
-        <Button v-if="canCreate" class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+        <Button v-if="canCreate" class="w-full sm:w-auto gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
           <NuxtLink to="/categories/create">
             <Plus class="size-4" />
             {{ t('categories_page.create') }}
@@ -699,7 +699,7 @@ onMounted(() => {
     <!-- Table -->
     <div class="rounded-lg border overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow class="bg-muted/40 hover:bg-muted/40">
             <!-- Bulk Checkbox -->
             <TableHead class="w-10 text-center">
@@ -760,7 +760,7 @@ onMounted(() => {
 
         <TableBody>
           <!-- Loading -->
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="8" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
@@ -770,7 +770,7 @@ onMounted(() => {
           </TableRow>
 
           <!-- Error -->
-          <TableRow v-else-if="listLoadError">
+          <TableRow v-else-if="listLoadError" class="md:table-row">
             <TableCell :colspan="8" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
@@ -786,7 +786,7 @@ onMounted(() => {
           </TableRow>
 
           <!-- Empty -->
-          <TableRow v-else-if="categories.length === 0">
+          <TableRow v-else-if="categories.length === 0" class="md:table-row">
             <TableCell :colspan="8" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
@@ -801,43 +801,58 @@ onMounted(() => {
             v-for="cat in categories"
             v-else
             :key="cat.id"
-            class="hover:bg-muted/30 transition-colors align-middle"
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
+                   md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
+                   hover:bg-muted/30 transition-colors align-middle"
             :class="{ 'bg-muted/20': selectedIds.has(cat.id) }"
           >
             <!-- Checkbox -->
-            <TableCell class="w-10">
+            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:border-0 md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox
                 :model-value="selectedIds.has(cat.id)"
-                class="mt-0.5 mx-4"
+                class="md:mt-0.5 md:mx-4"
                 @update:model-value="toggleSelect(cat.id)"
               />
             </TableCell>
 
             <!-- Name -->
-            <TableCell class="font-medium">
-              <button
-                v-if="canShow"
-                type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
-                @click="handleView(cat)"
-              >
-                {{ categoryPrimaryName(cat) }}
-              </button>
-              <span v-else>{{ categoryPrimaryName(cat) }}</span>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">
+                {{ locale === 'ar' ? t('categories_page.col_name_ar') : t('categories_page.col_name_en') }}
+              </span>
+              <div class="font-medium text-start">
+                <button
+                  v-if="canShow"
+                  type="button"
+                  class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
+                  @click="handleView(cat)"
+                >
+                  {{ categoryPrimaryName(cat) }}
+                </button>
+                <span v-else>{{ categoryPrimaryName(cat) }}</span>
+              </div>
             </TableCell>
 
             <!-- Parent -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ parentDisplay(cat) }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('categories_page.col_parent') }}</span>
+              <span class="text-sm text-muted-foreground">
+                {{ parentDisplay(cat) }}
+              </span>
             </TableCell>
 
             <!-- Description (truncated to 5 words) -->
-            <TableCell class="text-sm text-muted-foreground max-w-[180px]">
-              {{ truncateDescription(cat.description) }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('categories_page.col_description') }}</span>
+              <span class="text-sm text-muted-foreground">
+                {{ truncateDescription(cat.description) }}
+              </span>
             </TableCell>
 
             <!-- Status Badge -->
-            <TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('categories_page.col_status') }}</span>
               <span
                 class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                 :class="statusConfig(cat.status).class"
@@ -847,17 +862,23 @@ onMounted(() => {
             </TableCell>
 
             <!-- Created By -->
-            <TableCell class="text-sm text-muted-foreground">
-              {{ authorDisplay(cat.created_by) }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.added_by') }}</span>
+              <span class="text-sm text-muted-foreground">
+                {{ authorDisplay(cat.created_by) }}
+              </span>
             </TableCell>
 
             <!-- Created At -->
-            <TableCell class=" text-sm text-muted-foreground tabular-nums">
-              {{ formatDate(cat.created_at) }}
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.created_at') }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">
+                {{ formatDate(cat.created_at) }}
+              </span>
             </TableCell>
 
             <!-- Actions -->
-            <TableCell class="text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
               <TableRowActions
                 :actions="[
                   { key: `edit-${cat.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canUpdate, onClick: () => handleEdit(cat) },

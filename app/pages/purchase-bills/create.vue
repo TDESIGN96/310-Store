@@ -380,7 +380,7 @@ onMounted(() => {
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader class="hidden md:table-header-group">
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
                     <TableHead class="min-w-[200px] text-start">{{ t('purchase_bills_page.col_product') }}</TableHead>
                     <TableHead class="min-w-[180px] text-start">{{ t('purchase_bills_page.row_description') }}</TableHead>
@@ -392,8 +392,16 @@ onMounted(() => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-for="(item, idx) in draft.items" :key="item.key">
-                    <TableCell class="align-top whitespace-normal min-w-[200px] py-3">
+                  <TableRow
+                    v-for="(item, idx) in draft.items"
+                    :key="item.key"
+                    class="flex flex-col gap-2 border-2 rounded-lg p-4 mb-4 shadow-sm
+                           md:table-row md:border-0 md:rounded-none md:p-0 md:mb-0 md:shadow-none"
+                  >
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:whitespace-normal md:min-w-[200px] md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.col_product') }}
+                      </span>
                       <div class="flex min-w-0 flex-col gap-2">
                         <p class="text-sm font-medium leading-snug break-words">{{ productDisplayName(item.product) }}</p>
                         <Select
@@ -410,15 +418,29 @@ onMounted(() => {
                         </Select>
                       </div>
                     </TableCell>
-                    <TableCell class="align-top min-w-[180px] py-3"><Input v-model="item.description" class="w-full" /></TableCell>
-                    <TableCell class="align-top py-3">
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[180px] md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.row_description') }}
+                      </span>
+                      <Input v-model="item.description" class="w-full" />
+                    </TableCell>
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.qty') }}
+                      </span>
                       <Input :model-value="item.qty" type="number" min="1" class="h-9 w-full text-start tabular-nums" @update:model-value="value => purchaseBillsStore.setRowQty(idx, Number(value))" />
                     </TableCell>
-                    <TableCell class="align-top py-3">
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.unit_price') }}
+                      </span>
                       <Input :model-value="item.unit_price" type="number" min="0" class="h-9 w-full text-start tabular-nums" @update:model-value="value => purchaseBillsStore.setRowUnitPrice(idx, Number(value))" />
                     </TableCell>
-                    <TableCell class="align-top py-3">
-                      <div class="ms-auto w-full max-w-44 space-y-2">
+                    <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                      <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
+                        {{ t('purchase_bills_page.discount_percent') }}
+                      </span>
+                      <div class="w-full space-y-2 md:ms-auto md:max-w-44">
                         <Select :model-value="item.discount_mode" @update:model-value="value => purchaseBillsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))">
                           <SelectTrigger class="h-9 w-full"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -429,10 +451,13 @@ onMounted(() => {
                         <Input :model-value="item.discount_value" type="number" step="0.01" class="h-9 w-full text-start tabular-nums" @update:model-value="value => purchaseBillsStore.setRowDiscountValue(idx, Number(value))" />
                       </div>
                     </TableCell>
-                    <TableCell class="align-top py-3 text-start tabular-nums">
-                      <div class="ms-auto flex h-9 max-w-32 items-center justify-start font-medium">{{ formatMoney(rowTotals(idx).rowTotal) }}</div>
+                    <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:align-top md:py-3 md:text-start md:tabular-nums">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">
+                        {{ t('purchase_bills_page.row_total') }}
+                      </span>
+                      <div class="font-medium md:ms-auto md:flex md:h-9 md:max-w-32 md:items-center md:justify-start">{{ formatMoney(rowTotals(idx).rowTotal) }}</div>
                     </TableCell>
-                    <TableCell class="align-top py-3 text-start rtl:text-end">
+                    <TableCell class="flex justify-end pt-2 border-t mt-1 md:table-cell md:border-0 md:align-top md:pt-3 md:mt-0 md:text-start md:rtl:text-end">
                       <div class="flex h-9 items-center justify-end">
                         <Button type="button" variant="ghost" size="icon" class="size-8 shrink-0 text-red-600" @click="purchaseBillsStore.removeRow(idx)">
                           <Trash2 class="size-4" />

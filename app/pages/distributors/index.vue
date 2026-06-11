@@ -372,7 +372,7 @@ onMounted(() => {
       </div>
 
       <Table>
-        <TableHeader>
+        <TableHeader class="hidden md:table-header-group">
           <TableRow>
             <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_name') }}</TableHead>
             <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_admin_name') }}</TableHead>
@@ -382,7 +382,7 @@ onMounted(() => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-if="loading">
+          <TableRow v-if="loading" class="md:table-row">
             <TableCell :colspan="5" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
@@ -391,7 +391,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="listLoadError">
+          <TableRow v-else-if="listLoadError" class="md:table-row">
             <TableCell :colspan="5" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
@@ -406,27 +406,37 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="rows.length === 0">
+          <TableRow v-else-if="rows.length === 0" class="md:table-row">
             <TableCell :colspan="5" class="py-14 text-center text-sm text-muted-foreground">
               {{ emptyListMessage }}
             </TableCell>
           </TableRow>
 
-          <TableRow v-for="row in rows" v-else :key="row.id" class="hover:bg-muted/30 transition-colors align-middle">
-            <TableCell class="font-medium">
-              <button
-                v-if="canShowDistributor"
-                type="button"
-                class="text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-start cursor-pointer"
-                @click="navigateTo(`/distributors/show/${row.id}`)"
-              >
-                {{ distributorDisplayName(row) }}
-              </button>
-              <span v-else>{{ distributorDisplayName(row) }}</span>
+          <TableRow v-for="row in rows" v-else :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle">
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_page.col_name') }}</span>
+              <div class="font-medium">
+                <button
+                  v-if="canShowDistributor"
+                  type="button"
+                  class="text-sm text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm text-end md:text-start cursor-pointer"
+                  @click="navigateTo(`/distributors/show/${row.id}`)"
+                >
+                  {{ distributorDisplayName(row) }}
+                </button>
+                <span v-else class="text-sm">{{ distributorDisplayName(row) }}</span>
+              </div>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ row.admin_name || '—' }}</TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ row.location || '—' }}</TableCell>
-            <TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_page.col_admin_name') }}</span>
+              <span class="text-sm text-muted-foreground">{{ row.admin_name || '—' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_page.col_location') }}</span>
+              <span class="text-sm text-muted-foreground">{{ row.location || '—' }}</span>
+            </TableCell>
+            <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_page.col_status') }}</span>
               <span
                 class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                 :class="statusConfig(row.status).class"
@@ -434,7 +444,7 @@ onMounted(() => {
                 {{ statusConfig(row.status).label }}
               </span>
             </TableCell>
-            <TableCell class="text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
               <TableRowActions
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditDistributor, onClick: () => navigateTo(`/distributors/edit/${row.id}`) },
