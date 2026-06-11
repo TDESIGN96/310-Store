@@ -10,15 +10,15 @@ export function validatePurchaseBillDraft(
   t: (key: string) => string,
 ): Record<string, string> {
   const errors: Record<string, string> = {}
-  const mobile = String(draft.customer_mobile ?? '').trim()
-  const email = String(draft.customer_email ?? '').trim()
+  const mobile = String(draft.supplier_mobile ?? '').trim()
+  const email = String(draft.supplier_email ?? '').trim()
   const address = String(draft.address ?? '').trim()
 
-  if (!mobile) errors.customer_mobile = t('purchase_bills_page.customer_mobile_required')
-  else if (!STRICT_PHONE_RE.test(mobile)) errors.customer_mobile = t('purchase_bills_page.customer_mobile_invalid')
+  if (!mobile) errors.supplier_mobile = t('purchase_bills_page.supplier_mobile_required')
+  else if (!STRICT_PHONE_RE.test(mobile)) errors.supplier_mobile = t('purchase_bills_page.supplier_mobile_invalid')
 
-  if (!email) errors.customer_email = t('purchase_bills_page.customer_email_required')
-  else if (!STRICT_EMAIL_RE.test(email)) errors.customer_email = t('purchase_bills_page.customer_email_invalid')
+  if (!email) errors.supplier_email = t('purchase_bills_page.supplier_email_required')
+  else if (!STRICT_EMAIL_RE.test(email)) errors.supplier_email = t('purchase_bills_page.supplier_email_invalid')
 
   if (!address) errors.address = t('purchase_bills_page.address_required')
 
@@ -50,7 +50,7 @@ export function validatePurchaseBillDraft(
   return errors
 }
 
-const FORM_KEY_ORDER = ['customer_mobile', 'customer_email', 'address', 'bill_date', 'warehouse_id', 'items'] as const
+const FORM_KEY_ORDER = ['supplier_mobile', 'supplier_email', 'address', 'bill_date', 'warehouse_id', 'items'] as const
 
 /** Pick one message for a validation-error toast (stable priority). */
 export function firstPurchaseBillValidationToastDescription(errors: Record<string, string>): string {

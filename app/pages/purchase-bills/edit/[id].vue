@@ -226,7 +226,7 @@ onMounted(async () => {
               <p v-if="loadingWarehouses" class="text-xs text-muted-foreground">{{ t('common.loading') }}</p>
               <p v-if="formErrors.warehouse_id" class="text-xs text-red-600">{{ formErrors.warehouse_id }}</p>
             </div>
-            <div class="space-y-2"><label class="text-sm font-medium">{{ t('purchase_bills_page.customer_name') }}</label><Input v-model="draft.customer_name" /></div>
+            <div class="space-y-2"><label class="text-sm font-medium">{{ t('purchase_bills_page.supplier_name') }}</label><Input v-model="draft.supplier_name" /></div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('purchase_bills_page.district') }}</label>
               <Select :model-value="draft.district_id ? String(draft.district_id) : ''" @update:model-value="onDistrictChange">
@@ -240,14 +240,14 @@ onMounted(async () => {
               <p v-if="loadingDistricts" class="text-xs text-muted-foreground">{{ t('common.loading') }}</p>
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium">{{ t('purchase_bills_page.customer_mobile') }}</label>
-              <Input v-model="draft.customer_mobile" type="tel" />
-              <p v-if="formErrors.customer_mobile" class="text-xs text-red-600">{{ formErrors.customer_mobile }}</p>
+              <label class="text-sm font-medium">{{ t('purchase_bills_page.supplier_mobile') }}</label>
+              <Input v-model="draft.supplier_mobile" type="tel" />
+              <p v-if="formErrors.supplier_mobile" class="text-xs text-red-600">{{ formErrors.supplier_mobile }}</p>
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium">{{ t('purchase_bills_page.customer_email') }}</label>
-              <Input v-model="draft.customer_email" type="email" />
-              <p v-if="formErrors.customer_email" class="text-xs text-red-600">{{ formErrors.customer_email }}</p>
+              <label class="text-sm font-medium">{{ t('purchase_bills_page.supplier_email') }}</label>
+              <Input v-model="draft.supplier_email" type="email" />
+              <p v-if="formErrors.supplier_email" class="text-xs text-red-600">{{ formErrors.supplier_email }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('purchase_bills_page.address') }}</label>

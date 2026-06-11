@@ -10,16 +10,16 @@ import {
 } from '@/utils/quotationMath'
 import { getTieredUnitPrice } from '@/utils/tieredUnitPrice'
 
-export interface InvoicePagination {
+export interface TransportInvoicePagination {
   current_page: number
   last_page: number
   per_page: number
   total: number
 }
 
-export type InvoiceStatus = 'issued' | 'paid' | 'partially_returned' | 'returned' | string
+export type TransportInvoiceStatus = 'issued' | 'paid' | 'partially_returned' | 'returned' | string
 
-export interface InvoiceListItem {
+export interface TransportInvoiceListItem {
   id: number
   reference_number: string
   warehouse_id: number | null
@@ -29,7 +29,7 @@ export interface InvoiceListItem {
   district_name: string
   invoice_date: string
   supply_date: string
-  status: InvoiceStatus
+  status: TransportInvoiceStatus
   status_label: string
   shipment_code: string
   shipment_status: number | null
@@ -41,7 +41,7 @@ export interface InvoiceListItem {
   can_be_edited: boolean
 }
 
-export interface InvoiceReturnFormItem {
+export interface TransportInvoiceReturnFormItem {
   invoice_item_id: number
   product_id: number | null
   variation_id: number | null
@@ -52,34 +52,34 @@ export interface InvoiceReturnFormItem {
   original_qty: number
 }
 
-export interface InvoiceReturnCreateItemPayload {
+export interface TransportInvoiceReturnCreateItemPayload {
   invoice_item_id: number
   qty: number
 }
 
-export interface InvoiceReturnCreatePayload {
+export interface TransportInvoiceReturnCreatePayload {
   reason: string | null
   return_date: string | null
-  items: InvoiceReturnCreateItemPayload[]
+  items: TransportInvoiceReturnCreateItemPayload[]
 }
 
-export interface InvoiceReturnActor {
+export interface TransportInvoiceReturnActor {
   id: number
   name: string
   email: string
 }
 
-export interface InvoiceReturnListItem {
+export interface TransportInvoiceReturnListItem {
   id: number
   return_reference: string
   reference_number: string
   invoice_id: number
   return_date: string
   reason: string
-  created_by: InvoiceReturnActor | null
+  created_by: TransportInvoiceReturnActor | null
 }
 
-export interface InvoiceReturnItem {
+export interface TransportInvoiceReturnItem {
   id: number
   invoice_return_id: number
   invoice_item_id: number
@@ -91,23 +91,23 @@ export interface InvoiceReturnItem {
   variation: Record<string, unknown> | null
 }
 
-export interface InvoiceReturnRecord {
+export interface TransportInvoiceReturnRecord {
   id: number
   return_reference: string
   reference_number: string
   invoice_id: number
   reason: string
   return_date: string
-  items: InvoiceReturnItem[]
-  created_by: InvoiceReturnActor | null
+  items: TransportInvoiceReturnItem[]
+  created_by: TransportInvoiceReturnActor | null
 }
 
-export interface InvoiceReturnListResult {
-  returns: InvoiceReturnListItem[]
-  pagination: InvoicePagination
+export interface TransportInvoiceReturnListResult {
+  returns: TransportInvoiceReturnListItem[]
+  pagination: TransportInvoicePagination
 }
 
-export interface InvoiceDraftItem {
+export interface TransportInvoiceDraftItem {
   key: string
   product_id: number | null
   variation_id: number | null
@@ -120,7 +120,7 @@ export interface InvoiceDraftItem {
   unit_price_manual: boolean
 }
 
-export interface InvoiceDraft {
+export interface TransportInvoiceDraft {
   id: number | null
   reference_number: string
   warehouse_id: number | null
@@ -137,7 +137,7 @@ export interface InvoiceDraft {
   notes: string
   delivery_fees: number
   other_fees: number
-  items: InvoiceDraftItem[]
+  items: TransportInvoiceDraftItem[]
 }
 
 const todayIso = (): string => new Date().toISOString().slice(0, 10)
@@ -152,7 +152,7 @@ const normalizeNonNegative = (value: number, fallback = 0): number => {
   return Math.max(0, value)
 }
 
-const createEmptyItem = (): InvoiceDraftItem => ({
+const createEmptyItem = (): TransportInvoiceDraftItem => ({
   key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   product_id: null,
   variation_id: null,
@@ -165,7 +165,7 @@ const createEmptyItem = (): InvoiceDraftItem => ({
   unit_price_manual: false,
 })
 
-const createEmptyDraft = (): InvoiceDraft => ({
+const createEmptyDraft = (): TransportInvoiceDraft => ({
   id: null,
   reference_number: '',
   warehouse_id: null,
@@ -185,7 +185,7 @@ const createEmptyDraft = (): InvoiceDraft => ({
   items: [createEmptyItem()],
 })
 
-const getVariationPrice = (item: InvoiceDraftItem): number => {
+const getVariationPrice = (item: TransportInvoiceDraftItem): number => {
   if (!item.product) return 0
   if (!item.variation_id) return item.product.price
   const variation = item.product.variations.find(v => v.id === item.variation_id)
@@ -197,15 +197,15 @@ const getVariationPrice = (item: InvoiceDraftItem): number => {
   )
 }
 
-export const useInvoicesStore = defineStore('invoices', () => {
+export const useTransportInvoicesStore = defineStore('transport-invoices', () => {
   const { $api } = useApi()
-  const INVOICES_ENDPOINT = '/v1/invoices'
+  const INVOICES_ENDPOINT = '/v1/invoices/shipped'
   const INVOICE_RETURNS_ENDPOINT = '/v1/invoice-returns'
-  const draft = ref<InvoiceDraft>(createEmptyDraft())
+  const draft = ref<TransportInvoiceDraft>(createEmptyDraft())
   const submitting = ref(false)
-  const list = ref<InvoiceListItem[]>([])
+  const list = ref<TransportInvoiceListItem[]>([])
   const listLoading = ref(false)
-  const pagination = ref<InvoicePagination>({
+  const pagination = ref<TransportInvoicePagination>({
     current_page: 1,
     last_page: 1,
     per_page: 15,
@@ -224,13 +224,13 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return Number.isFinite(num) ? num : undefined
   }
 
-  const normalizeStatus = (value: unknown): InvoiceStatus => {
+  const normalizeStatus = (value: unknown): TransportInvoiceStatus => {
     const status = String(value ?? '').toLowerCase()
     if (status === 'issued' || status === 'paid' || status === 'partially_returned' || status === 'returned') return status
     return status || 'issued'
   }
 
-  const extractPagination = (payload: unknown): InvoicePagination | null => {
+  const extractPagination = (payload: unknown): TransportInvoicePagination | null => {
     if (!payload || typeof payload !== 'object') return null
     const root = payload as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
@@ -244,7 +244,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     }
   }
 
-  const normalizeListItem = (payload: Record<string, unknown>): InvoiceListItem => {
+  const normalizeListItem = (payload: Record<string, unknown>): TransportInvoiceListItem => {
     const warehouse = (payload.warehouse && typeof payload.warehouse === 'object' ? payload.warehouse : null) as Record<string, unknown> | null
     const district = (payload.district && typeof payload.district === 'object' ? payload.district : null) as Record<string, unknown> | null
     const returnEntity = (
@@ -284,7 +284,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     }
   }
 
-  const extractList = (payload: unknown): InvoiceListItem[] => {
+  const extractList = (payload: unknown): TransportInvoiceListItem[] => {
     if (!payload || typeof payload !== 'object') return []
     const root = payload as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
@@ -303,7 +303,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return invoice && typeof invoice === 'object' ? invoice : null
   }
 
-  const extractReturnFormItems = (invoice: Record<string, unknown>): InvoiceReturnFormItem[] => {
+  const extractReturnFormItems = (invoice: Record<string, unknown>): TransportInvoiceReturnFormItem[] => {
     const rows = Array.isArray(invoice.items) ? invoice.items : []
     return rows
       .map((raw) => {
@@ -328,7 +328,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       .filter(item => item.invoice_item_id > 0 && item.original_qty > 0)
   }
 
-  const normalizeReturnActor = (value: unknown): InvoiceReturnActor | null => {
+  const normalizeReturnActor = (value: unknown): TransportInvoiceReturnActor | null => {
     if (!value || typeof value !== 'object') return null
     const raw = value as Record<string, unknown>
     const id = toNumber(raw.id, 0)
@@ -338,7 +338,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return { id, name, email }
   }
 
-  const normalizeReturnItem = (value: unknown): InvoiceReturnItem | null => {
+  const normalizeReturnItem = (value: unknown): TransportInvoiceReturnItem | null => {
     if (!value || typeof value !== 'object') return null
     const raw = value as Record<string, unknown>
     return {
@@ -354,7 +354,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     }
   }
 
-  const normalizeInvoiceReturnListItem = (value: unknown): InvoiceReturnListItem | null => {
+  const normalizeInvoiceReturnListItem = (value: unknown): TransportInvoiceReturnListItem | null => {
     if (!value || typeof value !== 'object') return null
     const raw = value as Record<string, unknown>
     const id = toNumber(raw.id, 0)
@@ -371,7 +371,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     }
   }
 
-  const normalizeInvoiceReturnRecord = (value: unknown): InvoiceReturnRecord | null => {
+  const normalizeInvoiceReturnRecord = (value: unknown): TransportInvoiceReturnRecord | null => {
     if (!value || typeof value !== 'object') return null
     const raw = value as Record<string, unknown>
     const id = toNumber(raw.id, 0)
@@ -385,25 +385,25 @@ export const useInvoicesStore = defineStore('invoices', () => {
       invoice_id: toNumber(raw.invoice_id, 0),
       reason: String(raw.reason ?? ''),
       return_date: String(raw.return_date ?? ''),
-      items: itemsRaw.map(item => normalizeReturnItem(item)).filter((x): x is InvoiceReturnItem => Boolean(x)),
+      items: itemsRaw.map(item => normalizeReturnItem(item)).filter((x): x is TransportInvoiceReturnItem => Boolean(x)),
       created_by: normalizeReturnActor(raw.created_by),
     }
   }
 
-  const extractInvoiceReturn = (payload: unknown): InvoiceReturnRecord | null => {
+  const extractInvoiceReturn = (payload: unknown): TransportInvoiceReturnRecord | null => {
     if (!payload || typeof payload !== 'object') return null
     const root = payload as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
     return normalizeInvoiceReturnRecord(nested?.return ?? root.return ?? null)
   }
 
-  const extractInvoiceReturns = (payload: unknown): InvoiceReturnListItem[] => {
+  const extractInvoiceReturns = (payload: unknown): TransportInvoiceReturnListItem[] => {
     if (!payload || typeof payload !== 'object') return []
     const root = payload as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
     const rows = (nested?.returns ?? root.returns ?? []) as unknown[]
     if (!Array.isArray(rows)) return []
-    return rows.map(row => normalizeInvoiceReturnListItem(row)).filter((x): x is InvoiceReturnListItem => Boolean(x))
+    return rows.map(row => normalizeInvoiceReturnListItem(row)).filter((x): x is TransportInvoiceReturnListItem => Boolean(x))
   }
 
   const resolveHydratedDiscount = (
@@ -415,7 +415,6 @@ export const useInvoicesStore = defineStore('invoices', () => {
       return { mode: 'percentage', value: normalizePercent(discountPercent) }
     }
 
-    // Fixed discount is now row-level (group qty), so hydrate as total line discount.
     const perUnitDiscount = Math.max(0, toNumber(item.discount, NaN))
     if (Number.isFinite(perUnitDiscount)) {
       return { mode: 'fixed', value: perUnitDiscount * Math.max(1, qty) }
@@ -686,7 +685,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     }
   }
 
-  const rowMath = (item: InvoiceDraftItem) => calculateLineTotals({
+  const rowMath = (item: TransportInvoiceDraftItem) => calculateLineTotals({
     qty: item.qty,
     unitPrice: item.unit_price,
     discountMode: item.discount_mode,
@@ -881,14 +880,14 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return await $api(`${INVOICES_ENDPOINT}/${id}`, { method: 'DELETE' })
   }
 
-  const createInvoiceReturn = async (invoiceId: string | number, payload: InvoiceReturnCreatePayload) => {
+  const createInvoiceReturn = async (invoiceId: string | number, payload: TransportInvoiceReturnCreatePayload) => {
     return await $api(`${INVOICES_ENDPOINT}/${invoiceId}/returns`, {
       method: 'POST',
       body: payload,
     })
   }
 
-  const updateInvoiceReturn = async (invoiceReturnId: string | number, payload: InvoiceReturnCreatePayload) => {
+  const updateInvoiceReturn = async (invoiceReturnId: string | number, payload: TransportInvoiceReturnCreatePayload) => {
     return await $api(`${INVOICE_RETURNS_ENDPOINT}/${invoiceReturnId}`, {
       method: 'PUT',
       body: payload,
@@ -907,7 +906,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
   const loadInvoiceReturnsForInvoice = async (
     invoiceId: string | number,
     params: Record<string, string | number | undefined> = {},
-  ): Promise<InvoiceReturnListResult> => {
+  ): Promise<TransportInvoiceReturnListResult> => {
     try {
       const response = await $api(`${INVOICES_ENDPOINT}/${invoiceId}/returns`, { params })
       const rows = extractInvoiceReturns(response)

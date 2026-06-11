@@ -25,7 +25,7 @@ export interface PurchaseBillListItem {
   warehouse_id: number | null
   warehouse_name_ar: string
   warehouse_name_en: string
-  customer_name: string
+  supplier_name: string
   district_name: string
   bill_date: string
   supply_date: string
@@ -61,9 +61,9 @@ export interface PurchaseBillDraft {
   status: PurchaseBillStatus
   description: string
   address: string
-  customer_name: string
-  customer_mobile: string
-  customer_email: string
+  supplier_name: string
+  supplier_mobile: string
+  supplier_email: string
   bill_date: string
   supply_date: string
   terms: string
@@ -112,9 +112,9 @@ const createEmptyDraft = (): PurchaseBillDraft => ({
   status: 'pending',
   description: '',
   address: '',
-  customer_name: '',
-  customer_mobile: '',
-  customer_email: '',
+  supplier_name: '',
+  supplier_mobile: '',
+  supplier_email: '',
   bill_date: todayIso(),
   supply_date: todayIso(),
   terms: '',
@@ -243,7 +243,7 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
       warehouse_id: toNumber(payload.warehouse_id ?? warehouse?.id, 0) || null,
       warehouse_name_ar: String(warehouse?.name_ar ?? ''),
       warehouse_name_en: String(warehouse?.name_en ?? ''),
-      customer_name: String(payload.customer_name ?? ''),
+      supplier_name: String(payload.supplier_name ?? payload.customer_name ?? ''),
       district_name: String(district?.district ?? payload.district_name ?? ''),
       bill_date: String(payload.bill_date ?? payload.invoice_date ?? ''),
       supply_date: String(payload.supply_date ?? ''),
@@ -410,9 +410,9 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
       status: normalizeStatus(bill.status),
       description: String(bill.description ?? ''),
       address: String(bill.address ?? supplier?.address ?? ''),
-      customer_name: String(bill.customer_name ?? supplier?.name ?? bill.supplier_name ?? ''),
-      customer_mobile: String(bill.customer_mobile ?? supplier?.mobile ?? supplier?.phone ?? bill.supplier_mobile ?? ''),
-      customer_email: String(bill.customer_email ?? supplier?.email ?? bill.supplier_email ?? ''),
+      supplier_name: String(bill.supplier_name ?? supplier?.name ?? bill.customer_name ?? ''),
+      supplier_mobile: String(bill.supplier_mobile ?? supplier?.mobile ?? supplier?.phone ?? bill.customer_mobile ?? ''),
+      supplier_email: String(bill.supplier_email ?? supplier?.email ?? bill.customer_email ?? ''),
       bill_date: toDateInputValue(bill.bill_date ?? bill.invoice_date) || todayIso(),
       supply_date: toDateInputValue(bill.supply_date) || todayIso(),
       terms: String(bill.terms ?? ''),
@@ -552,9 +552,9 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     status: draft.value.status || undefined,
     description: draft.value.description || undefined,
     address: draft.value.address || undefined,
-    customer_name: draft.value.customer_name || undefined,
-    customer_mobile: draft.value.customer_mobile || undefined,
-    customer_email: draft.value.customer_email || undefined,
+    supplier_name: draft.value.supplier_name || undefined,
+    supplier_mobile: draft.value.supplier_mobile || undefined,
+    supplier_email: draft.value.supplier_email || undefined,
     bill_date: draft.value.bill_date,
     supply_date: draft.value.supply_date || undefined,
     terms: draft.value.terms || undefined,

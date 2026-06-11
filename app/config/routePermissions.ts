@@ -58,6 +58,10 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/invoices\/show\/[^/]+\/?$/, permission: 'invoices.show' },
   { pattern: /^\/invoices\/?$/, permission: ['invoices.index', 'invoices.show'] },
 
+  // Transport Invoices (read-only: list + show)
+  { pattern: /^\/transport-invoices\/show\/[^/]+\/?$/, permission: 'invoices.show' },
+  { pattern: /^\/transport-invoices\/?$/, permission: ['invoices.index', 'invoices.show'] },
+
   // Purchase bills
   { pattern: /^\/purchase-bills\/create\/?$/, permission: 'purchase_bills.store' },
   { pattern: /^\/purchase-bills\/edit\/[^/]+\/?$/, permission: 'purchase_bills.update' },

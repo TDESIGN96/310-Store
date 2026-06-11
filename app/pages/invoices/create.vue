@@ -347,8 +347,8 @@ onMounted(() => {
             </div>
             <div class="flex items-center gap-2">
               <Checkbox
-                :checked="draft.send_to_shipping"
-                @update:checked="draft.send_to_shipping = $event"
+                :model-value="draft.send_to_shipping"
+                @update:model-value="draft.send_to_shipping = Boolean($event)"
               />
               <label class="text-sm font-medium cursor-pointer" @click="draft.send_to_shipping = !draft.send_to_shipping">
                 {{ t('invoices_page.send_to_shipping') }}

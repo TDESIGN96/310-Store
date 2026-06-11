@@ -126,10 +126,10 @@ onMounted(async () => {
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.reference_number') }}</p><p class="text-sm font-medium">{{ purchaseBill.reference_number || `#${purchaseBill.id}` }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.col_status') }}</p><p class="text-sm font-medium">{{ purchaseBill.status_label || purchaseBill.status || '—' }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.customer_name') }}</p><p class="text-sm">{{ purchaseBill.customer_name || '—' }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.supplier_name') }}</p><p class="text-sm">{{ purchaseBill.supplier_name || purchaseBill.customer_name || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.warehouse') }}</p><p class="text-sm">{{ warehouseName }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.customer_mobile') }}</p><p class="text-sm">{{ purchaseBill.customer_mobile || '—' }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.customer_email') }}</p><p class="text-sm">{{ purchaseBill.customer_email || '—' }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.supplier_mobile') }}</p><p class="text-sm">{{ purchaseBill.supplier_mobile || purchaseBill.customer_mobile || '—' }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.supplier_email') }}</p><p class="text-sm">{{ purchaseBill.supplier_email || purchaseBill.customer_email || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.district') }}</p><p class="text-sm">{{ districtName || t('purchase_bills_page.district_unassigned') }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.address') }}</p><p class="text-sm">{{ purchaseBill.address || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.bill_date') }}</p><p class="text-sm">{{ fmtDate(purchaseBill.bill_date) }}</p></div>

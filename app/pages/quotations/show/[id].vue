@@ -95,6 +95,11 @@ const variationLabel = (row: Record<string, unknown>) => {
   if (!variation) return '—'
   return String(variation.label ?? '—')
 }
+const productDescription = (row: Record<string, unknown>) => {
+  const direct = String(row.description ?? '').trim()
+  if (direct && direct !== 'null' && direct !== 'undefined') return direct
+  return ''
+}
 
 const itemDiscount = (row: Record<string, unknown>) => {
   const direct = asNumber(row.discount)
@@ -256,7 +261,10 @@ onMounted(async () => {
                           class="size-10 shrink-0 rounded-md border object-cover"
                           loading="lazy"
                         >
-                        <span>{{ productLabel(item) }}</span>
+                        <div class="min-w-0">
+                          <span class="block">{{ productLabel(item) }}</span>
+                          <span v-if="productDescription(item)" class="block text-xs text-muted-foreground whitespace-normal">{{ productDescription(item) }}</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{{ variationLabel(item) }}</TableCell>

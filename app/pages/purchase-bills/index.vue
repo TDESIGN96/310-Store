@@ -123,7 +123,7 @@ const loadRows = async (page = currentPage.value) => {
     per_page: pagination.value.per_page || 15,
     search: query || undefined,
     reference_number: query || undefined,
-    customer_name: query || undefined,
+    supplier_name: query || undefined,
     bill_date: toIsoDateTimeStart(billDate.value),
     supply_date: toIsoDateTimeStart(supplyDate.value),
     status: filterStatus.value === 'all' ? undefined : filterStatus.value,
@@ -289,7 +289,7 @@ const goToPage = (page: number) => {
                 />
               </TableHead>
               <TableHead class="text-start font-medium min-w-[120px]">{{ t('purchase_bills_page.col_ref_id') }}</TableHead>
-              <TableHead class="text-start font-medium min-w-[140px]">{{ t('purchase_bills_page.col_customer') }}</TableHead>
+              <TableHead class="text-start font-medium min-w-[140px]">{{ t('purchase_bills_page.col_supplier') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_bill_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_supply_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.warehouse') }}</TableHead>
@@ -316,9 +316,9 @@ const goToPage = (page: number) => {
                 </NuxtLink>
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
-                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_customer') }}</span>
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_supplier') }}</span>
                 <div class="flex flex-col gap-0.5 text-end md:text-start">
-                  <span class="text-sm text-muted-foreground">{{ row.customer_name || '—' }}</span>
+                  <span class="text-sm text-muted-foreground">{{ row.supplier_name || '—' }}</span>
                   <span class="text-xs text-muted-foreground/80">
                     {{ t('purchase_bills_page.district') }}: {{ row.district_name || t('purchase_bills_page.district_unassigned') }}
                   </span>
