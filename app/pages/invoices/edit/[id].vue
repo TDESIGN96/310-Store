@@ -149,6 +149,7 @@ const saveInvoice = async (mode: SaveMode) => {
   errorMessage.value = ''
   try {
     await invoicesStore.updateInvoice(id.value)
+    await invoicesStore.loadDraftById(id.value)
     if (mode === 'close') {
       toast.success(t('invoices_page.system_success_title'), { description: t('invoices_page.system_save_success_body') })
       await navigateTo('/invoices')
@@ -261,10 +262,10 @@ onMounted(async () => {
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('invoices_page.supply_date') }}</label><Input v-model="draft.supply_date" type="date" /></div>
             <div class="flex items-center gap-2">
               <Checkbox
-                :model-value="draft.send_to_shipping"
-                @update:model-value="draft.send_to_shipping = Boolean($event)"
+                :model-value="invoicesStore.draft.send_to_shipping"
+                @update:model-value="invoicesStore.draft.send_to_shipping = Boolean($event)"
               />
-              <label class="text-sm font-medium cursor-pointer" @click="draft.send_to_shipping = !draft.send_to_shipping">
+              <label class="text-sm font-medium cursor-pointer" @click="invoicesStore.draft.send_to_shipping = !invoicesStore.draft.send_to_shipping">
                 {{ t('invoices_page.send_to_shipping') }}
               </label>
             </div>

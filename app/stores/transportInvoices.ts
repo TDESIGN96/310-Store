@@ -224,6 +224,24 @@ export const useTransportInvoicesStore = defineStore('transport-invoices', () =>
     return Number.isFinite(num) ? num : undefined
   }
 
+  const resolveSendToShipping = (invoice: Record<string, unknown>): boolean => {
+    const raw = invoice.send_to_shipping
+    if (raw !== null && raw !== undefined) {
+      if (typeof raw === 'boolean') return raw
+      if (typeof raw === 'number') return raw !== 0
+      if (typeof raw === 'string') {
+        const normalized = raw.trim().toLowerCase()
+        if (normalized === '0' || normalized === 'false' || normalized === 'no') return false
+        if (normalized === '1' || normalized === 'true' || normalized === 'yes') return true
+      }
+    }
+    if (String(invoice.shipment_code ?? '').trim()) return true
+    if (invoice.shipment_status !== null && invoice.shipment_status !== undefined && String(invoice.shipment_status).trim() !== '') {
+      return true
+    }
+    return false
+  }
+
   const normalizeStatus = (value: unknown): TransportInvoiceStatus => {
     const status = String(value ?? '').toLowerCase()
     if (status === 'issued' || status === 'paid' || status === 'partially_returned' || status === 'returned') return status
@@ -565,7 +583,7 @@ export const useTransportInvoicesStore = defineStore('transport-invoices', () =>
       customer_email: String(invoice.customer_email ?? ''),
       invoice_date: String(invoice.invoice_date ?? todayIso()),
       supply_date: String(invoice.supply_date ?? todayIso()),
-      send_to_shipping: Boolean(invoice.send_to_shipping),
+      send_to_shipping: resolveSendToShipping(invoice),
       terms: String(invoice.terms ?? ''),
       notes: String(invoice.notes ?? ''),
       delivery_fees: Math.max(
