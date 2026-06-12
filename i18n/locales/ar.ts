@@ -1252,7 +1252,7 @@ export default {
     address_required: 'العنوان مطلوب.',
     invoice_date: 'تاريخ الفاتورة',
     supply_date: 'تاريخ التوريد',
-    send_to_shipping: 'إرسال للشحن',
+    send_to_shipping: 'إرسال لشركة الشحن',
     details_section: 'تفاصيل الفاتورة',
     items_section: 'بنود الأصناف',
     terms_section: 'الشروط والأحكام',

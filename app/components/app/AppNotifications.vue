@@ -21,7 +21,7 @@ import { toast } from 'vue-sonner'
 
 const authStore = useAuthStore()
 const nuxtApp = useNuxtApp()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const STORAGE_PREFIX = 'app_notifications'
 const MAX_NOTIFICATIONS = 50
 
@@ -43,12 +43,18 @@ interface EchoNotificationPayload {
   created_at?: string
   title?: string
   message?: string
+  message_ar?: string
+  message_en?: string
   link?: string
+  stocktaking_order_id?: string | number
   data?: {
     title?: string
     message?: string
+    message_ar?: string
+    message_en?: string
     type?: string
     link?: string
+    stocktaking_order_id?: string | number
   }
 }
 
@@ -85,14 +91,27 @@ const normalizeNotification = (payload: EchoNotificationPayload): Notification =
   const data = payload.data || {}
   const resolvedType = resolveNotificationType(payload)
 
+  type MessageSource = { message_ar?: string; message_en?: string; message?: string }
+  const pickMessage = (src: MessageSource): string => {
+    if (locale.value === 'ar') {
+      return src.message_ar || src.message_en || src.message || ''
+    }
+    return src.message_en || src.message_ar || src.message || ''
+  }
+
+  const stocktakingId = data.stocktaking_order_id ?? payload.stocktaking_order_id
+  const resolvedLink =
+    data.link || payload.link ||
+    (stocktakingId ? `/stocktaking-orders/show/${stocktakingId}` : undefined)
+
   return {
     id: String(payload.id ?? crypto.randomUUID()),
     type: resolvedType,
     title: data.title || payload.title || t('notifications.default_title'),
-    message: data.message || payload.message || t('notifications.default_message'),
+    message: pickMessage(data) || pickMessage(payload) || t('notifications.default_message'),
     createdAt: payload.created_at,
     read: Boolean(payload.read_at),
-    link: data.link || payload.link,
+    link: resolvedLink,
   }
 }
 
@@ -307,6 +326,13 @@ const markAllRead = () => {
 const remove = (id: string) => {
   notifications.value = notifications.value.filter(n => n.id !== id)
 }
+
+const onNotificationClick = (notification: Notification) => {
+  markRead(notification.id)
+  if (notification.link) {
+    navigateTo(notification.link)
+  }
+}
 </script>
 
 <template>
@@ -372,7 +398,7 @@ const remove = (id: string) => {
             :key="notification.id"
             class="flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer relative group border-b border-border/50 last:border-0"
             :class="!notification.read ? 'bg-muted/40' : 'hover:bg-muted/30'"
-            @click="markRead(notification.id)"
+            @click="onNotificationClick(notification)"
           >
             <!-- Type Icon -->
             <div
@@ -402,9 +428,17 @@ const remove = (id: string) => {
               <p class="text-xs text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
                 {{ notification.message }}
               </p>
-              <span class="text-[11px] text-muted-foreground/50 mt-1 block">
-                {{ toRelativeTime(notification.createdAt) }}
-              </span>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[11px] text-muted-foreground/50">
+                  {{ toRelativeTime(notification.createdAt) }}
+                </span>
+                <span
+                  v-if="notification.link"
+                  class="text-[11px] font-medium text-primary underline underline-offset-2 hover:opacity-80"
+                >
+                  {{ t('notifications.view') }}
+                </span>
+              </div>
             </div>
 
             <!-- Remove Button -->
