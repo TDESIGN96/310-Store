@@ -141,7 +141,6 @@ onMounted(async () => {
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.customer_name') }}</p><p class="text-sm">{{ invoice.customer_name || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.warehouse') }}</p><p class="text-sm">{{ warehouseName }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.customer_mobile') }}</p><p class="text-sm">{{ invoice.customer_mobile || '—' }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.customer_email') }}</p><p class="text-sm">{{ invoice.customer_email || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.district') }}</p><p class="text-sm">{{ districtName || t('invoices_page.district_unassigned') }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.address') }}</p><p class="text-sm">{{ invoice.address || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('invoices_page.invoice_date') }}</p><p class="text-sm">{{ fmtDate(invoice.invoice_date) }}</p></div>

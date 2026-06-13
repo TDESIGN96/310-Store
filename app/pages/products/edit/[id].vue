@@ -51,6 +51,9 @@ const toggleAttribute = (attributeId: number, checked: boolean) => {
   if (checked) current.add(attributeId)
   else current.delete(attributeId)
   draft.value.attribute_ids = [...current]
+  if (draft.value.attribute_ids.length && formErrors.value.attribute_ids) {
+    delete formErrors.value.attribute_ids
+  }
 }
 
 interface UploadedFileResponse {
@@ -113,6 +116,9 @@ const validate = () => {
   const additionalCount = draft.value.images.filter(Boolean).length + additionalImageFiles.value.length
   if (mainCount + additionalCount > MAX_PHOTOS) {
     errors.images = t('products_form.validation_images_max_count')
+  }
+  if (!draft.value.attribute_ids.length) {
+    errors.attribute_ids = t('products_variations.validation_attributes_required')
   }
   formErrors.value = errors
   return Object.keys(errors).length === 0
@@ -329,6 +335,7 @@ onMounted(async () => {
               <h3 class="flex items-center gap-2 text-sm font-semibold tracking-tight">
                 <Tag class="size-4 text-muted-foreground" />
                 {{ t('products_variations.attributes') }}
+                <span class="text-red-600">*</span>
               </h3>
               <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_attributes') }}</p>
               <div class="grid grid-cols-1 gap-2 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2 lg:grid-cols-3">

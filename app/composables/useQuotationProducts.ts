@@ -7,6 +7,7 @@ export interface QuotationProductVariation {
   price: number
   resolved_price: number
   is_active: boolean
+  is_available: boolean
   label: string
   tiered_prices: Array<{
     quantity_from: number
@@ -40,6 +41,7 @@ const normalizeVariation = (raw: Record<string, unknown>): QuotationProductVaria
   price: toNumber(raw.price, 0),
   resolved_price: toNumber(raw.resolved_price ?? raw.price, 0),
   is_active: toBool(raw.is_active),
+  is_available: raw.is_available === undefined ? true : toBool(raw.is_available),
   label: String(raw.label ?? raw.sku ?? `#${toNumber(raw.id, 0)}`),
   tiered_prices: (Array.isArray(raw.tiered_prices) ? raw.tiered_prices : []).map((row) => {
     const tier = row as Record<string, unknown>
@@ -61,7 +63,7 @@ const normalizeProduct = (raw: Record<string, unknown>): QuotationProductOption 
   is_combo: toBool(raw.is_combo),
   variations: (Array.isArray(raw.variations) ? raw.variations : [])
     .map(row => normalizeVariation(row as Record<string, unknown>))
-    .filter(variation => variation.id > 0 && variation.is_active),
+    .filter(variation => variation.id > 0 && variation.is_active && variation.is_available),
 })
 
 const extractProductsList = (payload: unknown): QuotationProductOption[] => {

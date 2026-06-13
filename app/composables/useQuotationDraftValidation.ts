@@ -16,8 +16,7 @@ export function validateQuotationDraft(
   if (!phone) errors.customer_phone = t('quotations_page.customer_phone_required')
   else if (!STRICT_PHONE_RE.test(phone)) errors.customer_phone = t('quotations_page.customer_phone_invalid')
 
-  if (!email) errors.customer_email = t('quotations_page.customer_email_required')
-  else if (!STRICT_EMAIL_RE.test(email)) errors.customer_email = t('quotations_page.customer_email_invalid')
+  if (email && !STRICT_EMAIL_RE.test(email)) errors.customer_email = t('quotations_page.customer_email_invalid')
 
   if (!draft.issue_date) errors.issue_date = t('quotations_page.issue_date_required')
   if (!draft.expiry_date) errors.expiry_date = t('quotations_page.expiry_date_required')

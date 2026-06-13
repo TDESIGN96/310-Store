@@ -1,6 +1,5 @@
 import type { InvoiceDraft } from '@/stores/invoices'
 
-const STRICT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const STRICT_PHONE_RE = /^\+?[0-9]{8,15}$/
 
 /** Field-level errors for invoice create/edit drafts. */
@@ -11,14 +10,10 @@ export function validateInvoiceDraft(
 ): Record<string, string> {
   const errors: Record<string, string> = {}
   const mobile = String(draft.customer_mobile ?? '').trim()
-  const email = String(draft.customer_email ?? '').trim()
   const address = String(draft.address ?? '').trim()
 
   if (!mobile) errors.customer_mobile = t('invoices_page.customer_mobile_required')
   else if (!STRICT_PHONE_RE.test(mobile)) errors.customer_mobile = t('invoices_page.customer_mobile_invalid')
-
-  if (!email) errors.customer_email = t('invoices_page.customer_email_required')
-  else if (!STRICT_EMAIL_RE.test(email)) errors.customer_email = t('invoices_page.customer_email_invalid')
 
   if (!address) errors.address = t('invoices_page.address_required')
 
@@ -50,7 +45,7 @@ export function validateInvoiceDraft(
   return errors
 }
 
-const FORM_KEY_ORDER = ['customer_mobile', 'customer_email', 'address', 'invoice_date', 'warehouse_id', 'items'] as const
+const FORM_KEY_ORDER = ['customer_mobile', 'address', 'invoice_date', 'warehouse_id', 'items'] as const
 
 /** Pick one message for a validation-error toast (stable priority). */
 export function firstInvoiceValidationToastDescription(errors: Record<string, string>): string {

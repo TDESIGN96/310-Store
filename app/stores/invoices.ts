@@ -454,6 +454,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     price: toNumber(raw.price, 0),
     resolved_price: toNumber(raw.resolved_price ?? raw.price, 0),
     is_active: true,
+    is_available: true,
     label: String(raw.label ?? raw.sku ?? ''),
     tiered_prices: (Array.isArray(raw.tiered_prices) ? raw.tiered_prices : []).map((tierRaw) => {
       const tier = tierRaw as Record<string, unknown>
@@ -503,6 +504,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
               price: toNumber(variation.price, 0),
               resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
               is_active: true,
+              is_available: true,
               label: String(variation.label ?? variation.sku ?? ''),
               tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
                 const tier = tierRaw as Record<string, unknown>
@@ -526,6 +528,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
             price: toNumber(variationRaw.price, 0),
             resolved_price: toNumber(variationRaw.resolved_price ?? variationRaw.price, 0),
             is_active: true,
+            is_available: true,
             label: String(variationRaw.label ?? variationRaw.sku ?? ''),
             tiered_prices: (Array.isArray(variationRaw.tiered_prices) ? variationRaw.tiered_prices : []).map((tierRaw) => {
               const tier = tierRaw as Record<string, unknown>

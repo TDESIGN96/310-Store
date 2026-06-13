@@ -245,6 +245,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
               price: toNumber(variation.price, 0),
               resolved_price: toNumber(variation.resolved_price ?? variation.price, 0),
               is_active: true,
+              is_available: true,
               label: String(variation.label ?? variation.sku ?? ''),
               tiered_prices: (Array.isArray(variation.tiered_prices) ? variation.tiered_prices : []).map((tierRaw) => {
                 const tier = tierRaw as Record<string, unknown>
@@ -268,6 +269,7 @@ export const useQuotationsStore = defineStore('quotations', () => {
             price: toNumber(variationRaw.price, 0),
             resolved_price: toNumber(variationRaw.resolved_price ?? variationRaw.price, 0),
             is_active: true,
+            is_available: true,
             label: String(variationRaw.label ?? variationRaw.sku ?? ''),
             tiered_prices: (Array.isArray(variationRaw.tiered_prices) ? variationRaw.tiered_prices : []).map((tierRaw) => {
               const tier = tierRaw as Record<string, unknown>

@@ -235,6 +235,15 @@ const createVariationPayload = (row: VariationForm) => {
   return payload
 }
 
+const validateProductAttributes = () => {
+  if (!selectedAttributeIds.value.length) {
+    fieldErrors.value.attribute_ids = t('products_variations.validation_attributes_required')
+    return false
+  }
+  delete fieldErrors.value.attribute_ids
+  return true
+}
+
 const validateRow = (row: VariationForm, rowIndex: number) => {
   let valid = true
 
@@ -329,6 +338,7 @@ const createVariations = async () => {
   submitErrorMessage.value = ''
   clearServerErrors()
   if (!variations.value.length) variations.value.push(createEmptyVariation())
+  if (!validateProductAttributes()) return
   const allRowsValid = variations.value.every((row, rowIndex) => validateRow(row, rowIndex))
   if (!allRowsValid) return
 
@@ -501,7 +511,7 @@ onMounted(async () => {
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div v-for="attributeId in selectedAttributeIds" :key="`${rowIndex}_${attributeId}`">
-            <Select :model-value="row.selectedValues[attributeId] ? String(row.selectedValues[attributeId]) : ''" @update:model-value="v => { row.selectedValues[attributeId] = Number(v); clearFieldError(attributeFieldKey(rowIndex, attributeId)); clearFieldError(rowFieldKey(rowIndex, 'attribute_value_ids')) }">
+            <Select :model-value="row.selectedValues[attributeId] ? String(row.selectedValues[attributeId]) : ''" @update:model-value="v => { row.selectedValues[attributeId] = Number(v); clearFieldError(attributeFieldKey(rowIndex, attributeId)); clearFieldError(rowFieldKey(rowIndex, 'attribute_value_ids')) }" required="true">
               <SelectTrigger><SelectValue :placeholder="attributesStore.attributeName(attributeId)" /></SelectTrigger>
               <SelectContent>
                 <SelectItem

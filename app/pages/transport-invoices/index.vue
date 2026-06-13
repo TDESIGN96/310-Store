@@ -227,7 +227,7 @@ const goToPage = (page: number) => {
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_ref_id') }}</span>
                 <NuxtLink
-                  :to="`/transport-invoices/show/${row.id}`"
+                  :to="`/invoices/show/${row.id}`"
                   class="text-sm font-medium text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
                 >
                   {{ row.reference_number || `#${row.id}` }}

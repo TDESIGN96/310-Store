@@ -289,7 +289,7 @@ onMounted(() => {
               <p v-if="formErrors.customer_phone" class="text-xs text-red-600">{{ formErrors.customer_phone }}</p>
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium">{{ t('quotations_page.customer_email') }}</label>
+              <label class="text-sm font-medium">{{ t('quotations_page.customer_email') }} <span class="text-muted-foreground font-normal">({{ t('quotations_page.optional') }})</span></label>
               <Input v-model="draft.customer_email" type="email" />
               <p v-if="formErrors.customer_email" class="text-xs text-red-600">{{ formErrors.customer_email }}</p>
             </div>
