@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   ArrowRight,
@@ -245,8 +245,8 @@ onMounted(() => {
       </div>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <FileText class="size-4 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6">
+          <FileText class="size-4 text-white/70" />
           <h2 class="text-base font-semibold">{{ t('purchase_bills_page.details_section') }}</h2>
         </div>
         <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
@@ -331,8 +331,8 @@ onMounted(() => {
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <Package class="size-4 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
+          <Package class="size-4 text-white/70" />
           <h2 class="text-base font-semibold">{{ t('purchase_bills_page.items_section') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
@@ -502,7 +502,7 @@ onMounted(() => {
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="border-b bg-muted/40 px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.terms_section') }}</h2></div>
+        <div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.terms_section') }}</h2></div>
         <CardContent class="px-4 py-5 sm:px-6 sm:py-6">
           <details class="rounded-lg border px-4 py-3">
             <summary class="cursor-pointer text-sm font-medium">{{ t('purchase_bills_page.terms_section') }}</summary>
@@ -512,7 +512,7 @@ onMounted(() => {
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="border-b bg-muted/40 px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.notes_section') }}</h2></div>
+        <div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.notes_section') }}</h2></div>
         <CardContent class="px-4 py-5 sm:px-6 sm:py-6">
           <details class="rounded-lg border px-4 py-3">
             <summary class="cursor-pointer text-sm font-medium">{{ t('purchase_bills_page.notes_section') }}</summary>

@@ -12,6 +12,7 @@ import {
   Warehouse,
   History,
   ClipboardList,
+  AlertTriangle,
 } from 'lucide-vue-next'
 import type { PermissionModule } from '@/config/permissions'
 
@@ -106,6 +107,13 @@ export const navItems: NavGroup[] = [
         path: '/stocktaking-orders',
         module: 'stocktaking',
         createPath: '/stocktaking-orders/create',
+      },
+      {
+        labelKey: 'nav.items.damage_records',
+        icon: AlertTriangle,
+        path: '/damage-records',
+        module: 'damage',
+        createPath: '/damage-records/create',
       },
     ],
   },

@@ -1,9 +1,10 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, Loader2 } from 'lucide-vue-next'
+import { ArrowRight, Loader2, Package, Image, Tags } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -185,18 +186,12 @@ onMounted(async () => {
       {{ errorMessage }}
     </div>
 
-    <div class="rounded-lg border p-5 space-y-6">
-      <div>
-        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {{ t('products_create.step_badge', { n: 1 }) }}
-        </p>
-        <h2 class="text-lg font-semibold tracking-tight mt-1">
-          {{ t('products_variations.product_info') }}
-        </h2>
-        <p class="text-sm text-muted-foreground mt-1">
-          {{ t('products_variations.create_subtitle') }}
-        </p>
+    <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+      <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6">
+        <Package class="size-4 text-white/70" />
+        <h2 class="text-base font-semibold">{{ t('products_variations.product_info') }}</h2>
       </div>
+      <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
       <div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
         <div class="space-y-2">
           <label class="text-sm font-medium leading-none">{{ t('products_form.name_ar') }}</label>
@@ -247,20 +242,15 @@ onMounted(async () => {
           <p v-if="formErrors.description" class="text-xs text-red-600">{{ formErrors.description }}</p>
         </div>
       </div>
-    </div>
+      </CardContent>
+    </Card>
 
-    <div class="rounded-lg border p-5 space-y-6">
-      <div>
-        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {{ t('products_create.step_badge', { n: 2 }) }}
-        </p>
-        <h2 class="text-lg font-semibold tracking-tight mt-1">
-          {{ t('products_page.show_images') }}
-        </h2>
-        <p class="text-sm text-muted-foreground mt-1">
-          {{ t('products_variations.hint_additional_images') }}
-        </p>
+    <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+      <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
+        <Image class="size-4 text-white/70" />
+        <h2 class="text-base font-semibold">{{ t('products_page.show_images') }}</h2>
       </div>
+      <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
       <div class="grid gap-6 sm:grid-cols-2">
         <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
           <label class="text-sm font-medium">{{ t('products_form.main_image') }}</label>
@@ -287,21 +277,15 @@ onMounted(async () => {
           <p v-if="formErrors.additional_images" class="text-xs text-red-600">{{ formErrors.additional_images }}</p>
         </div>
       </div>
-    </div>
+      </CardContent>
+    </Card>
 
-    <div class="rounded-lg border p-5 space-y-6">
-      <div>
-        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {{ t('products_create.step_badge', { n: 3 }) }}
-        </p>
-        <h2 class="text-lg font-semibold tracking-tight mt-1">
-          {{ t('products_variations.attributes') }}
-          <span class="text-red-600">*</span>
-        </h2>
-        <p class="text-sm text-muted-foreground mt-1">
-          {{ t('products_variations.hint_attributes') }}
-        </p>
+    <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+      <div class="flex items-center gap-2 border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6">
+        <Tags class="size-4 text-Black/70" />
+        <h2 class="text-base font-semibold">{{ t('products_variations.attributes') }}</h2>
       </div>
+      <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
       <div class="grid grid-cols-1 gap-2 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2 lg:grid-cols-3">
         <label
           v-for="a in attributesStore.options"
@@ -316,7 +300,8 @@ onMounted(async () => {
         </label>
       </div>
       <p v-if="formErrors.attribute_ids" class="text-xs text-red-600">{{ formErrors.attribute_ids }}</p>
-    </div>
+      </CardContent>
+    </Card>
 
     <div class="flex flex-wrap items-center justify-end gap-2 pb-6">
       <Button type="button" variant="outline" :disabled="submitting" @click="navigateTo('/products')">
@@ -324,7 +309,7 @@ onMounted(async () => {
       </Button>
       <Button
         type="button"
-        class="inline-flex items-center gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] min-w-[120px]"
+        class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-Green-Light min-w-[120px]"
         :disabled="submitting"
         @click="saveProduct"
       >

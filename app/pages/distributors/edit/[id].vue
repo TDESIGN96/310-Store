@@ -353,7 +353,7 @@ onMounted(async () => {
         <Button type="button" variant="outline" as-child>
           <NuxtLink to="/distributors">{{ t('common.cancel') }}</NuxtLink>
         </Button>
-        <Button type="button" class="bg-[#215260] hover:bg-[#184754]" :disabled="submitting" @click="updateDistributor">
+        <Button type="button" class="bg-primary hover:bg-primary/90" :disabled="submitting" @click="updateDistributor">
           <Loader2 v-if="submitting" class="size-4 animate-spin me-1" />
           {{ t('common.save') }}
         </Button>

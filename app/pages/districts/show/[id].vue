@@ -188,7 +188,7 @@ onMounted(() => {
 
       <template v-else-if="district">
         <div class="rounded-lg border overflow-hidden">
-          <div class="bg-muted/40 px-4 py-3 border-b">
+          <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
             <h2 class="font-semibold flex items-center gap-2">
               <MapPin class="size-4" />
               {{ t('districts_show.basic_info') }}
@@ -213,7 +213,7 @@ onMounted(() => {
         </div>
 
         <div class="rounded-lg border overflow-hidden">
-          <div class="bg-muted/40 px-4 py-3 border-b">
+          <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
             <h2 class="font-semibold flex items-center gap-2">
               <Calendar class="size-4" />
               {{ t('districts_show.audit_info') }}

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Plus,
@@ -326,7 +326,7 @@ const goToPage = (page: number) => {
             <span class="hidden sm:inline">{{ t('invoices_page.shipment_status_sync') }}</span>
             <span class="sm:hidden">{{ t('invoices_page.sync_status') }}</span>
           </Button>
-          <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] w-full sm:w-auto" as-child>
+          <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto" as-child>
             <NuxtLink to="/invoices/create"><Plus class="size-4" />{{ t('invoices_page.new_invoice') }}</NuxtLink>
           </Button>
         </div>

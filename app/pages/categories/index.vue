@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Search, Plus, Pencil, Trash2, Loader2, ShieldAlert,
@@ -631,7 +631,7 @@ onMounted(() => {
 
         <div class="hidden sm:block sm:flex-1" />
 
-        <Button v-if="canCreate" class="w-full sm:w-auto gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+        <Button v-if="canCreate" class="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-Green-Light" as-child>
           <NuxtLink to="/categories/create">
             <Plus class="size-4" />
             {{ t('categories_page.create') }}
@@ -642,9 +642,9 @@ onMounted(() => {
       <!-- Bulk Action Bar -->
       <div
         v-if="selectedCount > 0"
-        class="flex items-center gap-3 rounded-lg border border-[#215260]/30 bg-[#215260]/5 px-4 py-2.5 flex-wrap"
+        class="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 flex-wrap"
       >
-        <span class="text-sm font-medium text-[#215260]">
+        <span class="text-sm font-medium text-primary">
           {{ t('categories_page.bulk_selected', { count: selectedCount }) }}
         </span>
         <div class="flex items-center gap-2 mr-auto">
@@ -717,8 +717,8 @@ onMounted(() => {
             >
               <div class="flex items-center gap-1.5">
                 {{ locale === 'ar' ? t('categories_page.col_name_ar') : t('categories_page.col_name_en') }}
-                <ArrowUp v-if="isNameSortActive && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="isNameSortActive && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                <ArrowUp v-if="isNameSortActive && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                <ArrowDown v-else-if="isNameSortActive && sortOrder === 'desc'" class="size-3.5 text-primary" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
@@ -733,8 +733,8 @@ onMounted(() => {
             >
               <div class="flex items-center gap-1.5">
                 {{ t('categories_page.col_status') }}
-                <ArrowUp v-if="sortBy === 'status' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'status' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                <ArrowUp v-if="sortBy === 'status' && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                <ArrowDown v-else-if="sortBy === 'status' && sortOrder === 'desc'" class="size-3.5 text-primary" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
@@ -748,8 +748,8 @@ onMounted(() => {
             >
               <div class="flex items-center gap-1.5">
                 {{ t('common.created_at') }}
-                <ArrowUp v-if="sortBy === 'created_at' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'created_at' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                <ArrowUp v-if="sortBy === 'created_at' && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                <ArrowDown v-else-if="sortBy === 'created_at' && sortOrder === 'desc'" class="size-3.5 text-primary" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>

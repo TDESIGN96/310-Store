@@ -310,8 +310,8 @@ onMounted(() => {
 
     <template v-else-if="product">
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <Package class="size-4 shrink-0 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6">
+          <Package class="size-4 shrink-0 text-white/70" />
           <h2 class="text-base font-semibold tracking-tight">
             {{ t('products_page.show_basic_info') }}
           </h2>
@@ -412,8 +412,8 @@ onMounted(() => {
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <Layers class="size-4 shrink-0 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
+          <Layers class="size-4 shrink-0 text-white/70" />
           <h2 class="text-base font-semibold tracking-tight">
             {{ t('products_variations.variations') }}
           </h2>
@@ -559,8 +559,8 @@ onMounted(() => {
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <ImageIcon class="size-4 shrink-0 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
+          <ImageIcon class="size-4 shrink-0 text-white/70" />
           <h2 class="text-base font-semibold tracking-tight">
             {{ t('products_page.show_images') }}
           </h2>
@@ -591,8 +591,8 @@ onMounted(() => {
       </Card>
 
       <!-- <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <Warehouse class="size-4 shrink-0 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
+          <Warehouse class="size-4 shrink-0 text-white/70" />
           <h2 class="text-base font-semibold tracking-tight">
             {{ t('products_page.show_inventory') }}
           </h2>

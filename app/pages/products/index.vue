@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Search,
@@ -616,7 +616,7 @@ onMounted(async () => {
 <!-- Right side — create dropdown -->
 <DropdownMenu v-if="canCreateProduct">
   <DropdownMenuTrigger as-child>
-    <Button class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] w-full sm:w-auto">
+    <Button class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto">
       <Plus class="size-4" />
       {{ t('products_page.new_product') }}
     </Button>

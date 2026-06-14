@@ -36,12 +36,14 @@ export function usePermissions() {
   const canAccess = (module: PermissionModule) => {
     if (isModuleBlockedForDistributor(module)) return false
     if (module === 'stocktaking') return can('stocktaking.view')
+    if (module === 'damage') return can('damage.view')
     return can(`${module}.index`) || can(`${module}.show`)
   }
 
   const canCreate = (module: PermissionModule) => {
     if (isModuleBlockedForDistributor(module)) return false
     if (module === 'stocktaking') return can('stocktaking.create')
+    if (module === 'damage') return can('damage.create')
     return can(`${module}.store`)
   }
 

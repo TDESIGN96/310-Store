@@ -213,7 +213,7 @@ onMounted(async () => {
       <div v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">{{ errorMessage }}</div>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6"><FileText class="size-4 text-muted-foreground" /><h2 class="text-base font-semibold">{{ t('invoices_page.details_section') }}</h2></div>
+        <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6"><FileText class="size-4 text-white/70" /><h2 class="text-base font-semibold">{{ t('invoices_page.details_section') }}</h2></div>
         <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
           <div class="grid gap-5 md:grid-cols-2">
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('invoices_page.reference_number') }}</label><Input :model-value="draft.reference_number || `#${id}`" disabled /></div>
@@ -270,7 +270,7 @@ onMounted(async () => {
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6"><Package class="size-4 text-muted-foreground" /><h2 class="text-base font-semibold">{{ t('invoices_page.items_section') }}</h2></div>
+        <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6"><Package class="size-4 text-white/70" /><h2 class="text-base font-semibold">{{ t('invoices_page.items_section') }}</h2></div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
           <div class="grid gap-3 md:grid-cols-2">
             <div class="space-y-2">
@@ -380,8 +380,8 @@ onMounted(async () => {
         </CardContent>
       </Card>
 
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-muted/40 px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('invoices_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.terms" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('invoices_page.terms_placeholder')" /></CardContent></Card>
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-muted/40 px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('invoices_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.notes" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('invoices_page.notes_placeholder')" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('invoices_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.terms" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('invoices_page.terms_placeholder')" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('invoices_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.notes" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('invoices_page.notes_placeholder')" /></CardContent></Card>
 
       <div class="flex flex-col-reverse gap-3 rounded-xl border bg-card/80 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-end sm:px-5">
         <Button variant="outline" class="w-full sm:w-auto" :disabled="invoicesStore.submitting" as-child><NuxtLink to="/invoices">{{ t('common.cancel') }}</NuxtLink></Button>

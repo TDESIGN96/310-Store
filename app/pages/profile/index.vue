@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
   ArrowRight,
@@ -267,7 +267,7 @@ onMounted(loadUser)
         <!-- API-loaded profile (same shape as users/show) -->
         <template v-if="user">
           <div class="rounded-lg border overflow-hidden">
-            <div class="bg-muted/40 px-4 py-3 border-b">
+            <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
               <h2 class="font-semibold flex items-center gap-2">
                 <User class="size-4" />
                 {{ t('users_show.basic_info') }}
@@ -384,7 +384,7 @@ onMounted(loadUser)
         <!-- Session fallback (GET /user failed) -->
         <template v-else>
           <div class="rounded-lg border overflow-hidden">
-            <div class="bg-muted/40 px-4 py-3 border-b">
+            <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
               <h2 class="font-semibold flex items-center gap-2">
                 <User class="size-4" />
                 {{ t('users_show.basic_info') }}

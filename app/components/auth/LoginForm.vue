@@ -296,13 +296,13 @@ const handleLogin = async () => {
 
 .forgot-link {
   font-size: 11px;
-  color: #215260;
+  color: var(--color-Green-Dark);
   text-decoration: none;
   transition: color 0.15s;
   position: relative;
 }
 
-.forgot-link:hover { color: #2a6678; }
+.forgot-link:hover { color: color-mix(in srgb, var(--color-Green-Dark) 80%, white); }
 
 .forgot-link::after {
   content: '';
@@ -338,7 +338,7 @@ const handleLogin = async () => {
   border-radius: 10px;
   font-size: 13px;
   color: #1a1a1a;
-  font-family: 'Readex Pro', sans-serif;
+  font-family: inherit;
   outline: none;
   direction: rtl;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
@@ -347,9 +347,9 @@ const handleLogin = async () => {
 .form-input::placeholder { color: #9ca3af; }
 
 .form-input:focus {
-  border-color: #215260;
+  border-color: var(--color-Green-Dark);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(33, 82, 96, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-Green-Dark) 15%, transparent);
   transform: scale(1.01);
 }
 
@@ -414,8 +414,8 @@ const handleLogin = async () => {
 }
 
 .checkbox-input:checked + .checkbox-box {
-  background: #215260;
-  border-color: #215260;
+  background: var(--color-Green-Dark);
+  border-color: var(--color-Green-Dark);
   animation: checkPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -440,13 +440,13 @@ const handleLogin = async () => {
 .login-btn {
   width: 100%;
   padding: 14px;
-  background: #215260;
+  background: var(--color-Green-Dark);
   color: #ffffff;
   border: none;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  font-family: 'Readex Pro', sans-serif;
+  font-family: inherit;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -489,8 +489,8 @@ const handleLogin = async () => {
 }
 
 .login-btn:hover {
-  background: #2a6678;
-  box-shadow: 0 8px 24px rgba(33, 82, 96, 0.3);
+  background: color-mix(in srgb, var(--color-Green-Dark) 80%, white);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-Green-Dark) 30%, transparent);
   transform: translateY(-1px);
 }
 
@@ -562,13 +562,13 @@ const handleLogin = async () => {
 }
 
 .login-note-link {
-  color: #215260;
+  color: var(--color-Green-Dark);
   text-decoration: none;
   transition: color 0.15s;
   position: relative;
 }
 
-.login-note-link:hover { color: #2a6678; }
+.login-note-link:hover { color: color-mix(in srgb, var(--color-Green-Dark) 80%, white); }
 
 .login-note-link::after {
   content: '';

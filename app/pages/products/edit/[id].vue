@@ -229,8 +229,8 @@ onMounted(async () => {
 
       <template v-else>
         <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-          <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-            <Package class="size-4 shrink-0 text-muted-foreground" />
+          <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6">
+            <Package class="size-4 shrink-0 text-white/70" />
             <h2 class="text-base font-semibold tracking-tight">
               {{ t('products_variations.product_info') }}
             </h2>
@@ -367,7 +367,7 @@ onMounted(async () => {
             <NuxtLink :to="`/products/variations/${id}`">{{ t('products_page.manage_variations') }}</NuxtLink>
           </Button>
           <Button
-            class="inline-flex w-full items-center justify-center gap-2 bg-[#215260] text-[#CFE030] hover:bg-[#215260]/90 sm:w-auto sm:min-w-[140px]"
+            class="inline-flex w-full items-center justify-center gap-2 bg-primary text-Green-Light hover:bg-primary/90 sm:w-auto sm:min-w-[140px]"
             :disabled="submitting"
             @click="saveProduct"
           >

@@ -560,7 +560,7 @@ onMounted(async () => {
 
     <div v-if="canCreateVariation" class="flex justify-end gap-2">
       <Button variant="outline" as-child><NuxtLink :to="`/products/variations/${productId}`">{{ t('common.cancel') }}</NuxtLink></Button>
-      <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="createVariations">
+      <Button class="bg-primary hover:bg-primary/90 text-Green-Light" :disabled="submitting" @click="createVariations">
         <Loader2 v-if="submitting" class="size-4 animate-spin mr-1" />
         {{ submitting ? t('common.saving') : t('common.save') }}
       </Button>

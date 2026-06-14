@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ArrowRight, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -255,7 +255,7 @@ const createDistributor = async () => {
         <Button type="button" variant="outline" as-child>
           <NuxtLink to="/distributors">{{ t('common.cancel') }}</NuxtLink>
         </Button>
-        <Button type="button" class="bg-[#215260] hover:bg-[#184754]" :disabled="submitting" @click="createDistributor">
+        <Button type="button" class="bg-primary hover:bg-primary/90" :disabled="submitting" @click="createDistributor">
           <Loader2 v-if="submitting" class="size-4 animate-spin me-1" />
           {{ t('common.save') }}
         </Button>

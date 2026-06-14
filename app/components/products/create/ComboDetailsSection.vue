@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { Package } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -290,18 +291,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="rounded-lg border p-5 space-y-6">
-    <div>
-      <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {{ t('products_create.step_badge', { n: 1 }) }}
-      </p>
-      <h2 class="text-lg font-semibold tracking-tight mt-1">
-        {{ t('products_combo.section_details_title') }}
-      </h2>
-      <p class="text-sm text-muted-foreground mt-1">
-        {{ t('products_combo.section_details_hint') }}
-      </p>
+  <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+    <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6">
+      <Package class="size-4 text-white/70" />
+      <h2 class="text-base font-semibold">{{ t('products_combo.section_details_title') }}</h2>
     </div>
+    <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
 
     <div
       v-if="optionsError"
@@ -309,8 +304,6 @@ onMounted(() => {
     >
       {{ optionsError }}
     </div>
-
-    <Separator />
 
     <div class="grid gap-5 sm:grid-cols-2">
       <div class="space-y-2">
@@ -454,5 +447,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </div>
+    </CardContent>
+  </Card>
 </template>

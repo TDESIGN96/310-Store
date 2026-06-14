@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { Search, Plus, Pencil, Copy, Trash2, Loader2, ShieldAlert, LoaderCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -236,7 +236,7 @@ onMounted(loadRoles)
      
       <Button
         v-if="canCreateRole"
-        class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+        class="gap-2 bg-primary hover:bg-primary/90 text-Green-Light"
         as-child
       >
         <NuxtLink to="/roles/create">

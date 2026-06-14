@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { ArrowRight, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -217,7 +217,7 @@ function handleCancel() {
       </Button>
       <Button
         type="button"
-        class="inline-flex items-center gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] min-w-[120px]"
+        class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-Green-Light min-w-[120px]"
         :disabled="submitting"
         @click="handleSave"
       >

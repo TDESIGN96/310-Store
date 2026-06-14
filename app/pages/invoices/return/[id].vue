@@ -173,8 +173,8 @@ onMounted(async () => {
       </div>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <FileText class="size-4 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6">
+          <FileText class="size-4 text-white/70" />
           <h2 class="text-base font-semibold">{{ t('invoices_page.return_details_section') }}</h2>
         </div>
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
@@ -206,8 +206,8 @@ onMounted(async () => {
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
-          <Package class="size-4 text-muted-foreground" />
+        <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
+          <Package class="size-4 text-white/70" />
           <h2 class="text-base font-semibold">{{ t('invoices_page.return_items_section') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6 sm:py-6">
@@ -280,7 +280,7 @@ onMounted(async () => {
         <Button variant="outline" :disabled="submitting" as-child>
           <NuxtLink to="/invoices">{{ t('common.cancel') }}</NuxtLink>
         </Button>
-        <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="submitReturn">
+        <Button class="bg-primary hover:bg-primary/90 text-Green-Light" :disabled="submitting" @click="submitReturn">
           <Loader2 v-if="submitting" class="size-4 animate-spin" />
           {{ t('invoices_page.return_submit') }}
         </Button>

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowRight, ChevronDown, ShieldCheck, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -386,7 +386,7 @@ onMounted(async () => {
     <template v-else>
     <div
       v-if="isClonePrefill"
-      class="rounded-lg border border-[#215260]/30 bg-[#215260]/5 px-4 py-3 text-sm text-foreground"
+      class="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground"
     >
       {{ t('users_form.clone_prefill_banner', { name: cloneSourceName }) }}
     </div>
@@ -605,7 +605,7 @@ onMounted(async () => {
       <Button variant="outline" :disabled="submitting" as-child>
         <NuxtLink to="/users">{{ t('common.cancel') }}</NuxtLink>
       </Button>
-      <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="createUser">
+      <Button class="bg-primary hover:bg-primary/90 text-Green-Light" :disabled="submitting" @click="createUser">
         {{ submitting ? t('common.saving') : t('users_form.submit_create') }}
       </Button>
     </div>

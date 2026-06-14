@@ -26,7 +26,7 @@ const modulePills = computed(() =>
 </script>
 
 <template>
-  <div class="font-['Readex_Pro',sans-serif] bg-white text-[#1a1a1a] min-h-screen relative overflow-hidden" :dir="dir">
+  <div class="bg-white text-[#1a1a1a] min-h-screen relative overflow-hidden" :dir="dir">
 
     <!-- Decorative backgrounds -->
     <div class="kamu-bg-noise"></div>

@@ -351,7 +351,7 @@ onMounted(loadReview)
       </Card>
 
       <Card class="gap-0 overflow-hidden py-0 shadow-sm">
-        <div class="flex items-center gap-2 border-b bg-muted/40 px-4 py-3.5 sm:px-6">
+        <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
           <h2 class="text-base font-semibold">{{ t('stocktaking_review_page.variance_summary') }}</h2>
         </div>
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-5">

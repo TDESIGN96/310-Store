@@ -215,7 +215,7 @@ onMounted(() => {
       <template v-else-if="unit">
         <!-- Basic info -->
         <div class="rounded-lg border overflow-hidden">
-          <div class="bg-muted/40 px-4 py-3 border-b">
+          <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
             <h2 class="font-semibold flex items-center gap-2">
               <Ruler class="size-4" />
               {{ t('units_show.basic_info') }}
@@ -252,7 +252,7 @@ onMounted(() => {
 
         <!-- Audit -->
         <div class="rounded-lg border overflow-hidden">
-          <div class="bg-muted/40 px-4 py-3 border-b">
+          <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
             <h2 class="font-semibold flex items-center gap-2">
               <Calendar class="size-4" />
               {{ t('units_show.audit_info') }}

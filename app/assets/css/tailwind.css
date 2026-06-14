@@ -60,10 +60,58 @@ span.flatpickr-weekday {
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* ── Fonts ── */
+  --font-sans: 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
+  --font-urbanist: 'Urbanist', ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Brand palette ── */
+  --color-Green-Dark: #1e4841;
+  --color-Green-Light: #bbf49c;
+  --color-Green-BG: #ecf4e9;
+  --color-Red: #f73541;
+  --color-Red-Light: #fdced1;
+  --color-Yellow: #f2b007;
+  --color-Black: #242e2c;
+  --color-Gray-30: #6b7271;
+  --color-Gray-20: #bcbebd;
+  --color-Gray-Line: #e5e6e6;
+  --color-White: #fbfbfc;
+  --color-Gray-10: #eff0f0;
+
+  /* ── Section header semantic colors ── */
+  --color-section-details: var(--section-details);
+  --color-section-items: var(--section-items);
+  --color-section-terms: var(--section-terms);
+  --color-section-notes: var(--section-notes);
+
+  /* ── Radius scale ── */
+  --radius-none: 0rem;
+  --radius-4xs: 0rem;
+  --radius-3xs: 0.125rem;
+  --radius-2xs: 0.1875rem;
+  --radius-xs: 0.2109375rem;
+  --radius-sm: 0.25rem;
+  --radius: 0.3125rem;
+  --radius-md: 0.3125rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.4375rem;
+  --radius-2xl: 0.5rem;
+  --radius-3xl: 0.5625rem;
+  --radius-4xl: 0.625rem;
+  --radius-5xl: 0.75rem;
+  --radius-6xl: 0.875rem;
+  --radius-7xl: 0.9375rem;
+  --radius-8xl: 1rem;
+  --radius-9xl: 1.125rem;
+  --radius-10xl: 1.25rem;
+  --radius-11xl: 1.5rem;
+  --radius-12xl: 1.75rem;
+  --radius-13xl: 2rem;
+  --radius-14xl: 2.5rem;
+  --radius-15xl: 3.5rem;
+  --radius-16xl: 62.4375rem;
+
+  /* ── shadcn semantic bridges ── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -93,77 +141,122 @@ span.flatpickr-weekday {
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+  --radius: 0.3125rem;
+
+  /* Section headers */
+  --section-details: var(--color-Green-Dark);
+  --section-items: color-mix(in srgb, var(--color-Green-Dark) 75%, var(--color-Green-Light));
+  --section-terms: var(--color-Green-Light);
+  --section-notes: var(--color-Green-Light);
+
+  /* Core */
+  --background: var(--color-White);
+  --foreground: var(--color-Black);
+  --card: var(--color-White);
+  --card-foreground: var(--color-Black);
+  --popover: var(--color-White);
+  --popover-foreground: var(--color-Black);
+
+  /* Brand */
+  --primary: var(--color-Green-Dark);
+  --primary-foreground: var(--color-White);
+  --secondary: var(--color-Green-BG);
+  --secondary-foreground: var(--color-Green-Dark);
+
+  /* Muted / Accent */
+  --muted: var(--color-Gray-10);
+  --muted-foreground: var(--color-Gray-30);
+  --accent: var(--color-Green-Light);
+  --accent-foreground: var(--color-Black);
+
+  /* Feedback */
+  --destructive: var(--color-Red);
+
+  /* Borders & Ring */
+  --border: var(--color-Gray-Line);
+  --input: var(--color-Gray-Line);
+  --ring: var(--color-Green-Dark);
+
+  /* Charts */
+  --chart-1: var(--color-Green-Dark);
+  --chart-2: var(--color-Green-Light);
+  --chart-3: var(--color-Yellow);
+  --chart-4: var(--color-Red);
+  --chart-5: var(--color-Gray-30);
+
+  /* Sidebar */
+  --sidebar: var(--color-Green-BG);
+  --sidebar-foreground: var(--color-Black);
+  --sidebar-primary: var(--color-Green-Dark);
+  --sidebar-primary-foreground: var(--color-White);
+  --sidebar-accent: var(--color-Gray-10);
+  --sidebar-accent-foreground: var(--color-Green-Dark);
+  --sidebar-active: var(--color-Green-Light);
+  --sidebar-active-foreground: var(--color-Black);
+  --sidebar-border: var(--color-Gray-Line);
+  --sidebar-ring: var(--color-Green-Dark);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  /* Section headers (keep same in dark — they're on colored divs) */
+  --section-details: var(--color-Green-Dark);
+  --section-items: color-mix(in srgb, var(--color-Green-Dark) 75%, var(--color-Green-Light));
+  --section-terms: var(--color-Green-Light);
+  --section-notes: var(--color-Green-Light);
+
+  /* Core */
+  --background: var(--color-Black);
+  --foreground: var(--color-White);
+  --card: var(--color-Green-Dark);
+  --card-foreground: var(--color-White);
+  --popover: var(--color-Green-Dark);
+  --popover-foreground: var(--color-White);
+
+  /* Brand (inverted for dark) */
+  --primary: var(--color-Green-Light);
+  --primary-foreground: var(--color-Black);
+  --secondary: color-mix(in srgb, var(--color-Green-Dark) 80%, black);
+  --secondary-foreground: var(--color-White);
+
+  /* Muted / Accent */
+  --muted: color-mix(in srgb, var(--color-Green-Dark) 80%, black);
+  --muted-foreground: var(--color-Gray-20);
+  --accent: color-mix(in srgb, var(--color-Green-Dark) 60%, black);
+  --accent-foreground: var(--color-Green-Light);
+
+  /* Feedback */
+  --destructive: var(--color-Red);
+
+  /* Borders & Ring */
+  --border: color-mix(in srgb, var(--color-Gray-30) 40%, transparent);
+  --input: color-mix(in srgb, var(--color-Gray-30) 55%, transparent);
+  --ring: var(--color-Green-Light);
+
+  /* Charts */
+  --chart-1: var(--color-Green-Light);
+  --chart-2: var(--color-Yellow);
+  --chart-3: var(--color-Red);
+  --chart-4: var(--color-Gray-20);
+  --chart-5: var(--color-Green-BG);
+
+  /* Sidebar */
+  --sidebar: color-mix(in srgb, var(--color-Green-Dark) 80%, black);
+  --sidebar-foreground: var(--color-White);
+  --sidebar-primary: var(--color-Green-Light);
+  --sidebar-primary-foreground: var(--color-Black);
+  --sidebar-accent: color-mix(in srgb, var(--color-Green-Dark) 60%, black);
+  --sidebar-accent-foreground: var(--color-Green-Light);
+  --sidebar-active: var(--color-Green-Light);
+  --sidebar-active-foreground: var(--color-Black);
+  --sidebar-border: color-mix(in srgb, var(--color-Gray-30) 40%, transparent);
+  --sidebar-ring: var(--color-Green-Light);
 }
 
 @layer base {
@@ -171,7 +264,34 @@ span.flatpickr-weekday {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground text-start rtl:text-right ltr:text-left text-start ;
+    @apply bg-background text-foreground font-sans text-start rtl:text-right ltr:text-left;
+  }
+  html[lang="en"] body {
+    font-family: var(--font-urbanist);
+  }
+  h1 {
+    @apply font-bold;
+  }
+  h2 {
+    @apply font-semibold;
+  }
+  h3 {
+    @apply font-semibold;
+  }
+  h4,
+  h5,
+  h6 {
+    @apply font-medium;
+  }
+  label {
+    @apply font-medium;
+  }
+  th {
+    @apply font-medium;
+  }
+  strong,
+  b {
+    @apply font-semibold;
   }
 }
 
@@ -195,7 +315,7 @@ span.flatpickr-weekday {
   position: fixed;
   width: 700px;
   height: 700px;
-  background: radial-gradient(circle, rgba(33, 82, 96, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-Green-Dark) 8%, transparent) 0%, transparent 70%);
   top: -200px;
   right: -200px;
   pointer-events: none;
@@ -206,7 +326,7 @@ span.flatpickr-weekday {
   position: fixed;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(139, 165, 6, 0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-Green-Light) 8%, transparent) 0%, transparent 70%);
   bottom: -100px;
   left: 200px;
   pointer-events: none;
@@ -217,9 +337,9 @@ span.flatpickr-weekday {
 .kamu-brand-panel {
   background: linear-gradient(
     145deg,
-    rgba(33, 82, 96, 0.95) 0%,
-    rgba(33, 82, 96, 0.85) 60%,
-    rgba(42, 102, 120, 0.9) 100%
+    color-mix(in srgb, var(--color-Green-Dark) 95%, transparent) 0%,
+    color-mix(in srgb, var(--color-Green-Dark) 85%, transparent) 60%,
+    color-mix(in srgb, var(--color-Green-Dark) 90%, var(--color-Green-Light)) 100%
   );
   border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -248,7 +368,7 @@ span.flatpickr-weekday {
   gap: 8px;
   font-size: 11px;
   font-weight: 500;
-  color: #CFE030;
+  color: var(--color-Green-Light);
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-bottom: 20px;
@@ -260,7 +380,7 @@ span.flatpickr-weekday {
   display: inline-block;
   width: 24px;
   height: 1px;
-  background: #CFE030;
+  background: var(--color-Green-Light);
   opacity: 0.6;
 }
 
@@ -280,8 +400,8 @@ span.flatpickr-weekday {
 
 .kamu-headline-accent {
   display: block;
-  color: #CFE030;
-  text-shadow: 0 0 60px rgba(207, 224, 48, 0.4);
+  color: var(--color-Green-Light);
+  text-shadow: 0 0 60px color-mix(in srgb, var(--color-Green-Light) 40%, transparent);
 }
 
 /* ── Stat value (hover pulse) ── */
@@ -296,7 +416,7 @@ span.flatpickr-weekday {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 100px;
   font-size: 11px;
-  color: rgba(207, 224, 48, 0.9);
+  color: color-mix(in srgb, var(--color-Green-Light) 90%, transparent);
   font-weight: 400;
   transition: all 0.2s;
   backdrop-filter: blur(4px);
@@ -306,8 +426,8 @@ span.flatpickr-weekday {
 
 .kamu-pill:hover {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(207, 224, 48, 0.4);
-  color: #CFE030;
+  border-color: color-mix(in srgb, var(--color-Green-Light) 40%, transparent);
+  color: var(--color-Green-Light);
 }
 
 .kamu-pill::before {
@@ -360,28 +480,28 @@ span.flatpickr-weekday {
 
 .kamu-p1 {
   width: 300px; height: 300px;
-  background: radial-gradient(circle, rgba(33, 82, 96, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-Green-Dark) 15%, transparent) 0%, transparent 70%);
   top: 10%; right: 20%;
   animation-delay: 0s;
 }
 
 .kamu-p2 {
   width: 200px; height: 200px;
-  background: radial-gradient(circle, rgba(139, 165, 6, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-Green-Light) 10%, transparent) 0%, transparent 70%);
   bottom: 20%; left: 10%;
   animation-delay: -5s;
 }
 
 .kamu-p3 {
   width: 150px; height: 150px;
-  background: radial-gradient(circle, rgba(33, 82, 96, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-Green-Dark) 12%, transparent) 0%, transparent 70%);
   top: 60%; right: 60%;
   animation-delay: -10s;
 }
 
 .kamu-p4 {
   width: 100px; height: 100px;
-  background: radial-gradient(circle, rgba(207, 224, 48, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-Green-Light) 8%, transparent) 0%, transparent 70%);
   top: 30%; left: 30%;
   animation-delay: -15s;
 }
@@ -451,8 +571,8 @@ span.flatpickr-weekday {
 }
 
 @keyframes kamuTextGlow {
-  0%, 100% { text-shadow: 0 0 40px rgba(207, 224, 48, 0.3); }
-  50%       { text-shadow: 0 0 80px rgba(207, 224, 48, 0.5), 0 0 120px rgba(207, 224, 48, 0.2); }
+  0%, 100% { text-shadow: 0 0 40px color-mix(in srgb, var(--color-Green-Light) 30%, transparent); }
+  50%       { text-shadow: 0 0 80px color-mix(in srgb, var(--color-Green-Light) 50%, transparent), 0 0 120px color-mix(in srgb, var(--color-Green-Light) 20%, transparent); }
 }
 
 @keyframes kamuRingPulse {

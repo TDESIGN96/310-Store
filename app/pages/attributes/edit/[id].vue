@@ -321,7 +321,7 @@ onMounted(() => {
               <Button
                 variant="ghost"
                 size="icon"
-                class="text-[#215260] hover:text-[#215260] hover:bg-muted"
+                class="text-primary hover:text-primary hover:bg-muted"
                 :disabled="addingValue"
                 @click="addValue"
               >
@@ -407,7 +407,7 @@ onMounted(() => {
           <NuxtLink to="/attributes">{{ t('common.cancel') }}</NuxtLink>
         </Button>
         <Button
-          class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+          class="bg-primary hover:bg-primary/90 text-Green-Light"
           :disabled="saving || loading || !attribute"
           @click="saveChanges"
         >

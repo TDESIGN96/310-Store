@@ -194,7 +194,7 @@ onMounted(() => {
           <p class="text-sm text-muted-foreground">#{{ productId }}</p>
         </div>
       </div>
-      <Button v-if="canCreateVariation" as-child class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]">
+      <Button v-if="canCreateVariation" as-child class="bg-primary hover:bg-primary/90 text-Green-Light">
         <NuxtLink :to="`/products/variations/${productId}/create`">{{ t('products_variations.add_variation') }}</NuxtLink>
       </Button>
     </div>

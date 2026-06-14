@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Search,
@@ -290,7 +290,7 @@ const goToPage = (page: number) => {
       </div>
       <Button
         v-if="canCreateStocktaking"
-        class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+        class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light"
         as-child
       >
         <NuxtLink to="/stocktaking-orders/create">

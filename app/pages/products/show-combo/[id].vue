@@ -232,7 +232,7 @@ onMounted(() => {
 
     <template v-else-if="product">
       <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
+        <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
           <h2 class="font-semibold flex items-center gap-2">
             <Package class="size-4" />
             {{ t('products_page.show_basic_info') }}
@@ -291,7 +291,7 @@ onMounted(() => {
       </div>
 
       <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
+        <div class="bg-section-items border-section-items text-white px-4 py-3 border-b">
           <h2 class="font-semibold">{{ t('products_combo.section_bundle_title') }}</h2>
         </div>
         <div class="p-4">
@@ -322,7 +322,7 @@ onMounted(() => {
       </div>
 
       <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
+        <div class="bg-section-items border-section-items text-white px-4 py-3 border-b">
           <h2 class="font-semibold">{{ t('products_page.show_tiered_prices') }}</h2>
         </div>
         <div class="p-4">
@@ -353,7 +353,7 @@ onMounted(() => {
       </div>
 
       <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
+        <div class="bg-section-items border-section-items text-white px-4 py-3 border-b">
           <h2 class="font-semibold">{{ t('products_page.show_images') }}</h2>
         </div>
         <div class="p-4">

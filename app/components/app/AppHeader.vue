@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
@@ -135,7 +135,7 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
               <DropdownMenuTrigger as-child>
                 <SidebarMenuButton size="lg">
                   <div
-                    class="flex size-7 items-center justify-center rounded-full bg-[#215260] text-[#CFE030] text-xs font-bold shrink-0"
+                    class="flex size-7 items-center justify-center rounded-full bg-primary text-Green-Light text-xs font-bold shrink-0"
                   >
                     {{ currentUser?.name?.charAt(0) ?? '؟' }}
                   </div>

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, UserX, UserCheck, Eye, Boxes } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -330,7 +330,7 @@ onMounted(() => {
       </div>
       <Button
         v-if="canCreateDistributor"
-        class="gap-2 bg-[#215260] hover:bg-[#184754]"
+        class="gap-2 bg-primary hover:bg-primary/90"
         as-child
       >
         <NuxtLink to="/distributors/create">

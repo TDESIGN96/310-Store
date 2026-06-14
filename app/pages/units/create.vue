@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { ArrowRight, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -224,7 +224,7 @@ const createUnit = async () => {
         <NuxtLink to="/units">{{ t('common.cancel') }}</NuxtLink>
       </Button>
       <Button
-        class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+        class="bg-primary hover:bg-primary/90 text-Green-Light"
         :disabled="submitting"
         @click="createUnit"
       >

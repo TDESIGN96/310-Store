@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowRight, Barcode, Boxes, Loader2, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
@@ -796,7 +796,7 @@ onMounted(async () => {
       </div>
 
       <div class="overflow-hidden rounded-xl border">
-        <div class="bg-muted/40 px-4 py-3 border-b flex items-center justify-between">
+        <div class="bg-section-items border-section-items text-white px-4 py-3 border-b flex items-center justify-between">
           <h2 class="font-semibold flex items-center gap-2">
             <Boxes class="size-4" />
             {{ $t('distributors_show.stock_allocation_allocate_products') }}
@@ -1003,7 +1003,7 @@ onMounted(async () => {
         </Button>
         <Button
           type="button"
-          class="h-10 gap-2 bg-[#215260] hover:bg-[#184754] w-full sm:w-auto"
+          class="h-10 gap-2 bg-primary hover:bg-primary/90 w-full sm:w-auto"
           :disabled="submitting || distributorLoading || !distributorActive"
           @click="submitAllocation"
         >

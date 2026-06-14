@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   ArrowRight,
@@ -917,7 +917,7 @@ onMounted(async () => {
           <NuxtLink to="/stocktaking-orders">{{ t('stocktaking_orders_page.cancel') }}</NuxtLink>
         </Button>
         <Button
-          class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+          class="bg-primary hover:bg-primary/90 text-Green-Light"
           :disabled="submitting"
           @click="submitCreate"
         >

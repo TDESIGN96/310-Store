@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Plus, Trash2, Layers } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -280,18 +280,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="rounded-lg border p-5 space-y-6">
-    <div>
-      <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {{ t('products_create.step_badge', { n: 2 }) }}
-      </p>
-      <h2 class="text-lg font-semibold tracking-tight mt-1">
-        {{ t('products_combo.section_bundle_title') }}
-      </h2>
-      <p class="text-sm text-muted-foreground mt-1">
-        {{ t('products_combo.section_bundle_hint') }}
-      </p>
+  <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+    <div class="flex items-center gap-2 border-b bg-section-items border-section-items text-white px-4 py-3.5 sm:px-6">
+      <Layers class="size-4 text-white/70" />
+      <h2 class="text-base font-semibold">{{ t('products_combo.section_bundle_title') }}</h2>
     </div>
+    <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
 
     <div
       v-if="loadError"
@@ -299,8 +293,6 @@ onMounted(async () => {
     >
       {{ loadError }}
     </div>
-
-    <Separator />
 
     <div class="rounded-md border overflow-auto">
       <Table>
@@ -385,5 +377,6 @@ onMounted(async () => {
       <Plus class="size-4" />
       {{ t('products_combo.add_product_row') }}
     </Button>
-  </div>
+    </CardContent>
+  </Card>
 </template>

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Plus,
@@ -486,7 +486,7 @@ const goToPage = (page: number) => {
 
         <Button
           v-if="canCreateQuotation"
-          class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] w-full sm:w-auto"
+          class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto"
           as-child
         >
           <NuxtLink to="/quotations/create">

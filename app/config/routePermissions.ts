@@ -82,6 +82,13 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/stocktaking-orders\/create\/?$/, permission: 'stocktaking.create' },
   { pattern: /^\/stocktaking-orders\/show\/[^/]+\/?$/, permission: 'stocktaking.view' },
   { pattern: /^\/stocktaking-orders\/?$/, permission: 'stocktaking.view' },
+
+  // Damage Records
+  { pattern: /^\/damage-records\/create\/?$/, permission: 'damage.create' },
+  { pattern: /^\/damage-records\/disposition\/[^/]+\/?$/, permission: 'damage.disposition' },
+  { pattern: /^\/damage-records\/edit\/[^/]+\/?$/, permission: 'damage.edit' },
+  { pattern: /^\/damage-records\/show\/[^/]+\/?$/, permission: 'damage.view' },
+  { pattern: /^\/damage-records\/?$/, permission: 'damage.view' },
 ]
 
 /**

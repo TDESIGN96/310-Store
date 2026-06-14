@@ -599,7 +599,7 @@ onMounted(async () => {
         </div>
 
         <div v-if="currentTab === 'general'" class="rounded-lg border overflow-hidden">
-          <div class="bg-muted/40 px-4 py-3 border-b flex items-center justify-between gap-2">
+          <div class="bg-section-details border-section-details text-white px-4 py-3 border-b flex items-center justify-between gap-2">
             <h2 class="font-semibold flex items-center gap-2">
               <Building2 class="size-4" />
               {{ t('distributors_show.general_information') }}
@@ -713,7 +713,7 @@ onMounted(async () => {
                     <X class="size-3.5" />
                     {{ t('distributors_show.stock_allocation_reset_filters') }}
                   </Button>
-                  <Button class="w-full sm:w-auto h-9 gap-2 bg-[#215260] hover:bg-[#184754]" @click="goToAllocateProducts">
+                  <Button class="w-full sm:w-auto h-9 gap-2 bg-primary hover:bg-primary/90" @click="goToAllocateProducts">
                     <Boxes class="size-4" />
                     {{ t('distributors_show.stock_allocation_allocate_products') }}
                   </Button>

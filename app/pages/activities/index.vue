@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import formatDateToIso from '@/hooks/useFormatDateHook'
 import { computed, onMounted, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
@@ -461,8 +461,8 @@ onMounted(() => {
               >
                 <div class="flex items-center gap-1.5">
                   {{ t('activities_page.col_user') }}
-                  <ArrowUp v-if="sortBy === 'user_name' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                  <ArrowDown v-else-if="sortBy === 'user_name' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                  <ArrowUp v-if="sortBy === 'user_name' && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                  <ArrowDown v-else-if="sortBy === 'user_name' && sortOrder === 'desc'" class="size-3.5 text-primary" />
                   <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
                 </div>
               </TableHead>
@@ -473,8 +473,8 @@ onMounted(() => {
               >
                 <div class="flex items-center gap-1.5">
                   {{ t('activities_page.col_date') }}
-                  <ArrowUp v-if="sortBy === 'created_at' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                  <ArrowDown v-else-if="sortBy === 'created_at' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                  <ArrowUp v-if="sortBy === 'created_at' && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                  <ArrowDown v-else-if="sortBy === 'created_at' && sortOrder === 'desc'" class="size-3.5 text-primary" />
                   <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
                 </div>
               </TableHead>

@@ -116,7 +116,7 @@ function hasCreateLinks(item: NavItem): boolean {
         >
           <details class="group/details" :open="isRouteUnderModule(item, 'create-only')">
             <summary
-              class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&::-webkit-details-marker]:hidden"
+              class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&::-webkit-details-marker]:hidden"
             >
               <component :is="item.icon" class="size-4 shrink-0" />
               <span class="truncate">{{ t(item.labelKey) }}</span>
@@ -148,7 +148,7 @@ function hasCreateLinks(item: NavItem): boolean {
         >
           <details class="group/details" :open="isRouteUnderModule(item)">
             <summary
-              class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&::-webkit-details-marker]:hidden"
+              class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&::-webkit-details-marker]:hidden"
             >
               <component :is="item.icon" class="size-4 shrink-0" />
               <span class="truncate">{{ t(item.labelKey) }}</span>

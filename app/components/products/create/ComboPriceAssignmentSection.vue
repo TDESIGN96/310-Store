@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { CircleDollarSign } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
+import { Card, CardContent } from '@/components/ui/card'
 import TieredPriceTableSection from '@/components/products/shared/TieredPriceTableSection.vue'
 
 const { t } = useI18n()
@@ -154,20 +155,12 @@ defineExpose({
 </script>
 
 <template>
-  <div class="rounded-lg border p-5 space-y-6">
-    <div>
-      <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {{ t('products_create.step_badge', { n: 3 }) }}
-      </p>
-      <h2 class="text-lg font-semibold tracking-tight mt-1">
-        {{ t('products_combo.section_pricing_title') }}
-      </h2>
-      <p class="text-sm text-muted-foreground mt-1">
-        {{ t('products_combo.tiered_optional_hint') }}
-      </p>
+  <Card class="gap-0 overflow-hidden py-0 shadow-sm">
+    <div class="flex items-center gap-2 border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6">
+      <CircleDollarSign class="size-4 text-Black/70" />
+      <h2 class="text-base font-semibold">{{ t('products_combo.section_pricing_title') }}</h2>
     </div>
-
-    <Separator />
+    <CardContent class="space-y-6 px-4 py-5 sm:px-6 sm:py-6">
 
     <div class="max-w-sm space-y-2">
       <label class="text-sm font-medium">{{ t('price_assignment.col_bundle_price') }}</label>
@@ -202,5 +195,6 @@ defineExpose({
       @update-max-qty="updateMaxQty"
       @update-price="updatePrice"
     />
-  </div>
+    </CardContent>
+  </Card>
 </template>

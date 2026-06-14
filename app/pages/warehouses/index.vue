@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, LoaderCircle,
@@ -443,7 +443,7 @@ onMounted(() => loadWarehouses())
       </div>
       <Button
         v-if="canCreateWarehouse"
-        class="gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]"
+        class="gap-2 bg-primary hover:bg-primary/90 text-Green-Light"
         as-child
       >
         <NuxtLink to="/warehouses/create">
@@ -521,8 +521,8 @@ onMounted(() => loadWarehouses())
             >
               <div class="flex items-center gap-1.5">
                 {{ t('warehouses_page.col_name') }}
-                <ArrowUp v-if="isNameSortActive && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="isNameSortActive && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                <ArrowUp v-if="isNameSortActive && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                <ArrowDown v-else-if="isNameSortActive && sortOrder === 'desc'" class="size-3.5 text-primary" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
@@ -532,8 +532,8 @@ onMounted(() => loadWarehouses())
             >
               <div class="flex items-center gap-1.5">
                 {{ t('warehouses_page.col_location') }}
-                <ArrowUp v-if="sortBy === 'location' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'location' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                <ArrowUp v-if="sortBy === 'location' && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                <ArrowDown v-else-if="sortBy === 'location' && sortOrder === 'desc'" class="size-3.5 text-primary" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>
@@ -544,8 +544,8 @@ onMounted(() => loadWarehouses())
             >
               <div class="flex items-center gap-1.5">
                 {{ t('warehouses_page.col_status') }}
-                <ArrowUp v-if="sortBy === 'status' && sortOrder === 'asc'" class="size-3.5 text-[#215260]" />
-                <ArrowDown v-else-if="sortBy === 'status' && sortOrder === 'desc'" class="size-3.5 text-[#215260]" />
+                <ArrowUp v-if="sortBy === 'status' && sortOrder === 'asc'" class="size-3.5 text-primary" />
+                <ArrowDown v-else-if="sortBy === 'status' && sortOrder === 'desc'" class="size-3.5 text-primary" />
                 <ArrowUpDown v-else class="size-3.5 text-muted-foreground/50" />
               </div>
             </TableHead>

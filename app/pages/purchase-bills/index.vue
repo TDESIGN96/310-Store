@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   Plus,
@@ -233,7 +233,7 @@ const goToPage = (page: number) => {
           </Select>
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('purchase_bills_page.reset_filters') }}</Button>
         </div>
-        <Button v-if="canCreatePurchaseBill" class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030] w-full sm:w-auto" as-child>
+        <Button v-if="canCreatePurchaseBill" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto" as-child>
           <NuxtLink to="/purchase-bills/create"><Plus class="size-4" />{{ t('purchase_bills_page.new_purchase_bill') }}</NuxtLink>
         </Button>
       </div>

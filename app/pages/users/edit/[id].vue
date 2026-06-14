@@ -628,7 +628,7 @@ onMounted(() => {
       <Button variant="outline" :disabled="submitting" as-child>
         <NuxtLink to="/users">{{ t('common.cancel') }}</NuxtLink>
       </Button>
-      <Button class="bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" :disabled="submitting" @click="updateUser">
+      <Button class="bg-primary hover:bg-primary/90 text-Green-Light" :disabled="submitting" @click="updateUser">
         {{ submitting ? t('common.saving') : t('users_form.submit_save') }}
       </Button>
     </div>

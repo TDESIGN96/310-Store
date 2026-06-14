@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { Search, Plus, Pencil, Trash2, Loader2, ShieldAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -163,7 +163,7 @@ onMounted(() => {
         <h1 class="text-2xl font-bold tracking-tight">{{ t('districts_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">{{ t('districts_page.subtitle') }}</p>
       </div>
-      <Button v-if="canCreateDistrict" class="h-9 gap-2 bg-[#215260] hover:bg-[#215260]/90 text-[#CFE030]" as-child>
+      <Button v-if="canCreateDistrict" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light" as-child>
         <NuxtLink to="/districts/create">
           <Plus class="size-4" />
           {{ t('districts_page.create') }}

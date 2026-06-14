@@ -47,6 +47,7 @@ interface EchoNotificationPayload {
   message_en?: string
   link?: string
   stocktaking_order_id?: string | number
+  damage_record_id?: string | number
   data?: {
     title?: string
     message?: string
@@ -55,6 +56,7 @@ interface EchoNotificationPayload {
     type?: string
     link?: string
     stocktaking_order_id?: string | number
+    damage_record_id?: string | number
   }
 }
 
@@ -100,9 +102,11 @@ const normalizeNotification = (payload: EchoNotificationPayload): Notification =
   }
 
   const stocktakingId = data.stocktaking_order_id ?? payload.stocktaking_order_id
+  const damageRecordId = data.damage_record_id ?? payload.damage_record_id
   const resolvedLink =
     data.link || payload.link ||
-    (stocktakingId ? `/stocktaking-orders/show/${stocktakingId}` : undefined)
+    (stocktakingId ? `/stocktaking-orders/show/${stocktakingId}` : undefined) ||
+    (damageRecordId ? `/damage-records/show/${damageRecordId}` : undefined)
 
   return {
     id: String(payload.id ?? crypto.randomUUID()),

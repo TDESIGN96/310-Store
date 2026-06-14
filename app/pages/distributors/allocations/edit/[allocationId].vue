@@ -355,7 +355,7 @@ onMounted(loadAllocation)
         </Button>
         <Button
           type="button"
-          class="h-10 gap-2 bg-[#215260] hover:bg-[#184754] w-full sm:w-auto"
+          class="h-10 gap-2 bg-primary hover:bg-primary/90 w-full sm:w-auto"
           :disabled="submitting"
           @click="submitAllocation"
         >

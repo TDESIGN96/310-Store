@@ -235,7 +235,7 @@ onMounted(() => {
       <!-- User details -->
       <template v-else-if="user">
       <div class="rounded-lg border overflow-hidden">
-        <div class="bg-muted/40 px-4 py-3 border-b">
+        <div class="bg-section-details border-section-details text-white px-4 py-3 border-b">
           <h2 class="font-semibold flex items-center gap-2">
             <User class="size-4" />
             {{ t('users_show.basic_info') }}
