@@ -58,7 +58,7 @@ export default {
       products: 'المنتجات',
       quotations: 'عروض الأسعار',
       invoices: 'الفواتير',
-      transport_invoices: 'فواتير النقل',
+      transport_invoices: 'فواتير شركة النقل',
       purchase_bills: 'فواتير المشتريات',
       invoice_returns: 'مرتجعات الفواتير',
       units: 'الوحدات',
@@ -425,6 +425,8 @@ export default {
     default_title: 'إشعار جديد',
     default_message: 'تم استلام إشعار جديد',
     view: 'عرض',
+    sound_on: 'أصوات الإشعارات مفعّلة',
+    sound_off: 'أصوات الإشعارات معطّلة',
   },
 
   roles_page: {
@@ -2257,7 +2259,7 @@ export default {
     stock_allocation_create_stub_subtitle: 'أنشئ تخصيص مخزون جديداً للوكيل المحدد.',
     stock_allocation_create_stub_body: 'سيتم إضافة نموذج تخصيص المنتجات هنا في قصة لاحقة.',
     allocation_product_search_placeholder: 'ابحث عن المنتج بالاسم…',
-    allocation_choose_product_hint: 'اختر المنتجات بنفس طريقة إنشاء الفاتورة.',
+    allocation_choose_product_hint: 'اختر المنتجات أولا .',
     allocation_show_all_products: 'عرض كل المنتجات',
     allocation_variations_count: 'متغير',
     allocation_barcode: 'الباركود',

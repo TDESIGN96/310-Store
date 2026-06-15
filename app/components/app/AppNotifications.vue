@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
   Bell,
+  BellOff,
   Package,
   CheckSquare,
   AlertTriangle,
@@ -18,8 +19,10 @@ import {
   Info,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
+import type { NotificationType } from '~/types/notifications'
 
 const authStore = useAuthStore()
+const { play, unlock, isEnabled, setEnabled } = useNotificationSound()
 const nuxtApp = useNuxtApp()
 const { t, locale } = useI18n()
 const STORAGE_PREFIX = 'app_notifications'
@@ -28,7 +31,7 @@ const MAX_NOTIFICATIONS = 50
 // ── Types ──
 interface Notification {
   id: string
-  type: 'low_stock' | 'approval' | 'shipment' | 'warning' | 'info'
+  type: NotificationType
   title: string
   message: string
   createdAt?: string
@@ -121,6 +124,8 @@ const normalizeNotification = (payload: EchoNotificationPayload): Notification =
 
 const showToastForNotification = (notification: Notification) => {
   if (!import.meta.client) return
+
+  play(notification.type)
 
   toast(notification.title, {
     position: 'top-left',
@@ -284,6 +289,10 @@ watch(
   { deep: true },
 )
 
+onMounted(() => {
+  unlock()
+})
+
 onBeforeUnmount(() => {
   unsubscribeFromUserChannel()
 })
@@ -370,15 +379,28 @@ const onNotificationClick = (notification: Notification) => {
             {{ t('notifications.new_count', { count: unreadCount }) }}
           </Badge>
         </div>
-        <Button
-          v-if="unreadCount > 0"
-          variant="ghost"
-          size="sm"
-          class="text-xs text-muted-foreground h-7"
-          @click="markAllRead"
-        >
-          {{ t('notifications.mark_all_read') }}
-        </Button>
+        <div class="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-7"
+            :title="isEnabled ? t('notifications.sound_on') : t('notifications.sound_off')"
+            :aria-label="isEnabled ? t('notifications.sound_on') : t('notifications.sound_off')"
+            @click="setEnabled(!isEnabled)"
+          >
+            <Bell v-if="isEnabled" class="size-3.5" />
+            <BellOff v-else class="size-3.5 text-muted-foreground" />
+          </Button>
+          <Button
+            v-if="unreadCount > 0"
+            variant="ghost"
+            size="sm"
+            class="text-xs text-muted-foreground h-7"
+            @click="markAllRead"
+          >
+            {{ t('notifications.mark_all_read') }}
+          </Button>
+        </div>
       </div>
 
       <Separator />

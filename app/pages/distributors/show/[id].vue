@@ -178,7 +178,10 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
   if (!isRecord(raw)) return null
   const variationObj = isRecord(raw.variation) ? raw.variation : null
   const warehouseObj = isRecord(raw.warehouse) ? raw.warehouse : null
-  const productObj = isRecord(variationObj?.product) ? variationObj.product : null
+  // `product` may be a top-level sibling of `variation` (API v2) or nested inside `variation.product`
+  const productObj = isRecord(raw.product)
+    ? raw.product
+    : (isRecord(variationObj?.product) ? variationObj.product : null)
   const status = normalizeAllocationStatus(raw.status ?? raw.allocation_status)
 
   const sourceWarehouse = typeof raw.warehouse === 'string'
@@ -213,14 +216,14 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
       || raw.variation,
     ),
     description: getString(raw.description),
-    unit_price: Number.isFinite(Number(raw.unit_price ?? raw.price ?? raw.custom_price ?? raw.distributor_price))
-      ? Number(raw.unit_price ?? raw.price ?? raw.custom_price ?? raw.distributor_price)
+    unit_price: Number.isFinite(Number(raw.unit_price ?? variationObj?.price ?? raw.price ?? raw.custom_price ?? raw.distributor_price))
+      ? Number(raw.unit_price ?? variationObj?.price ?? raw.price ?? raw.custom_price ?? raw.distributor_price)
       : null,
     allocated_quantity: toNumber(raw.allocated_quantity, 0),
     sold_quantity: toNumber(raw.consumed_quantity ?? raw.sold_quantity, 0),
     remaining_quantity: toNumber(raw.remaining_quantity, 0),
     source_warehouse: sourceWarehouse,
-    allocation_date: getString(raw.allocation_date || raw.created_at),
+    allocation_date: getString(raw.allocation_date || raw.created_at).slice(0, 10),
     status,
     status_label: getString(raw.status_label || raw.status_text || raw.status),
   }
@@ -645,10 +648,7 @@ onMounted(async () => {
               <p class="text-xs text-muted-foreground">{{ t('distributors_show.admin_mobile') }}</p>
               <p class="font-medium">{{ distributor.admin_mobile || '—' }}</p>
             </div>
-            <div class="space-y-1 md:col-span-2">
-              <p class="text-xs text-muted-foreground">{{ t('distributors_show.description') }}</p>
-              <p class="font-medium">{{ distributor.description || '—' }}</p>
-            </div>
+            
           </div>
         </div>
 
@@ -726,15 +726,13 @@ onMounted(async () => {
             <Table>
               <TableHeader class="hidden md:table-header-group">
                 <TableRow class="bg-muted/40 hover:bg-muted/40">
-                  <TableHead class="min-w-[220px]">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                  <TableHead class="min-w-[140px]">{{ t('distributors_show.allocation_row_description') }}</TableHead>
-                  <TableHead class="w-24 text-end">{{ t('distributors_show.allocation_quantity') }}</TableHead>
-                  <TableHead class="w-28 text-end">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
-                  <TableHead class="w-28 text-end">{{ t('distributors_show.allocation_row_total') }}</TableHead>
-                  <TableHead class="text-end w-24">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
-                  <TableHead class="text-end w-24">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
-                  <TableHead>{{ t('distributors_show.stock_allocation_col_allocation_date') }}</TableHead>
-                  <TableHead>{{ t('distributors_show.stock_allocation_col_status') }}</TableHead>
+                  <TableHead class="min-w-[220px] rtl:text-right">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
+                  <TableHead class="w-24 text-end rtl:text-right">{{ t('distributors_show.allocation_quantity') }}</TableHead>
+                  <TableHead class="w-28 text-end rtl:text-right">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
+                  <TableHead class="text-end w-24 rtl:text-right">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
+                  <TableHead class="text-end w-24 rtl:text-right">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
+                  <TableHead class="rtl:text-right">{{ t('distributors_show.stock_allocation_col_allocation_date') }}</TableHead>
+                  <TableHead class="rtl:text-right">{{ t('distributors_show.stock_allocation_col_status') }}</TableHead>
                   <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_actions') }}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -792,40 +790,31 @@ onMounted(async () => {
                     </div>
                   </TableCell>
 
-                  <!-- Description -->
-                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:align-top md:py-4">
-                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_row_description') }}</span>
-                    <span class="text-sm text-muted-foreground">{{ row.description || '—' }}</span>
-                  </TableCell>
+                 
+                  
 
                   <!-- Qty (allocated) -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_quantity') }}</span>
                     <span class="tabular-nums">{{ formatQty(row.allocated_quantity) }}</span>
                   </TableCell>
 
                   <!-- Unit Price -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_unit_price') }}</span>
                     <span class="tabular-nums">{{ formatMoney(row.unit_price) }}</span>
                   </TableCell>
 
-                  <!-- Row Total -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
-                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_row_total') }}</span>
-                    <span class="tabular-nums font-medium">
-                      {{ row.unit_price != null ? (row.allocated_quantity * row.unit_price).toFixed(2) : '—' }}
-                    </span>
-                  </TableCell>
+                 
 
                   <!-- Sold Qty -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</span>
                     <span class="tabular-nums">{{ formatQty(row.sold_quantity) }}</span>
                   </TableCell>
 
                   <!-- Remaining Qty -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</span>
                     <span class="tabular-nums">{{ formatQty(row.remaining_quantity) }}</span>
                   </TableCell>

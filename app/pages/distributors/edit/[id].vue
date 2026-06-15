@@ -23,7 +23,7 @@ interface DistributorDetailResponse {
 const route = useRoute()
 const distributorId = computed(() => String(route.params.id ?? ''))
 
-const { t, tm, rt, locale } = useI18n()
+const { t } = useI18n()
 const { $api } = useApi()
 const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
@@ -67,13 +67,6 @@ const normalizeMobile = (value: string) =>
     .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
     .replace(/\s+/g, '')
     .replace(/[^\d]/g, '')
-const locationOptions = computed<string[]>(() => {
-  void locale.value
-  const raw = tm('distributors_form.iraqi_provinces') as unknown[]
-  if (!Array.isArray(raw)) return []
-  return raw.map((item: unknown) => rt(item as Parameters<typeof rt>[0])).filter((s: string) => s.trim().length > 0)
-})
-
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object'
 const getString = (value: unknown) => (typeof value === 'string' ? value : '')
 const normalizeStatus = (value: unknown): 'active' | 'inactive' => {
@@ -159,11 +152,6 @@ const validateForm = (): boolean => {
   }
 
   return !Object.values(fieldErrors.value).some(Boolean)
-}
-
-const onLocationChange = (value: unknown) => {
-  location.value = String(value ?? '')
-  fieldErrors.value.location = ''
 }
 
 const onStatusChange = (value: unknown) => {
@@ -290,14 +278,12 @@ onMounted(async () => {
 
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.location') }} <span class="text-red-500">*</span></label>
-          <Select :model-value="location" @update:model-value="onLocationChange">
-            <SelectTrigger :class="fieldErrors.location ? 'border-red-500 focus-visible:ring-red-500' : ''">
-              <SelectValue :placeholder="t('distributors_form.location_placeholder')" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="item in locationOptions" :key="item" :value="item">{{ item }}</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            v-model="location"
+            :placeholder="t('distributors_form.location_placeholder')"
+            :class="fieldErrors.location ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            @input="fieldErrors.location = ''"
+          />
           <p v-if="fieldErrors.location" class="text-xs text-red-500">{{ fieldErrors.location }}</p>
         </div>
         <div class="space-y-2">

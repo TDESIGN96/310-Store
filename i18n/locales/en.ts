@@ -425,6 +425,8 @@ export default {
     default_title: 'New notification',
     default_message: 'You have a new notification',
     view: 'View',
+    sound_on: 'Notification sounds on',
+    sound_off: 'Notification sounds off',
   },
 
   roles_page: {
@@ -2259,7 +2261,7 @@ export default {
     stock_allocation_create_stub_subtitle: 'Create a new stock allocation for the selected distributor.',
     stock_allocation_create_stub_body: 'Allocate products form will be added here in a follow-up story.',
     allocation_product_search_placeholder: 'Search product by name…',
-    allocation_choose_product_hint: 'Choose products the same way as invoice creation.',
+    allocation_choose_product_hint: 'Choose products first.',
     allocation_show_all_products: 'Show all products',
     allocation_variations_count: 'variations',
     allocation_barcode: 'Barcode',

@@ -37,7 +37,6 @@ interface AllocationDetail {
   product_label: string
   variation_label: string
   warehouse_label: string
-  description: string
   unit_price: number
 }
 
@@ -111,7 +110,9 @@ const loadAllocation = async () => {
 
     const variationObj = isRecord(raw.variation) ? raw.variation : null
     const warehouseObj = isRecord(raw.warehouse) ? raw.warehouse : null
-    const productObj = isRecord(variationObj?.product) ? variationObj.product : null
+    const productObj = isRecord(raw.product)
+      ? raw.product
+      : (isRecord(variationObj?.product) ? variationObj.product : null)
 
     const parsed: AllocationDetail = {
       id: String(raw.id ?? allocationId.value),
@@ -123,10 +124,9 @@ const loadAllocation = async () => {
       remaining_quantity: toNumber(raw.remaining_quantity, 0),
       distributor_label: labelOf(raw.distributor, 'name', 'name_en', 'name_ar'),
       product_label: productObj ? localeLabel(productObj) : labelOf(raw.product, 'name_en', 'name_ar', 'name'),
-      variation_label: labelOf(raw.variation, 'label', 'name', 'sku'),
-      warehouse_label: labelOf(raw.warehouse, 'name', 'name_en', 'name_ar'),
-      description: typeof raw.description === 'string' ? raw.description : '',
-      unit_price: toNumber(raw.price ?? raw.unit_price ?? raw.standard_price, 0),
+      variation_label: labelOf(variationObj ?? raw.variation, 'label', 'name', 'sku'),
+      warehouse_label: labelOf(warehouseObj ?? raw.warehouse, 'name', 'name_en', 'name_ar'),
+      unit_price: toNumber(raw.unit_price ?? variationObj?.price ?? raw.price ?? raw.standard_price, 0),
     }
 
     if (!parsed.variation_id || !parsed.warehouse_id) {
@@ -264,19 +264,17 @@ onMounted(loadAllocation)
           <Table>
             <TableHeader class="hidden md:table-header-group">
               <TableRow class="bg-muted/40 hover:bg-muted/40">
-                <TableHead class="min-w-[240px] text-start">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                <TableHead class="min-w-[160px] text-start">{{ t('distributors_show.allocation_row_description') }}</TableHead>
-                <TableHead class="w-28 text-end">{{ t('distributors_show.allocation_quantity') }}</TableHead>
-                <TableHead class="w-32 text-end">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
-                <TableHead class="w-28 text-end">{{ t('distributors_show.allocation_row_total') }}</TableHead>
-                <TableHead class="w-24 text-end">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
-                <TableHead class="w-28 text-end">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
+                <TableHead class="min-w-[240px] rtl:text-right ltr:text-left">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
+                <TableHead class="w-28 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.allocation_quantity') }}</TableHead>
+                <TableHead class="w-32 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
+                <TableHead class="w-24 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
+                <TableHead class="w-28 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow class="flex flex-col gap-2 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border-0 md:rounded-none md:p-0 md:mb-0 md:shadow-none">
                 <!-- Product -->
-                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[240px] md:py-3">
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[240px] md:py-3 rtl:text-right ltr:text-left">
                   <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
                     {{ t('distributors_show.stock_allocation_col_product_name') }}
                   </span>
@@ -293,42 +291,26 @@ onMounted(loadAllocation)
                   </div>
                 </TableCell>
 
-                <!-- Description -->
-                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[160px] md:py-3">
-                  <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
-                    {{ t('distributors_show.allocation_row_description') }}
-                  </span>
-                  <p class="text-sm text-muted-foreground">{{ detail.description || '—' }}</p>
-                </TableCell>
-
                 <!-- Allocated Qty (read-only) -->
-                <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:py-3 md:text-end">
+                <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-3 md:text-end rtl:text-right ltr:text-left">
                   <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_quantity') }}</span>
                   <span class="tabular-nums">{{ detail.allocated_quantity }}</span>
                 </TableCell>
 
                 <!-- Unit Price (read-only) -->
-                <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:py-3 md:text-end">
+                <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-3 md:text-end rtl:text-right ltr:text-left">
                   <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_unit_price') }}</span>
                   <span class="tabular-nums">{{ detail.unit_price > 0 ? formatMoney(detail.unit_price) : '—' }}</span>
                 </TableCell>
 
-                <!-- Row Total (read-only) -->
-                <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:py-3 md:text-end">
-                  <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_row_total') }}</span>
-                  <span class="tabular-nums font-medium">
-                    {{ detail.unit_price > 0 ? formatMoney(detail.allocated_quantity * detail.unit_price) : '—' }}
-                  </span>
-                </TableCell>
-
                 <!-- Sold Qty (read-only) -->
-                <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:py-3 md:text-end">
+                <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-3 md:text-end rtl:text-right ltr:text-left">
                   <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</span>
                   <span class="tabular-nums">{{ detail.consumed_quantity }}</span>
                 </TableCell>
 
                 <!-- Remaining Qty (read-only) -->
-                <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:py-3 md:text-end">
+                <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-3 md:text-end rtl:text-right ltr:text-left">
                   <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</span>
                   <span class="tabular-nums font-semibold">{{ detail.remaining_quantity }}</span>
                 </TableCell>

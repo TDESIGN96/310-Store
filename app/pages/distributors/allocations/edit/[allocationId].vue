@@ -106,7 +106,9 @@ const loadAllocation = async () => {
 
     const variationObj = isRecord(raw.variation) ? raw.variation : null
     const warehouseObj = isRecord(raw.warehouse) ? raw.warehouse : null
-    const productObj = isRecord(variationObj?.product) ? variationObj.product : null
+    const productObj = isRecord(raw.product)
+      ? raw.product
+      : (isRecord(variationObj?.product) ? variationObj.product : null)
 
     const parsed: AllocationDetail = {
       id: String(raw.id ?? allocationId.value),
@@ -118,10 +120,10 @@ const loadAllocation = async () => {
       remaining_quantity: toNumber(raw.remaining_quantity, 0),
       distributor_label: labelOf(raw.distributor, 'name', 'name_en', 'name_ar'),
       product_label: productObj ? localeLabel(productObj) : labelOf(raw.product, 'name_en', 'name_ar', 'name'),
-      variation_label: labelOf(raw.variation, 'label', 'name', 'sku'),
-      warehouse_label: labelOf(raw.warehouse, 'name', 'name_en', 'name_ar'),
+      variation_label: labelOf(variationObj ?? raw.variation, 'label', 'name', 'sku'),
+      warehouse_label: labelOf(warehouseObj ?? raw.warehouse, 'name', 'name_en', 'name_ar'),
       description: typeof raw.description === 'string' ? raw.description : '',
-      unit_price: toNumber(raw.price ?? raw.unit_price ?? raw.standard_price, 0),
+      unit_price: toNumber(raw.unit_price ?? variationObj?.price ?? raw.price ?? raw.standard_price, 0),
     }
 
     if (!parsed.variation_id || !parsed.warehouse_id) {
@@ -258,10 +260,8 @@ onMounted(loadAllocation)
             <TableHeader class="hidden md:table-header-group">
               <TableRow class="bg-muted/40 hover:bg-muted/40">
                 <TableHead class="min-w-[240px] text-start">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                <TableHead class="min-w-[160px] text-start">{{ t('distributors_show.allocation_row_description') }}</TableHead>
                 <TableHead class="w-28 text-start">{{ t('distributors_show.allocation_quantity') }}</TableHead>
                 <TableHead class="w-32 text-start">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
-                <TableHead class="w-28 text-start">{{ t('distributors_show.allocation_row_total') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -288,13 +288,7 @@ onMounted(loadAllocation)
                   </div>
                 </TableCell>
 
-                <!-- Description (read-only) -->
-                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[160px] md:py-3">
-                  <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
-                    {{ t('distributors_show.allocation_row_description') }}
-                  </span>
-                  <p class="text-sm text-muted-foreground">{{ detail.description || '—' }}</p>
-                </TableCell>
+              
 
                 <!-- Qty (editable) -->
                 <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
@@ -325,14 +319,7 @@ onMounted(loadAllocation)
                 </TableCell>
 
                 <!-- Total (read-only computed) -->
-                <TableCell class="flex justify-between items-center py-1.5 md:table-cell md:align-top md:py-3 md:text-start md:tabular-nums">
-                  <span class="text-xs font-medium text-muted-foreground md:hidden">
-                    {{ t('distributors_show.allocation_row_total') }}
-                  </span>
-                  <div class="font-medium md:ms-auto md:flex md:h-9 md:max-w-28 md:items-center md:justify-start tabular-nums">
-                    {{ formatMoney(rowTotal) }}
-                  </div>
-                </TableCell>
+                
               </TableRow>
             </TableBody>
           </Table>
