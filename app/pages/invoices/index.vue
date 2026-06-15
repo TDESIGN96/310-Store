@@ -30,7 +30,6 @@ definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
 const { canAccess, canCreate, canEdit, canDelete, can } = usePermissions()
-const { $api } = useApi()
 const invoicesStore = useInvoicesStore()
 
 const canViewInvoices = computed(() => canAccess('invoices'))
@@ -51,7 +50,6 @@ const copyingId = ref<number | null>(null)
 const selectedIds = ref<Set<number>>(new Set())
 const bulkDeleteConfirmOpen = ref(false)
 const bulkDeleteLoading = ref(false)
-const shipmentSyncLoading = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
@@ -133,6 +131,10 @@ const warehouseLabel = (row: InvoiceListItem) => {
 
 const statusLabel = (row: InvoiceListItem) => {
   if (row.status_label) return row.status_label
+  if (row.status === 'issued') return t('invoices_page.status_issued')
+  if (row.status === 'paid') return t('invoices_page.status_paid')
+  if (row.status === 'partially_returned') return t('invoices_page.status_partially_returned')
+  if (row.status === 'returned') return t('invoices_page.status_returned')
   if (row.status === 'pending') return t('invoices_page.status_pending')
   if (row.status === 'in_delivery') return t('invoices_page.status_in_delivery')
   if (row.status === 'complete') return t('invoices_page.status_complete')
@@ -204,21 +206,6 @@ const confirmBulkDelete = async () => {
   }
   finally {
     bulkDeleteLoading.value = false
-  }
-}
-
-const syncShipmentStatus = async () => {
-  shipmentSyncLoading.value = true
-  try {
-    await $api('/invoices/sync-shipment-status', { method: 'POST' })
-    toast.success(t('invoices_page.shipment_sync_success'))
-    await loadRows(currentPage.value)
-  }
-  catch {
-    toast.error(t('invoices_page.shipment_sync_error'))
-  }
-  finally {
-    shipmentSyncLoading.value = false
   }
 }
 
@@ -315,17 +302,6 @@ const goToPage = (page: number) => {
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('invoices_page.reset_filters') }}</Button>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-          <Button
-            class="h-9 gap-2 w-full sm:w-auto"
-            variant="outline"
-            :disabled="shipmentSyncLoading || loading"
-            @click="syncShipmentStatus"
-          >
-            <Loader2 v-if="shipmentSyncLoading" class="size-4 animate-spin" />
-            <RotateCcw v-else class="size-4" />
-            <span class="hidden sm:inline">{{ t('invoices_page.shipment_status_sync') }}</span>
-            <span class="sm:hidden">{{ t('invoices_page.sync_status') }}</span>
-          </Button>
           <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto" as-child>
             <NuxtLink to="/invoices/create"><Plus class="size-4" />{{ t('invoices_page.new_invoice') }}</NuxtLink>
           </Button>
@@ -387,10 +363,10 @@ const goToPage = (page: number) => {
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_invoice_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_supply_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.warehouse') }}</TableHead>
-              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_shipment_status') }}</TableHead>
               <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_discount_amount') }}</TableHead>
               <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('invoices_page.col_total') }}</TableHead>
               <TableHead class="rtl:text-start text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_return_id') }}</TableHead>
+              <TableHead class="text-start font-medium whitespace-nowrap">{{ t('invoices_page.col_status') }}</TableHead>
               <TableHead class="font-medium min-w-[220px] text-end">{{ t('invoices_page.col_actions') }}</TableHead>
             </TableRow>
           </TableHeader>
@@ -432,11 +408,6 @@ const goToPage = (page: number) => {
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.warehouse') }}</span>
                 <span class="text-sm text-muted-foreground rtl:text-start">{{ warehouseLabel(row) }}</span>
               </TableCell>
-              
-              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
-                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_shipment_status') }}</span>
-                <span class="text-sm text-muted-foreground rtl:text-start">{{ row.shipment_status_label || '—' }}</span>
-              </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_discount_amount') }}</span>
                 <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtMoney(row.total_discount) }}</span>
@@ -448,6 +419,10 @@ const goToPage = (page: number) => {
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_return_id') }}</span>
                 <span class="text-sm rtl:text-start">{{ row.return_reference || row.return_reference_number || '—' }}</span>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_status') }}</span>
+                <span class="text-sm text-muted-foreground rtl:text-start">{{ statusLabel(row) }}</span>
               </TableCell>
               <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions

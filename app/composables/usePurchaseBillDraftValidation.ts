@@ -26,6 +26,17 @@ export function validatePurchaseBillDraft(
   if (!draft.warehouse_id) errors.warehouse_id = t('purchase_bills_page.warehouse_required')
   if (!selectedRowsCount) errors.items = t('purchase_bills_page.product_required')
 
+  draft.additional_costs.forEach((cost, idx) => {
+    const key = String(cost.key ?? '').trim()
+    const amount = Number(cost.amount)
+    if (amount > 0 && !key) {
+      errors[`additional_cost_${idx}_key`] = t('purchase_bills_page.additional_cost_label_required')
+    }
+    if (key && (!Number.isFinite(amount) || amount < 0)) {
+      errors[`additional_cost_${idx}_amount`] = t('purchase_bills_page.additional_cost_amount_invalid')
+    }
+  })
+
   draft.items.forEach((item, idx) => {
     if (!item.product_id) return
     if (item.product?.variations.length && !item.variation_id) {
@@ -57,7 +68,7 @@ export function firstPurchaseBillValidationToastDescription(errors: Record<strin
   for (const k of FORM_KEY_ORDER) {
     if (errors[k]) return errors[k]!
   }
-  const rowKeys = Object.keys(errors).filter(k => k.startsWith('row_')).sort()
+  const rowKeys = Object.keys(errors).filter(k => k.startsWith('row_') || k.startsWith('additional_cost_')).sort()
   if (rowKeys.length) return errors[rowKeys[0]!]!
   return Object.values(errors)[0] ?? ''
 }

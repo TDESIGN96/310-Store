@@ -36,7 +36,7 @@ export interface PurchaseBillListItem {
 }
 
 export interface PurchaseBillAdditionalCost {
-  name: string
+  key: string
   amount: number
 }
 
@@ -68,7 +68,6 @@ export interface PurchaseBillDraft {
   supply_date: string
   terms: string
   notes: string
-  other_fees: number
   additional_costs: PurchaseBillAdditionalCost[]
   items: PurchaseBillDraftItem[]
 }
@@ -119,10 +118,24 @@ const createEmptyDraft = (): PurchaseBillDraft => ({
   supply_date: todayIso(),
   terms: '',
   notes: '',
-  other_fees: 0,
   additional_costs: [],
   items: [createEmptyItem()],
 })
+
+const createEmptyAdditionalCost = (): PurchaseBillAdditionalCost => ({
+  key: '',
+  amount: 0,
+})
+
+const normalizeAdditionalCost = (costRaw: unknown): PurchaseBillAdditionalCost | null => {
+  if (!costRaw || typeof costRaw !== 'object') return null
+  const cost = costRaw as Record<string, unknown>
+  const key = String(cost.key ?? cost.name ?? '').trim().slice(0, 100)
+  const amountNum = Number(cost.amount)
+  const amount = Math.max(0, Number.isFinite(amountNum) ? amountNum : 0)
+  if (!key && amount <= 0) return null
+  return { key, amount }
+}
 
 // Purchase-bill-only cache of variation buying prices (keyed by variation id),
 // populated from the product detail endpoint. Kept local to this store so the
@@ -388,14 +401,20 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
       .filter(item => item.product_id)
 
     const additionalCosts = (Array.isArray(bill.additional_costs) ? bill.additional_costs : [])
-      .map((costRaw) => {
-        const cost = costRaw as Record<string, unknown>
-        return {
-          name: String(cost.name ?? ''),
-          amount: Math.max(0, toNumber(cost.amount, 0)),
-        }
-      })
-      .filter(cost => cost.name || cost.amount > 0)
+      .map(normalizeAdditionalCost)
+      .filter((cost): cost is PurchaseBillAdditionalCost => cost !== null)
+
+    const legacyOtherFees = Math.max(
+      0,
+      toNumber(
+        toFiniteNumberOrUndefined(bill.other_fees)
+        ?? toFiniteNumberOrUndefined((bill.district as Record<string, unknown> | null)?.other_fees),
+        0,
+      ),
+    )
+    if (!additionalCosts.length && legacyOtherFees > 0) {
+      additionalCosts.push({ key: 'Other fees', amount: legacyOtherFees })
+    }
 
     const supplier = (bill.supplier && typeof bill.supplier === 'object' ? bill.supplier : null) as Record<string, unknown> | null
     const district = (bill.district && typeof bill.district === 'object' ? bill.district : null) as Record<string, unknown> | null
@@ -419,14 +438,6 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
       supply_date: toDateInputValue(bill.supply_date) || todayIso(),
       terms: String(bill.terms ?? ''),
       notes: String(bill.notes ?? ''),
-      other_fees: Math.max(
-        0,
-        toNumber(
-          toFiniteNumberOrUndefined(bill.other_fees)
-          ?? toFiniteNumberOrUndefined((bill.district as Record<string, unknown> | null)?.other_fees),
-          0,
-        ),
-      ),
       additional_costs: additionalCosts,
       items: items.length ? items : [createEmptyItem()],
     }
@@ -439,6 +450,10 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     discountValue: item.discount_value,
   })
 
+  const additionalCostsTotal = computed(() =>
+    draft.value.additional_costs.reduce((sum, cost) => sum + Math.max(0, cost.amount), 0),
+  )
+
   const summary = computed<QuotationSummaryResult>(() => {
     const rows: QuotationLineMathInput[] = draft.value.items.map(item => ({
       qty: item.qty,
@@ -449,7 +464,7 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     return calculateQuotationSummary({
       rows,
       deliveryFees: 0,
-      otherFees: draft.value.other_fees,
+      otherFees: additionalCostsTotal.value,
     })
   })
 
@@ -480,6 +495,26 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
 
   const clearAllRows = () => {
     draft.value.items = [createEmptyItem()]
+  }
+
+  const addAdditionalCost = () => {
+    draft.value.additional_costs.push(createEmptyAdditionalCost())
+  }
+
+  const removeAdditionalCost = (index: number) => {
+    draft.value.additional_costs.splice(index, 1)
+  }
+
+  const setAdditionalCostKey = (index: number, key: string) => {
+    const row = draft.value.additional_costs[index]
+    if (!row) return
+    row.key = key.trim().slice(0, 100)
+  }
+
+  const setAdditionalCostAmount = (index: number, amount: number) => {
+    const row = draft.value.additional_costs[index]
+    if (!row) return
+    row.amount = normalizeNonNegative(amount)
   }
 
   const setRowProduct = async (index: number, product: QuotationProductOption, variationId: number | null = null) => {
@@ -561,8 +596,12 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     supply_date: draft.value.supply_date || undefined,
     terms: draft.value.terms || undefined,
     notes: draft.value.notes || undefined,
-    other_fees: draft.value.other_fees || 0,
-    additional_costs: draft.value.additional_costs,
+    additional_costs: draft.value.additional_costs
+      .filter(cost => cost.key.trim())
+      .map(cost => ({
+        key: cost.key.trim().slice(0, 100),
+        amount: Math.max(0, cost.amount),
+      })),
     subtotal: summary.value.subtotal,
     total_discount: summary.value.totalDiscount,
     grand_total: summary.value.grandTotal,
@@ -637,12 +676,17 @@ export const usePurchaseBillsStore = defineStore('purchaseBills', () => {
     pagination,
     currentPurchaseBill,
     summary,
+    additionalCostsTotal,
     rowMath,
     resetDraft,
     addRow,
     clearRow,
     removeRow,
     clearAllRows,
+    addAdditionalCost,
+    removeAdditionalCost,
+    setAdditionalCostKey,
+    setAdditionalCostAmount,
     setRowProduct,
     setRowVariation,
     setRowQty,

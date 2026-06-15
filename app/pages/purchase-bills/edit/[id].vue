@@ -127,13 +127,6 @@ const loadDistrictOptions = async () => {
 const onDistrictChange = (value: unknown) => {
   const selectedId = Number(value ?? 0)
   draft.value.district_id = Number.isFinite(selectedId) && selectedId > 0 ? selectedId : null
-  if (!draft.value.district_id) {
-    draft.value.other_fees = 0
-    return
-  }
-  const selected = districtOptions.value.find(item => item.id === draft.value.district_id)
-  if (!selected) return
-  draft.value.other_fees = Math.max(0, Number(selected.other_fees) || 0)
 }
 type SaveMode = 'close' | 'add'
 const savePurchaseBill = async (mode: SaveMode) => {
@@ -356,11 +349,41 @@ onMounted(async () => {
           </div>
 
           <div class="flex flex-wrap gap-2"><Button type="button" variant="outline" class="gap-1.5" @click="purchaseBillsStore.addRow"><Plus class="size-4" />{{ t('purchase_bills_page.add_row') }}</Button><Button type="button" variant="outline" class="text-red-600" @click="clearDialogOpen = true">{{ t('purchase_bills_page.clear_all') }}</Button></div>
-          <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.subtotal) }}</p></div>
-            <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.totalDiscount) }}</p></div>
-            <div class="space-y-1"><label class="text-xs text-muted-foreground">{{ t('purchase_bills_page.other_fees') }}</label><Input :model-value="draft.other_fees" type="number" min="0" class="tabular-nums" @update:model-value="value => draft.other_fees = Math.max(0, Number(value) || 0)" /></div>
-            <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ formatMoney(summary.grandTotal) }}</p></div>
+          <div class="space-y-4 rounded-lg border bg-muted/20 p-4">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.subtotal) }}</p></div>
+              <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ formatMoney(summary.totalDiscount) }}</p></div>
+              <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ formatMoney(summary.grandTotal) }}</p></div>
+            </div>
+
+            <div class="space-y-3 border-t border-border/60 pt-4">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-medium">{{ t('purchase_bills_page.additional_costs') }}</p>
+                <Button type="button" variant="outline" size="sm" class="gap-1.5" @click="purchaseBillsStore.addAdditionalCost()"><Plus class="size-4" />{{ t('purchase_bills_page.add_additional_cost') }}</Button>
+              </div>
+
+              <div v-if="draft.additional_costs.length === 0" class="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">{{ t('purchase_bills_page.add_additional_cost') }}</div>
+
+              <div v-else class="space-y-2">
+                <div v-for="(cost, idx) in draft.additional_costs" :key="idx" class="grid gap-2 sm:grid-cols-[1fr_140px_auto]">
+                  <div class="space-y-1">
+                    <label v-if="idx === 0" class="text-xs text-muted-foreground">{{ t('purchase_bills_page.additional_cost_label') }}</label>
+                    <Input :model-value="cost.key" maxlength="100" :placeholder="t('purchase_bills_page.additional_cost_label_placeholder')" :class="formErrors[`additional_cost_${idx}_key`] ? 'border-red-500 focus-visible:ring-red-500' : ''" @update:model-value="value => purchaseBillsStore.setAdditionalCostKey(idx, String(value ?? ''))" />
+                    <p v-if="formErrors[`additional_cost_${idx}_key`]" class="text-xs text-red-500">{{ formErrors[`additional_cost_${idx}_key`] }}</p>
+                  </div>
+                  <div class="space-y-1">
+                    <label v-if="idx === 0" class="text-xs text-muted-foreground">{{ t('purchase_bills_page.additional_cost_amount') }}</label>
+                    <Input :model-value="cost.amount" type="number" min="0" step="0.01" class="tabular-nums" :placeholder="t('purchase_bills_page.additional_cost_amount_placeholder')" :class="formErrors[`additional_cost_${idx}_amount`] ? 'border-red-500 focus-visible:ring-red-500' : ''" @update:model-value="value => purchaseBillsStore.setAdditionalCostAmount(idx, Math.max(0, Number(value) || 0))" />
+                    <p v-if="formErrors[`additional_cost_${idx}_amount`]" class="text-xs text-red-500">{{ formErrors[`additional_cost_${idx}_amount`] }}</p>
+                  </div>
+                  <div class="flex items-end"><Button type="button" variant="ghost" size="icon" class="size-9 text-red-600" @click="purchaseBillsStore.removeAdditionalCost(idx)"><Trash2 class="size-4" /></Button></div>
+                </div>
+              </div>
+
+              <div v-if="purchaseBillsStore.additionalCostsTotal > 0" class="flex justify-end">
+                <p class="text-sm text-muted-foreground">{{ t('purchase_bills_page.additional_costs_total') }}: <span class="ms-1 font-semibold tabular-nums text-foreground">{{ formatMoney(purchaseBillsStore.additionalCostsTotal) }}</span></p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

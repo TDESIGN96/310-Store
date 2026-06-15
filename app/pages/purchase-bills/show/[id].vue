@@ -25,15 +25,37 @@ const districtName = computed(() => {
   const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
   return String(district?.district ?? current.district_name ?? '').trim()
 })
-const otherFeeValue = computed(() => {
+const additionalCosts = computed(() => {
   const current = purchaseBill.value
-  if (!current) return 0
-  const direct = asNumber(current.other_fees)
-  if (direct > 0) return direct
+  if (!current) return [] as Array<{ key: string, amount: number }>
+
+  const fromApi = Array.isArray(current.additional_costs) ? current.additional_costs : []
+  const parsed = fromApi
+    .map((costRaw) => {
+      if (!costRaw || typeof costRaw !== 'object') return null
+      const cost = costRaw as Record<string, unknown>
+      const key = String(cost.key ?? cost.name ?? '').trim()
+      const amount = asNumber(cost.amount)
+      if (!key && amount <= 0) return null
+      return { key, amount }
+    })
+    .filter((cost): cost is { key: string, amount: number } => cost !== null)
+
+  if (parsed.length) return parsed
+
+  const legacyFee = asNumber(current.other_fees)
+  if (legacyFee > 0) return [{ key: t('purchase_bills_page.other_fees'), amount: legacyFee }]
+
   const district = (current.district && typeof current.district === 'object' ? current.district : null) as Record<string, unknown> | null
-  return asNumber(district?.other_fees)
+  const districtFee = asNumber(district?.other_fees)
+  if (districtFee > 0) return [{ key: t('purchase_bills_page.other_fees'), amount: districtFee }]
+
+  return []
 })
-const showOtherFee = computed(() => otherFeeValue.value > 0)
+const additionalCostsTotal = computed(() =>
+  additionalCosts.value.reduce((sum, cost) => sum + cost.amount, 0),
+)
+const showAdditionalCosts = computed(() => additionalCosts.value.length > 0)
 const items = computed(() => {
   const raw = purchaseBill.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []
@@ -125,7 +147,6 @@ onMounted(async () => {
         <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6"><FileText class="size-4 text-white/70" /><h2 class="text-base font-semibold">{{ t('purchase_bills_page.details_section') }}</h2></div>
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.reference_number') }}</p><p class="text-sm font-medium">{{ purchaseBill.reference_number || `#${purchaseBill.id}` }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.col_status') }}</p><p class="text-sm font-medium">{{ purchaseBill.status_label || purchaseBill.status || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.supplier_name') }}</p><p class="text-sm">{{ purchaseBill.supplier_name || purchaseBill.customer_name || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.warehouse') }}</p><p class="text-sm">{{ warehouseName }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.supplier_mobile') }}</p><p class="text-sm">{{ purchaseBill.supplier_mobile || purchaseBill.customer_mobile || '—' }}</p></div>
@@ -170,7 +191,23 @@ onMounted(async () => {
           <div class="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.subtotal') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(purchaseBill.subtotal) }}</p></div>
             <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(purchaseBill.total_discount) }}</p></div>
-            <div v-if="showOtherFee"><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.other_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(otherFeeValue) }}</p></div>
+            <div v-if="showAdditionalCosts" class="sm:col-span-2 lg:col-span-4 space-y-2">
+              <p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.additional_costs') }}</p>
+              <div class="space-y-1.5">
+                <div
+                  v-for="(cost, idx) in additionalCosts"
+                  :key="idx"
+                  class="flex items-baseline gap-2 text-sm"
+                >
+                  <span>{{ cost.key }}</span>
+                  <span class="font-semibold tabular-nums">{{ money(cost.amount) }}</span>
+                </div>
+              </div>
+              <p class="text-sm text-muted-foreground">
+                {{ t('purchase_bills_page.additional_costs_total') }}:
+                <span class="ms-1 font-semibold tabular-nums text-foreground">{{ money(additionalCostsTotal) }}</span>
+              </p>
+            </div>
             <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ money(purchaseBill.grand_total) }}</p></div>
           </div>
         </CardContent>
