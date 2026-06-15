@@ -13,8 +13,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
+
+const money = (value: unknown) => formatDisplayNumber(value)
 
 interface DistrictAuthor {
   id: number
@@ -202,11 +205,11 @@ onMounted(() => {
               </div>
               <div class="space-y-1">
                 <p class="text-xs text-muted-foreground">{{ t('districts_show.delivery_fee') }}</p>
-                <p class="font-medium tabular-nums">{{ district.delivery_fee || '—' }}</p>
+                <p class="font-medium tabular-nums">{{ money(district.delivery_fee) }}</p>
               </div>
               <div class="space-y-1">
                 <p class="text-xs text-muted-foreground">{{ t('districts_show.other_fees') }}</p>
-                <p class="font-medium tabular-nums">{{ district.other_fees || '—' }}</p>
+                <p class="font-medium tabular-nums">{{ money(district.other_fees) }}</p>
               </div>
             </div>
           </div>

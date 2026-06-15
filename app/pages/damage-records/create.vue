@@ -38,6 +38,7 @@ import type { QuotationProductOption, QuotationProductVariation } from '@/compos
 import { useQuotationProducts } from '@/composables/useQuotationProducts'
 import { useInvoiceWarehouses, type InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { useDamageRecordsStore, type DamageReason } from '@/stores/damageRecords'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -113,6 +114,7 @@ const estimatedLoss = computed(() => {
   if (!qty || !unitPrice.value) return 0
   return qty * unitPrice.value
 })
+const formatEstimatedLoss = (value: number) => formatDisplayNumber(value, { locale: locale.value })
 
 const warehouseDisabled = computed(() => !selectedVariationId.value)
 
@@ -734,7 +736,7 @@ const cancelLeave = () => {
             >
               <label class="text-sm font-medium">{{ t('damage_records_page.estimated_loss_label') }}</label>
               <Input
-                :model-value="estimatedLoss.toFixed(2)"
+                :model-value="formatEstimatedLoss(estimatedLoss)"
                 disabled
                 class="bg-muted"
               />

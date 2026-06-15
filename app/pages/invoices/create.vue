@@ -51,6 +51,7 @@ import { useInvoicesStore } from '@/stores/invoices'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { firstInvoiceValidationToastDescription, validateInvoiceDraft } from '@/composables/useInvoiceDraftValidation'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -85,7 +86,7 @@ const productDisplayName = (product: QuotationProductOption | null): string => {
   return product.name_en || product.name_ar || `#${product.id}`
 }
 
-const formatMoney = (value: number): string => value.toFixed(2)
+const formatMoney = (value: number): string => formatDisplayNumber(value, { locale: locale.value })
 const warehouseDisplayName = (warehouse: InvoiceWarehouseOption): string => {
   if (locale.value === 'ar') return warehouse.name_ar || warehouse.name_en || `#${warehouse.id}`
   return warehouse.name_en || warehouse.name_ar || `#${warehouse.id}`
@@ -340,15 +341,7 @@ onMounted(() => {
               <label class="text-sm font-medium">{{ t('invoices_page.supply_date') }}</label>
               <Input v-model="draft.supply_date" type="date" />
             </div>
-            <div class="flex items-center gap-2">
-              <Checkbox
-                :model-value="draft.send_to_shipping"
-                @update:model-value="draft.send_to_shipping = Boolean($event)"
-              />
-              <label class="text-sm font-medium cursor-pointer" @click="draft.send_to_shipping = !draft.send_to_shipping">
-                {{ t('invoices_page.send_to_shipping') }}
-              </label>
-            </div>
+            
           </div>
           <div class="space-y-2">
             <label class="text-sm font-medium">{{ t('invoices_page.invoice_description') }}</label>

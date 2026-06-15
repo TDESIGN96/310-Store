@@ -290,7 +290,7 @@ const goToPage = (page: number) => {
       </div>
       <Button
         v-if="canCreateStocktaking"
-        class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light"
+        class="h-9 gap-2 bg-primary hover:bg-primary/90 text-white"
         as-child
       >
         <NuxtLink to="/stocktaking-orders/create">

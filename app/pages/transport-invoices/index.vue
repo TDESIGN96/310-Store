@@ -22,10 +22,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import type { TransportInvoiceListItem } from '@/stores/invoices'
+import type { TransportInvoiceListItem } from '@/stores/transportInvoices'
 import { useInvoicesStore } from '@/stores/invoices'
 import { useTransportInvoicesStore } from '@/stores/transportInvoices'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -42,7 +43,7 @@ const canDeleteInvoice = computed(() => canDelete('invoices'))
 const canCreateInvoiceReturn = computed(() => can('invoice_returns.store'))
 
 const search = ref('')
-const filterStatus = ref<'all' | 'pending' | 'in_delivery' | 'complete'>('all')
+// const filterStatus = ref<'all' | 'pending' | 'in_delivery' | 'complete'>('all')
 const invoiceDate = ref('')
 const supplyDate = ref('')
 const currentPage = ref(1)
@@ -56,9 +57,9 @@ const bulkDeleteLoading = ref(false)
 const shipmentSyncLoading = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-const hasActiveFilters = computed(
-  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDate.value) || Boolean(supplyDate.value),
-)
+// const hasActiveFilters = computed(
+//   () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDate.value) || Boolean(supplyDate.value),
+// )
 const isAllSelected = computed(
   () => sortedList.value.length > 0 && sortedList.value.every(row => selectedIds.value.has(row.id)),
 )
@@ -126,7 +127,8 @@ const toIsoDateTimeEnd = (value: string): string | undefined => {
   if (!normalized) return undefined
   return `${normalized}T23:59:59.999Z`
 }
-const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
+const fmtMoney = (value?: number) => formatDisplayNumber(value ?? 0, { locale: locale.value })
+const fmtGrandTotal = (value?: number) => formatDisplayGrandTotal(value ?? 0, { locale: locale.value })
 const warehouseLabel = (row: TransportInvoiceListItem) => {
   const nameAr = row.warehouse_name_ar || ''
   const nameEn = row.warehouse_name_en || ''
@@ -153,7 +155,7 @@ const loadRows = async (page = currentPage.value) => {
     customer_name: query || undefined,
     invoice_date: toIsoDateTimeStart(invoiceDate.value),
     supply_date: toIsoDateTimeStart(supplyDate.value),
-    status: filterStatus.value === 'all' ? undefined : filterStatus.value,
+    // status: filterStatus.value === 'all' ? undefined : filterStatus.value,
   }
   await transportInvoicesStore.loadList(params)
   selectedIds.value = new Set()
@@ -161,7 +163,7 @@ const loadRows = async (page = currentPage.value) => {
 
 const resetFilters = async () => {
   search.value = ''
-  filterStatus.value = 'all'
+  // filterStatus.value = 'all'
   invoiceDate.value = ''
   supplyDate.value = ''
   await loadRows(1)
@@ -267,14 +269,14 @@ const cloneInvoice = async (row: TransportInvoiceListItem) => {
   }
 }
 
-watch(
-  [search, filterStatus, invoiceDate, supplyDate],
-  () => {
-    if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => loadRows(1), 300)
-  },
-  { deep: true },
-)
+// watch(
+//   [search, filterStatus, invoiceDate, supplyDate],
+//   () => {
+//     if (debounceTimer) clearTimeout(debounceTimer)
+//     debounceTimer = setTimeout(() => loadRows(1), 300)
+//   },
+//   { deep: true },
+// )
 
 onMounted(async () => {
   await loadRows(1)
@@ -305,7 +307,7 @@ const goToPage = (page: number) => {
             <Input v-model="search" :placeholder="t('transport_invoices_page.list_search_placeholder')" class="h-9 pr-9 w-full" />
             <Loader2 v-if="loading && search.trim()" class="absolute top-1/2 left-3 z-[1] size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
           </div>
-          <Select v-model="filterStatus">
+          <!-- <Select v-model="filterStatus">
             <SelectTrigger class="h-9 w-full sm:w-[220px] gap-2"><Filter class="size-3.5 shrink-0 text-muted-foreground" /><SelectValue :placeholder="t('transport_invoices_page.filter_status')" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{{ t('transport_invoices_page.filter_status_all') }}</SelectItem>
@@ -313,8 +315,8 @@ const goToPage = (page: number) => {
               <SelectItem value="in_delivery">{{ t('transport_invoices_page.status_in_delivery') }}</SelectItem>
               <SelectItem value="complete">{{ t('transport_invoices_page.status_complete') }}</SelectItem>
             </SelectContent>
-          </Select>
-          <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('transport_invoices_page.reset_filters') }}</Button>
+          </Select> -->
+          <!-- <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('transport_invoices_page.reset_filters') }}</Button> -->
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
           <Button
@@ -328,7 +330,7 @@ const goToPage = (page: number) => {
             <span class="hidden sm:inline">{{ t('transport_invoices_page.shipment_status_sync') }}</span>
             <span class="sm:hidden">{{ t('transport_invoices_page.sync_status') }}</span>
           </Button>
-          <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto" as-child>
+          <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-white w-full sm:w-auto" as-child>
             <NuxtLink to="/transport-invoices/create"><Plus class="size-4" />{{ t('transport_invoices_page.new_invoice') }}</NuxtLink>
           </Button>
         </div>
@@ -445,7 +447,7 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_total') }}</span>
-                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtMoney(row.grand_total) }}</span>
+                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtGrandTotal(row.grand_total) }}</span>
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_return_id') }}</span>
@@ -457,7 +459,7 @@ const goToPage = (page: number) => {
                     { key: `edit-${row.id}`, label: t('transport_invoices_page.action_edit'), type: 'link', to: `/transport-invoices/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditInvoice && row.can_be_edited },
                     { key: `copy-${row.id}`, label: t('transport_invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: false, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
                     { key: `return-${row.id}`, label: t('transport_invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', visible: canCreateInvoiceReturn && row.status !== 'returned', onClick: () => navigateTo(`/transport-invoices/return/${row.id}`) },
-                    { key: `delete-${row.id}`, label: t('transport_invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteInvoice, onClick: () => requestDelete(row) },
+                    { key: `delete-${row.id}`, label: t('transport_invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteInvoice && row.can_be_deleted, onClick: () => requestDelete(row) },
                   ]"
                   variant="invoice"
                   align="end"

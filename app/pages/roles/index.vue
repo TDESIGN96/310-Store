@@ -236,7 +236,7 @@ onMounted(loadRoles)
      
       <Button
         v-if="canCreateRole"
-        class="gap-2 bg-primary hover:bg-primary/90 text-Green-Light"
+        class="gap-2 bg-primary hover:bg-primary/90 text-white"
         as-child
       >
         <NuxtLink to="/roles/create">

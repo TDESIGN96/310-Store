@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -354,8 +355,8 @@ const goToEditAllocation = (row: AllocationRow) =>
 const goToReturnAllocation = (row: AllocationRow) =>
   navigateTo({ path: `/distributors/allocations/return/${row.id}`, query: { distributor_id: distributorId.value } })
 
-const formatQty = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(2))
-const formatMoney = (value: number | null) => (value == null ? '—' : value.toFixed(2))
+const formatQty = (value: number) => formatDisplayNumber(value, { locale: locale.value })
+const formatMoney = (value: number | null) => (value == null ? '—' : formatDisplayNumber(value, { locale: locale.value }))
 
 const distributorName = computed(() => distributor.value?.name_en || distributor.value?.name_ar || `#${distributor.value?.id ?? ''}`)
 

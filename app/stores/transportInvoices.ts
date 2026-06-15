@@ -39,6 +39,7 @@ export interface TransportInvoiceListItem {
   return_reference: string
   return_reference_number: string
   can_be_edited: boolean
+  can_be_deleted: boolean
 }
 
 export interface TransportInvoiceReturnFormItem {
@@ -299,6 +300,9 @@ export const useTransportInvoicesStore = defineStore('transport-invoices', () =>
       can_be_edited: payload.can_be_edited === true
         || payload.can_be_edited === 1
         || payload.can_be_edited === '1',
+      can_be_deleted: payload.can_be_deleted === true
+        || payload.can_be_deleted === 1
+        || payload.can_be_deleted === '1',
     }
   }
 

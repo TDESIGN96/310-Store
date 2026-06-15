@@ -11,8 +11,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
+
+const money = (value: unknown) => formatDisplayNumber(value)
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -265,7 +268,7 @@ onMounted(() => {
           </div>
           <div class="space-y-1">
             <p class="text-xs text-muted-foreground">{{ t('products_page.col_price') }}</p>
-            <p>{{ product.price ?? '—' }}</p>
+            <p class="tabular-nums">{{ money(product.price) }}</p>
           </div>
           <div class="space-y-1 md:col-span-2">
             <p class="text-xs text-muted-foreground">{{ t('products_form.description') }}</p>
@@ -344,7 +347,7 @@ onMounted(() => {
                 <TableRow v-for="(row, idx) in product.tiered_prices" :key="idx">
                   <TableCell>{{ row.quantity_from }}</TableCell>
                   <TableCell>{{ row.quantity_to }}</TableCell>
-                  <TableCell>{{ row.price }}</TableCell>
+                  <TableCell class="tabular-nums">{{ money(row.price) }}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

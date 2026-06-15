@@ -3,8 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
+
+const money = (value: unknown) => formatDisplayNumber(value)
 
 const route = useRoute()
 const productId = computed(() => String(route.params.productId))
@@ -112,7 +115,7 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_sku') }}</p><p>{{ variation.sku || '—' }}</p></div>
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_barcode') }}</p><p>{{ variation.barcode || '—' }}</p></div>
-        <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_price') }}</p><p>{{ variation.price || '—' }}</p></div>
+        <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_price') }}</p><p class="tabular-nums">{{ money(variation.price) }}</p></div>
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_qty') }}</p><p>{{ variation.stock_quantity || 0 }}</p></div>
         <div v-if="createdAtRaw"><p class="text-xs text-muted-foreground">{{ t('common.created_at') }}</p><p>{{ formatDateTime(createdAtRaw) }}</p></div>
         <div v-if="showUpdatedAt"><p class="text-xs text-muted-foreground">{{ t('common.updated_at') }}</p><p>{{ formatDateTime(updatedAtRaw) }}</p></div>
@@ -136,7 +139,7 @@ onMounted(() => {
         <div class="space-y-1 text-sm">
           <p v-if="!(variation.tiered_prices as any[])?.length">—</p>
           <p v-for="(tier, idx) in (variation.tiered_prices as any[] || [])" :key="idx">
-            {{ tier.quantity_from }} - {{ tier.quantity_to }} : {{ tier.price }}
+            {{ tier.quantity_from }} - {{ tier.quantity_to }} : {{ money(tier.price) }}
           </p>
         </div>
       </div>

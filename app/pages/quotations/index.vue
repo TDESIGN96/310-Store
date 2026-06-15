@@ -46,10 +46,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { QuotationListItem } from '@/stores/quotations'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 const { loadActiveWarehouses } = useInvoiceWarehouses()
@@ -147,7 +148,8 @@ const toIsoDateTimeStart = (value: string): string | undefined => {
   if (!normalized) return undefined
   return `${normalized}T00:00:00.000Z`
 }
-const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
+const fmtMoney = (value?: number) => formatDisplayNumber(value ?? 0, { locale: locale.value })
+const fmtGrandTotal = (value?: number) => formatDisplayGrandTotal(value ?? 0, { locale: locale.value })
 
 const isEditable = (row: QuotationListItem) => {
   return row.status === 'active' || row.status === 'expired'
@@ -486,7 +488,7 @@ const goToPage = (page: number) => {
 
         <Button
           v-if="canCreateQuotation"
-          class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto"
+          class="h-9 gap-2 bg-primary hover:bg-primary/90 text-white w-full sm:w-auto"
           as-child
         >
           <NuxtLink to="/quotations/create">
@@ -644,7 +646,7 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('quotations_page.col_total') }}</span>
-                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtMoney(row.grand_total) }}</span>
+                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtGrandTotal(row.grand_total) }}</span>
               </TableCell>
               <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions

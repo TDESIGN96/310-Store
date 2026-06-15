@@ -17,13 +17,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useDamageRecordsStore } from '@/stores/damageRecords'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { can } = usePermissions()
 const { getErrorMessage } = useApiError()
 const damageStore = useDamageRecordsStore()
@@ -33,6 +34,8 @@ const canEditDamage = computed(() => can('damage.edit'))
 const canApproveDamage = computed(() => can('damage.approve'))
 const canCancelDamage = computed(() => can('damage.cancel'))
 const canDisposition = computed(() => can('damage.disposition'))
+
+const formatMoney = (value: unknown) => formatDisplayNumber(value, { locale: locale.value })
 
 // ─── Page state ───────────────────────────────────────────────────────────────
 const loading = ref(false)
@@ -322,7 +325,7 @@ const confirmCancel = async () => {
               {{ t('damage_records_page.estimated_loss_label') }}
             </p>
             <p class="mt-1 text-sm font-semibold tabular-nums">
-              {{ record.estimated_loss.toFixed(2) }}
+              {{ formatMoney(record.estimated_loss) }}
             </p>
           </div>
 

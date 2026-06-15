@@ -135,7 +135,7 @@ const breadcrumb = computed(() => getBreadcrumbForPath(route.path))
               <DropdownMenuTrigger as-child>
                 <SidebarMenuButton size="lg">
                   <div
-                    class="flex size-7 items-center justify-center rounded-full bg-primary text-Green-Light text-xs font-bold shrink-0"
+                    class="flex size-7 items-center justify-center rounded-full bg-primary text-white text-xs font-bold shrink-0"
                   >
                     {{ currentUser?.name?.charAt(0) ?? '؟' }}
                   </div>

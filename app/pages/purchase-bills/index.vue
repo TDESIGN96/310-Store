@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import type { PurchaseBillListItem } from '@/stores/purchaseBills'
 import { usePurchaseBillsStore } from '@/stores/purchaseBills'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -108,7 +109,8 @@ const toIsoDateTimeStart = (value: string): string | undefined => {
   if (!normalized) return undefined
   return `${normalized}T00:00:00.000Z`
 }
-const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
+const fmtMoney = (value?: number) => formatDisplayNumber(value ?? 0, { locale: locale.value })
+const fmtGrandTotal = (value?: number) => formatDisplayGrandTotal(value ?? 0, { locale: locale.value })
 const warehouseLabel = (row: PurchaseBillListItem) => {
   const nameAr = row.warehouse_name_ar || ''
   const nameEn = row.warehouse_name_en || ''
@@ -233,7 +235,7 @@ const goToPage = (page: number) => {
           </Select>
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('purchase_bills_page.reset_filters') }}</Button>
         </div>
-        <Button v-if="canCreatePurchaseBill" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto" as-child>
+        <Button v-if="canCreatePurchaseBill" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-white w-full sm:w-auto" as-child>
           <NuxtLink to="/purchase-bills/create"><Plus class="size-4" />{{ t('purchase_bills_page.new_purchase_bill') }}</NuxtLink>
         </Button>
       </div>
@@ -342,7 +344,7 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('purchase_bills_page.col_total') }}</span>
-                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtMoney(row.grand_total) }}</span>
+                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtGrandTotal(row.grand_total) }}</span>
               </TableCell>
               <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions

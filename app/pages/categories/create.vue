@@ -444,7 +444,7 @@ onMounted(loadParentCategories)
         <NuxtLink to="/categories">{{ t('common.cancel') }}</NuxtLink>
       </Button>
       <Button
-        class="bg-primary hover:bg-primary/90 text-Green-Light"
+        class="bg-primary hover:bg-primary/90 text-white"
         :disabled="submitting"
         @click="createCategory"
       >

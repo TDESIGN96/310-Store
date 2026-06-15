@@ -424,7 +424,7 @@ onMounted(() => {
             <NuxtLink to="/warehouses">{{ t('common.cancel') }}</NuxtLink>
           </Button>
           <Button
-            class="bg-primary hover:bg-primary/90 text-Green-Light"
+            class="bg-primary hover:bg-primary/90 text-white"
             :disabled="submitting || loadingUsers"
             @click="updateWarehouse"
           >

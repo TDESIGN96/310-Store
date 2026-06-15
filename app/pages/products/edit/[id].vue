@@ -367,7 +367,7 @@ onMounted(async () => {
             <NuxtLink :to="`/products/variations/${id}`">{{ t('products_page.manage_variations') }}</NuxtLink>
           </Button>
           <Button
-            class="inline-flex w-full items-center justify-center gap-2 bg-primary text-Green-Light hover:bg-primary/90 sm:w-auto sm:min-w-[140px]"
+            class="inline-flex w-full items-center justify-center gap-2 bg-primary text-white hover:bg-primary/90 sm:w-auto sm:min-w-[140px]"
             :disabled="submitting"
             @click="saveProduct"
           >

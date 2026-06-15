@@ -56,6 +56,7 @@ import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import { useDamageRecordsStore, type DamageReason } from '@/stores/damageRecords'
 import { useInvoiceWarehouses, type InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -182,7 +183,7 @@ const pagination = computed(() => damageStore.pagination)
 const loading = computed(() => damageStore.listLoading)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
+const fmtMoney = (value?: number) => formatDisplayNumber(value ?? 0, { locale: locale.value })
 
 const warehouseOptionLabel = (warehouse: InvoiceWarehouseOption) =>
   locale.value === 'ar'

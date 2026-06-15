@@ -49,6 +49,7 @@ import RichTextEditor from '@/components/quotations/RichTextEditor.vue'
 import { useQuotationsStore } from '@/stores/quotations'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import { firstValidationToastDescription, validateQuotationDraft } from '@/composables/useQuotationDraftValidation'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -80,7 +81,7 @@ const productDisplayName = (product: QuotationProductOption | null): string => {
   return product.name_en || product.name_ar || `#${product.id}`
 }
 
-const formatMoney = (value: number): string => value.toFixed(2)
+const formatMoney = (value: number): string => formatDisplayNumber(value, { locale: locale.value })
 
 const districtLabel = (item: { district: string }) => item.district || '—'
 

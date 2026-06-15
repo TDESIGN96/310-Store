@@ -302,7 +302,7 @@ onMounted(() => {
           </Button>
           <Button
             type="button"
-            class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-Green-Light min-w-[120px]"
+            class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white min-w-[120px]"
             :disabled="submitting"
             @click="handleSave"
           >

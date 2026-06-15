@@ -21,8 +21,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
+
+const money = (value: unknown) => formatDisplayNumber(value)
 
 const route = useRoute()
 const productId = computed(() => String(route.params.productId))
@@ -194,7 +197,7 @@ onMounted(() => {
           <p class="text-sm text-muted-foreground">#{{ productId }}</p>
         </div>
       </div>
-      <Button v-if="canCreateVariation" as-child class="bg-primary hover:bg-primary/90 text-Green-Light">
+      <Button v-if="canCreateVariation" as-child class="bg-primary hover:bg-primary/90 text-white">
         <NuxtLink :to="`/products/variations/${productId}/create`">{{ t('products_variations.add_variation') }}</NuxtLink>
       </Button>
     </div>
@@ -296,7 +299,7 @@ onMounted(() => {
             </TableCell>
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-center">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_price') }}</span>
-              <span>{{ row.price || '—' }}</span>
+              <span class="tabular-nums">{{ money(row.price) }}</span>
             </TableCell>
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-center">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_qty') }}</span>

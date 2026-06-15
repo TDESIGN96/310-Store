@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { usePurchaseBillsStore } from '@/stores/purchaseBills'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -65,7 +66,8 @@ const asNumber = (value: unknown) => {
   const n = Number(value)
   return Number.isFinite(n) ? n : 0
 }
-const money = (value: unknown) => asNumber(value).toFixed(2)
+const money = (value: unknown) => formatDisplayNumber(asNumber(value), { locale: locale.value })
+const grandTotal = (value: unknown) => formatDisplayGrandTotal(asNumber(value), { locale: locale.value })
 const fmtDate = (value: unknown) => {
   return formatDisplayDate(value)
 }
@@ -208,7 +210,7 @@ onMounted(async () => {
                 <span class="ms-1 font-semibold tabular-nums text-foreground">{{ money(additionalCostsTotal) }}</span>
               </p>
             </div>
-            <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ money(purchaseBill.grand_total) }}</p></div>
+            <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ grandTotal(purchaseBill.grand_total) }}</p></div>
           </div>
         </CardContent>
       </Card>

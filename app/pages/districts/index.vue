@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -163,7 +164,7 @@ onMounted(() => {
         <h1 class="text-2xl font-bold tracking-tight">{{ t('districts_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">{{ t('districts_page.subtitle') }}</p>
       </div>
-      <Button v-if="canCreateDistrict" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light" as-child>
+      <Button v-if="canCreateDistrict" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-white" as-child>
         <NuxtLink to="/districts/create">
           <Plus class="size-4" />
           {{ t('districts_page.create') }}
@@ -253,11 +254,11 @@ onMounted(() => {
             </TableCell>
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('districts_page.col_delivery_fee') }}</span>
-              <span class="text-sm text-muted-foreground tabular-nums">{{ row.delivery_fee || '0' }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ formatDisplayNumber(row.delivery_fee, { fallback: '0' }) }}</span>
             </TableCell>
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('districts_page.col_other_fees') }}</span>
-              <span class="text-sm text-muted-foreground tabular-nums">{{ row.other_fees || '0' }}</span>
+              <span class="text-sm text-muted-foreground tabular-nums">{{ formatDisplayNumber(row.other_fees, { fallback: '0' }) }}</span>
             </TableCell>
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.added_by') }}</span>

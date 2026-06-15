@@ -155,7 +155,7 @@ const createDistrict = async () => {
       <Button variant="outline" :disabled="submitting" as-child>
         <NuxtLink to="/districts">{{ t('common.cancel') }}</NuxtLink>
       </Button>
-      <Button class="bg-primary hover:bg-primary/90 text-Green-Light" :disabled="submitting" @click="createDistrict">
+      <Button class="bg-primary hover:bg-primary/90 text-white" :disabled="submitting" @click="createDistrict">
         <Loader2 v-if="submitting" class="size-4 animate-spin ml-2" />
         {{ submitting ? t('common.saving') : t('districts_form.submit_create') }}
       </Button>

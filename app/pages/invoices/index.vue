@@ -25,6 +25,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import type { InvoiceListItem } from '@/stores/invoices'
 import { useInvoicesStore } from '@/stores/invoices'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -122,7 +123,8 @@ const toIsoDateTimeEnd = (value: string): string | undefined => {
   if (!normalized) return undefined
   return `${normalized}T23:59:59.999Z`
 }
-const fmtMoney = (value?: number) => Number(value ?? 0).toFixed(2)
+const fmtMoney = (value?: number) => formatDisplayNumber(value ?? 0, { locale: locale.value })
+const fmtGrandTotal = (value?: number) => formatDisplayGrandTotal(value ?? 0, { locale: locale.value })
 const warehouseLabel = (row: InvoiceListItem) => {
   const nameAr = row.warehouse_name_ar || ''
   const nameEn = row.warehouse_name_en || ''
@@ -302,7 +304,7 @@ const goToPage = (page: number) => {
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('invoices_page.reset_filters') }}</Button>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-          <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto" as-child>
+          <Button v-if="canCreateInvoice" class="h-9 gap-2 bg-primary hover:bg-primary/90 text-white w-full sm:w-auto" as-child>
             <NuxtLink to="/invoices/create"><Plus class="size-4" />{{ t('invoices_page.new_invoice') }}</NuxtLink>
           </Button>
         </div>
@@ -414,7 +416,7 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_total') }}</span>
-                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtMoney(row.grand_total) }}</span>
+                <span class="text-sm tabular-nums text-end md:rtl:text-start">{{ fmtGrandTotal(row.grand_total) }}</span>
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_return_id') }}</span>
@@ -430,7 +432,7 @@ const goToPage = (page: number) => {
                     { key: `edit-${row.id}`, label: t('invoices_page.action_edit'), type: 'link', to: `/invoices/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditInvoice && row.can_be_edited },
                     { key: `copy-${row.id}`, label: t('invoices_page.action_copy'), type: 'button', icon: Copy, tone: 'default', visible: false, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneInvoice(row) },
                     { key: `return-${row.id}`, label: t('invoices_page.action_return'), type: 'button', icon: RotateCcw, tone: 'default', visible: canCreateInvoiceReturn && row.status !== 'returned', onClick: () => navigateTo(`/invoices/return/${row.id}`) },
-                    { key: `delete-${row.id}`, label: t('invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteInvoice, onClick: () => requestDelete(row) },
+                    { key: `delete-${row.id}`, label: t('invoices_page.action_delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteInvoice && row.can_be_deleted, onClick: () => requestDelete(row) },
                   ]"
                   variant="invoice"
                   align="end"

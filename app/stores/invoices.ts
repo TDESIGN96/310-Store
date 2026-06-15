@@ -39,6 +39,7 @@ export interface InvoiceListItem {
   return_reference: string
   return_reference_number: string
   can_be_edited: boolean
+  can_be_deleted: boolean
 }
 
 export interface InvoiceReturnFormItem {
@@ -225,6 +226,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
   }
 
   const resolveSendToShipping = (invoice: Record<string, unknown>): boolean => {
+    const shipmentCode = String(invoice.shipment_code ?? '').trim()
+    if (!shipmentCode) return false
+
     const raw = invoice.send_to_shipping
     if (raw !== null && raw !== undefined) {
       if (typeof raw === 'boolean') return raw
@@ -235,7 +239,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
         if (normalized === '1' || normalized === 'true' || normalized === 'yes') return true
       }
     }
-    if (String(invoice.shipment_code ?? '').trim()) return true
+    if (shipmentCode) return true
     if (invoice.shipment_status !== null && invoice.shipment_status !== undefined && String(invoice.shipment_status).trim() !== '') {
       return true
     }
@@ -299,6 +303,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
       can_be_edited: payload.can_be_edited === true
         || payload.can_be_edited === 1
         || payload.can_be_edited === '1',
+      can_be_deleted: payload.can_be_deleted === true
+        || payload.can_be_deleted === 1
+        || payload.can_be_deleted === '1',
     }
   }
 

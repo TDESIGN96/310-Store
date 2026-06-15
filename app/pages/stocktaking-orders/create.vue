@@ -917,7 +917,7 @@ onMounted(async () => {
           <NuxtLink to="/stocktaking-orders">{{ t('stocktaking_orders_page.cancel') }}</NuxtLink>
         </Button>
         <Button
-          class="bg-primary hover:bg-primary/90 text-Green-Light"
+          class="bg-primary hover:bg-primary/90 text-white"
           :disabled="submitting"
           @click="submitCreate"
         >

@@ -300,7 +300,7 @@ onMounted(loadRole)
         <Button variant="outline" :disabled="submitting" as-child>
           <NuxtLink to="/roles">{{ t('common.cancel') }}</NuxtLink>
         </Button>
-        <Button class="bg-primary hover:bg-primary/90 text-Green-Light" :disabled="submitting" @click="updateRole">
+        <Button class="bg-primary hover:bg-primary/90 text-white" :disabled="submitting" @click="updateRole">
           {{ submitting ? t('common.saving') : t('roles_form.submit_edit') }}
         </Button>
       </div>

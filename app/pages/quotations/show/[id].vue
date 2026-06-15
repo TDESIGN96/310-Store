@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -67,7 +68,8 @@ const asNumber = (value: unknown) => {
   const n = Number(value)
   return Number.isFinite(n) ? n : 0
 }
-const money = (value: unknown) => asNumber(value).toFixed(2)
+const money = (value: unknown) => formatDisplayNumber(asNumber(value), { locale: locale.value })
+const grandTotal = (value: unknown) => formatDisplayGrandTotal(asNumber(value), { locale: locale.value })
 const fmtDate = (value: unknown) => {
   return formatDisplayDate(value)
 }
@@ -298,7 +300,7 @@ onMounted(async () => {
             </div>
             <div>
               <p class="text-xs text-muted-foreground">{{ t('quotations_page.grand_total') }}</p>
-              <p class="mt-1 text-lg font-bold tabular-nums">{{ money(quotation.grand_total) }}</p>
+              <p class="mt-1 text-lg font-bold tabular-nums">{{ grandTotal(quotation.grand_total) }}</p>
             </div>
           </div>
         </CardContent>

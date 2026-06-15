@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -74,7 +75,7 @@ const localeLabel = (raw: unknown): string => {
   return labelOf(raw, 'name_en', 'name_ar', 'name')
 }
 
-const formatMoney = (value: number): string => value.toFixed(2)
+const formatMoney = (value: number): string => formatDisplayNumber(value, { locale: locale.value })
 
 const rowTotal = computed(() => {
   if (!detail.value) return 0

@@ -51,6 +51,7 @@ import { useInvoicesStore } from '@/stores/invoices'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { firstInvoiceValidationToastDescription, validateInvoiceDraft } from '@/composables/useInvoiceDraftValidation'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -85,7 +86,7 @@ const productDisplayName = (product: QuotationProductOption | null): string => {
   return product.name_en || product.name_ar || `#${product.id}`
 }
 
-const formatMoney = (value: number): string => value.toFixed(2)
+const formatMoney = (value: number): string => formatDisplayNumber(value, { locale: locale.value })
 const warehouseDisplayName = (warehouse: InvoiceWarehouseOption): string => {
   if (locale.value === 'ar') return warehouse.name_ar || warehouse.name_en || `#${warehouse.id}`
   return warehouse.name_en || warehouse.name_ar || `#${warehouse.id}`

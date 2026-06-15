@@ -443,7 +443,7 @@ onMounted(() => loadWarehouses())
       </div>
       <Button
         v-if="canCreateWarehouse"
-        class="gap-2 bg-primary hover:bg-primary/90 text-Green-Light"
+        class="gap-2 bg-primary hover:bg-primary/90 text-white"
         as-child
       >
         <NuxtLink to="/warehouses/create">

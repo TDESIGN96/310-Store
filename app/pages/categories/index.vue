@@ -631,7 +631,7 @@ onMounted(() => {
 
         <div class="hidden sm:block sm:flex-1" />
 
-        <Button v-if="canCreate" class="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-Green-Light" as-child>
+        <Button v-if="canCreate" class="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-white" as-child>
           <NuxtLink to="/categories/create">
             <Plus class="size-4" />
             {{ t('categories_page.create') }}

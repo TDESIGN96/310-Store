@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -150,7 +151,7 @@ const productDisplayName = (product: LookupProduct | null): string => {
   return product.name_en || product.name_ar || '—'
 }
 
-const formatMoney = (value: number): string => value.toFixed(2)
+const formatMoney = (value: number): string => formatDisplayNumber(value, { locale: locale.value })
 
 const rowTotal = (row: AllocationRowDraft): number => row.quantity * row.standard_price
 

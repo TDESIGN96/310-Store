@@ -542,7 +542,7 @@ onMounted(() => loadUnits())
         <div class="hidden sm:block sm:flex-1" />
         <Button
           v-if="canCreateUnit"
-          class="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-Green-Light"
+          class="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-white"
           as-child
         >
         <NuxtLink to="/units/create">

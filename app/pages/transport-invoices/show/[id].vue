@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useInvoicesStore } from '@/stores/invoices'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
@@ -52,7 +53,8 @@ const asNumber = (value: unknown) => {
   const n = Number(value)
   return Number.isFinite(n) ? n : 0
 }
-const money = (value: unknown) => asNumber(value).toFixed(2)
+const money = (value: unknown) => formatDisplayNumber(asNumber(value), { locale: locale.value })
+const grandTotal = (value: unknown) => formatDisplayGrandTotal(asNumber(value), { locale: locale.value })
 const fmtDate = (value: unknown) => {
   return formatDisplayDate(value)
 }
@@ -134,7 +136,6 @@ onMounted(async () => {
         <div class="flex items-center gap-2 border-b bg-section-details border-section-details text-white px-4 py-3.5 sm:px-6"><FileText class="size-4 text-white/70" /><h2 class="text-base font-semibold">{{ t('transport_invoices_page.details_section') }}</h2></div>
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.reference_number') }}</p><p class="text-sm font-medium">{{ invoice.reference_number || `#${invoice.id}` }}</p></div>
-          <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.col_status') }}</p><p class="text-sm font-medium">{{ invoice.status_label || invoice.status || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.shipment_status_label') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status_label || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.customer_name') }}</p><p class="text-sm">{{ invoice.customer_name || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.warehouse') }}</p><p class="text-sm">{{ warehouseName }}</p></div>
@@ -181,7 +182,7 @@ onMounted(async () => {
             <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.total_discount') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(invoice.total_discount) }}</p></div>
             <div v-if="showDeliveryFee"><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.delivery_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(deliveryFeeValue) }}</p></div>
             <div v-if="showOtherFee"><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.other_fees') }}</p><p class="mt-1 font-semibold tabular-nums">{{ money(otherFeeValue) }}</p></div>
-            <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ money(invoice.grand_total) }}</p></div>
+            <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.grand_total') }}</p><p class="mt-1 text-lg font-bold tabular-nums">{{ grandTotal(invoice.grand_total) }}</p></div>
           </div>
         </CardContent>
       </Card>

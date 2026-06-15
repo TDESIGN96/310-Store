@@ -13,8 +13,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
+
+const money = (value: unknown) => formatDisplayNumber(value)
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -471,10 +474,10 @@ onMounted(() => {
                       {{ variation.barcode || '—' }}
                     </TableCell>
                     <TableCell class="align-middle text-end tabular-nums text-sm">
-                      {{ variation.buying_price ?? '—' }}
+                      {{ money(variation.buying_price) }}
                     </TableCell>
                     <TableCell class="align-middle text-end tabular-nums text-sm">
-                      {{ variation.price ?? '—' }}
+                      {{ money(variation.price) }}
                     </TableCell>
                     <TableCell class="align-middle text-end tabular-nums text-sm">
                       {{ variation.stock_quantity ?? 0 }}
@@ -542,7 +545,7 @@ onMounted(() => {
                         class="space-y-1.5 rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-xs tabular-nums"
                       >
                         <p v-for="(tier, tierIdx) in variation.tiered_prices" :key="tierIdx" class="leading-snug">
-                          {{ tier.quantity_from ?? 0 }} – {{ tier.quantity_to ?? 0 }} · {{ tier.price ?? 0 }}
+                          {{ tier.quantity_from ?? 0 }} – {{ tier.quantity_to ?? 0 }} · {{ money(tier.price) }}
                         </p>
                       </div>
                       <span v-else class="text-sm text-muted-foreground">—</span>

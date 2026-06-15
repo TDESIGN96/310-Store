@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Eye, Loader2, Pencil, Search, Trash2 } from 'lucide-vue-next'
+import { Loader2, Pencil, Search, Trash2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -223,7 +223,12 @@ onMounted(async () => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.col_ref_id') }}</span>
-                <span class="font-medium">{{ row.return_reference || `#${row.id}` }}</span>
+                <NuxtLink
+                  :to="`/invoice-returns/show/${row.id}`"
+                  class="text-sm font-medium text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                >
+                  {{ row.return_reference || `#${row.id}` }}
+                </NuxtLink>
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.col_invoice_id') }}</span>
@@ -240,7 +245,6 @@ onMounted(async () => {
               <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions
                   :actions="[
-                    { key: `show-${row.id}`, label: t('common.view'), type: 'link', to: `/invoice-returns/show/${row.id}`, icon: Eye, tone: 'default' },
                     { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: `/invoice-returns/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditReturn },
                     { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', visible: canDeleteReturn, onClick: () => requestDelete(row) },
                   ]"

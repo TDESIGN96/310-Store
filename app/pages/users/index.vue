@@ -524,7 +524,7 @@ onMounted(() => {
       </div>
       <Button
         v-if="canCreateUser"
-        class="gap-2 bg-primary hover:bg-primary/90 text-Green-Light w-full sm:w-auto"
+        class="gap-2 bg-primary hover:bg-primary/90 text-white w-full sm:w-auto"
         as-child
       >
         <NuxtLink to="/users/create">

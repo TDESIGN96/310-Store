@@ -280,7 +280,7 @@ onMounted(async () => {
         <Button variant="outline" :disabled="submitting" as-child>
           <NuxtLink to="/invoices">{{ t('common.cancel') }}</NuxtLink>
         </Button>
-        <Button class="bg-primary hover:bg-primary/90 text-Green-Light" :disabled="submitting" @click="submitReturn">
+        <Button class="bg-primary hover:bg-primary/90 text-white" :disabled="submitting" @click="submitReturn">
           <Loader2 v-if="submitting" class="size-4 animate-spin" />
           {{ t('invoices_page.return_submit') }}
         </Button>

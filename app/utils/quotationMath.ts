@@ -1,3 +1,5 @@
+import { roundDownToCurrencyStep } from '@/utils/currencyRounding'
+
 export interface QuotationLineMathInput {
   qty: string | number | undefined
   unitPrice: string | number | undefined
@@ -75,7 +77,7 @@ export const calculateQuotationSummary = (
   return {
     subtotal: totals.subtotal,
     totalDiscount: totals.totalDiscount,
-    grandTotal,
+    grandTotal: roundDownToCurrencyStep(Math.max(0, grandTotal)),
   }
 }
 

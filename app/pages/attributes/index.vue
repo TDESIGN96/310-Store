@@ -254,7 +254,7 @@ onMounted(() => {
         <h1 class="text-2xl font-bold tracking-tight">{{ t('attributes_page.title') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">{{ t('attributes_page.subtitle') }}</p>
       </div>
-      <Button class="h-9 gap-2 bg-primary hover:bg-primary/90 text-Green-Light" @click="openCreate">
+      <Button class="h-9 gap-2 bg-primary hover:bg-primary/90 text-white" @click="openCreate">
         <Plus class="size-4" />
         {{ t('attributes_page.create') }}
       </Button>
