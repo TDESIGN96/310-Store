@@ -295,8 +295,8 @@ const goToPage = (page: number) => {
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_bill_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_supply_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.warehouse') }}</TableHead>
-              <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_discount_amount') }}</TableHead>
-              <TableHead class="rtl:text-start text-end font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_total') }}</TableHead>
+              <TableHead class="rtl:text-start text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_discount_amount') }}</TableHead>
+              <TableHead class="rtl:text-start text-start font-medium whitespace-nowrap">{{ t('purchase_bills_page.col_total') }}</TableHead>
               <TableHead class="font-medium min-w-[220px] text-end">{{ t('purchase_bills_page.col_actions') }}</TableHead>
             </TableRow>
           </TableHeader>
