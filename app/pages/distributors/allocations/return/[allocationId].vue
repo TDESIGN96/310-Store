@@ -294,7 +294,7 @@ onMounted(loadAllocation)
 
                 <!-- Allocated Qty (read-only) -->
                 <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-3 md:text-end rtl:text-right ltr:text-left">
-                  <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_quantity') }}</span>
+                  <span class="text-xs font-medium text-muted-foreground md:hidden ">{{ t('distributors_show.allocation_quantity') }}</span>
                   <span class="tabular-nums">{{ detail.allocated_quantity }}</span>
                 </TableCell>
 

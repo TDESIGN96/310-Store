@@ -728,10 +728,10 @@ onMounted(async () => {
               <TableHeader class="hidden md:table-header-group">
                 <TableRow class="bg-muted/40 hover:bg-muted/40">
                   <TableHead class="min-w-[220px] rtl:text-right">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                  <TableHead class="w-24 text-end rtl:text-right">{{ t('distributors_show.allocation_quantity') }}</TableHead>
-                  <TableHead class="w-28 text-end rtl:text-right">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
+                  <TableHead class="w-24 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.allocation_quantity') }}</TableHead>
+                  <TableHead class="w-28 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
                   <TableHead class="text-end w-24 rtl:text-right">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
-                  <TableHead class="text-end w-24 rtl:text-right">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
+                  <TableHead class="text-end w-24 rtl:text-right ltr:text-left">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
                   <TableHead class="rtl:text-right">{{ t('distributors_show.stock_allocation_col_allocation_date') }}</TableHead>
                   <TableHead class="rtl:text-right">{{ t('distributors_show.stock_allocation_col_status') }}</TableHead>
                   <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_actions') }}</TableHead>
@@ -795,13 +795,13 @@ onMounted(async () => {
                   
 
                   <!-- Qty (allocated) -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_quantity') }}</span>
                     <span class="tabular-nums">{{ formatQty(row.allocated_quantity) }}</span>
                   </TableCell>
 
                   <!-- Unit Price -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_unit_price') }}</span>
                     <span class="tabular-nums">{{ formatMoney(row.unit_price) }}</span>
                   </TableCell>
@@ -809,25 +809,25 @@ onMounted(async () => {
                  
 
                   <!-- Sold Qty -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
-                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</span>
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
+                    <span class="text-xs font-medium text-muted-foreground md:hidden ">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</span>
                     <span class="tabular-nums">{{ formatQty(row.sold_quantity) }}</span>
                   </TableCell>
 
                   <!-- Remaining Qty -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right">
+                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</span>
                     <span class="tabular-nums">{{ formatQty(row.remaining_quantity) }}</span>
                   </TableCell>
 
                   <!-- Date -->
-                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 ">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_allocation_date') }}</span>
                     <span>{{ row.allocation_date || '—' }}</span>
                   </TableCell>
 
                   <!-- Status -->
-                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                  <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 ">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_status') }}</span>
                     <span
                       class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
