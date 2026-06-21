@@ -100,7 +100,7 @@ const buildQueryParams = (page = currentPage.value) => {
   return {
     from_date: fromIso,
     to_date: toIso,
-    include_distributor_invoices: includeDistributorInvoices.value,
+    include_distributor_invoices: includeDistributorInvoices.value === true,
     warehouse_ids: selectedWarehouseIds.value.length ? selectedWarehouseIds.value : undefined,
     page,
     per_page: pagination.value.per_page || 15,
@@ -266,7 +266,10 @@ onMounted(async () => {
             </div>
             <div class="flex items-end">
               <label class="flex items-center gap-2 text-sm cursor-pointer pb-2">
-                <Checkbox v-model="includeDistributorInvoices" />
+                <Checkbox
+                  :model-value="includeDistributorInvoices"
+                  @update:model-value="value => includeDistributorInvoices = value === true"
+                />
                 <span>{{ t('reports_sales_summary.filter_include_distributor_invoices') }}</span>
               </label>
             </div>

@@ -186,6 +186,17 @@ const extractPagination = (data: Record<string, unknown> | null): SalesSummaryPa
   }
 }
 
+const toBoolean = (value: unknown): boolean => {
+  if (value === true || value === 1 || value === '1') return true
+  if (value === false || value === 0 || value === '0') return false
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'true') return true
+    if (normalized === 'false') return false
+  }
+  return Boolean(value)
+}
+
 const extractFilters = (data: Record<string, unknown> | null): SalesSummaryFiltersEcho | null => {
   if (!data?.filters || typeof data.filters !== 'object') return null
   const filters = data.filters as Record<string, unknown>
@@ -193,7 +204,7 @@ const extractFilters = (data: Record<string, unknown> | null): SalesSummaryFilte
     from_date: String(filters.from_date ?? ''),
     to_date: String(filters.to_date ?? ''),
     warehouse_ids: Array.isArray(filters.warehouse_ids) ? filters.warehouse_ids as Array<number | null> : [],
-    include_distributor_invoices: Boolean(filters.include_distributor_invoices),
+    include_distributor_invoices: toBoolean(filters.include_distributor_invoices),
   }
 }
 
@@ -283,7 +294,7 @@ export const useReportsStore = defineStore('reports', () => {
       const query: Record<string, string | number | boolean | string[] | undefined> = {
         from_date: params.from_date,
         to_date: params.to_date,
-        include_distributor_invoices: params.include_distributor_invoices,
+        include_distributor_invoices: params.include_distributor_invoices === true ? 1 : 0,
         page: params.page ?? 1,
         per_page: params.per_page ?? 15,
         'warehouse_ids[]': params.warehouse_ids?.length
