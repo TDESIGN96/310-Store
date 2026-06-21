@@ -400,7 +400,7 @@ span.flatpickr-weekday {
 
 .kamu-headline-accent {
   display: block;
-  color: var(--color-Green-Light);
+  color: #ffffff;
   text-shadow: 0 0 60px color-mix(in srgb, var(--color-Green-Light) 40%, transparent);
 }
 

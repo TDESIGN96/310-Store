@@ -89,6 +89,11 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/damage-records\/edit\/[^/]+\/?$/, permission: 'damage.edit' },
   { pattern: /^\/damage-records\/show\/[^/]+\/?$/, permission: 'damage.view' },
   { pattern: /^\/damage-records\/?$/, permission: 'damage.view' },
+
+  // Reports
+  { pattern: /^\/reports\/sales-summary\/?$/, permission: ['reports.index', 'reports.show'] },
+  { pattern: /^\/reports\/[^/]+\/?$/, permission: ['reports.index', 'reports.show'] },
+  { pattern: /^\/reports\/?$/, permission: ['reports.index', 'reports.show'] },
 ]
 
 /**
