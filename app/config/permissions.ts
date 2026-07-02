@@ -179,9 +179,6 @@ export const permissionGroups: PermissionGroup[] = [
     permissions: [
       { id: 'reports.index' },
       { id: 'reports.show' },
-      { id: 'reports.store' },
-      { id: 'reports.update' },
-      { id: 'reports.destroy' },
     ],
   },
   {

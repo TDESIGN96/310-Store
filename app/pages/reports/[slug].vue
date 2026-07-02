@@ -5,13 +5,7 @@ import { Button } from '@/components/ui/button'
 
 definePageMeta({ layout: 'default' })
 
-const PLACEHOLDER_SLUGS = [
-  'distributors-performance',
-  'product-profitability',
-  'sales-returns-analysis',
-  'warehouse-movement',
-  'damage-analysis',
-] as const
+const PLACEHOLDER_SLUGS = [] as const
 
 const route = useRoute()
 const { t } = useI18n()
@@ -22,16 +16,7 @@ if (!PLACEHOLDER_SLUGS.includes(slug.value as typeof PLACEHOLDER_SLUGS[number]))
   await navigateTo('/reports', { replace: true })
 }
 
-const titleKey = computed(() => {
-  const map: Record<string, string> = {
-    'distributors-performance': 'reports_hub.cards.distributors_performance.title',
-    'product-profitability': 'reports_hub.cards.product_profitability.title',
-    'sales-returns-analysis': 'reports_hub.cards.sales_returns_analysis.title',
-    'warehouse-movement': 'reports_hub.cards.warehouse_movement.title',
-    'damage-analysis': 'reports_hub.cards.damage_analysis.title',
-  }
-  return map[slug.value] ?? 'reports_hub.coming_soon_title'
-})
+const titleKey = computed(() => 'reports_hub.coming_soon_title')
 </script>
 
 <template>
