@@ -1037,6 +1037,8 @@ export default {
   products_variations: {
     product_info: 'معلومات المنتج',
     attributes: 'سمات المنتج',
+    shared_defaults_title: 'الإعدادات المشتركة',
+    shared_defaults_hint: 'تُطبَّق هذه الإعدادات تلقائياً على كل صف متغير.',
     global_warehouse: 'المستودع العام',
     main_image_url: 'رابط الصورة الرئيسية',
     additional_images: 'روابط الصور الإضافية',
@@ -1090,6 +1092,12 @@ export default {
     hint_variation_warehouse: 'اختر المستودع لمخزون هذا المتغير.',
     hint_min_qty: 'حد أدنى للكمية قبل ظهور التنبيه.',
     hint_values_by_attribute: 'اختر قيمة واحدة لكل سمة محددة.',
+    bulk_generate: 'إنشاء متغيرات متعددة',
+    bulk_generate_hint: 'اختر قيماً لكل سمة وسعراً مشتركاً، ثم انقر على "إنشاء" لإنشاء جميع التوليفات دفعةً واحدة.',
+    bulk_generate_button: 'إنشاء المتغيرات',
+    bulk_clear_variations: 'مسح المتغيرات',
+    bulk_price: 'السعر المشترك',
+    bulk_buying_price: 'سعر الشراء المشترك',
   },
 
   products_create: {
@@ -2055,7 +2063,11 @@ export default {
     images_count: '{current} / {max} صور',
     remove_image: 'إزالة',
     save: 'حفظ',
+    save_options: 'خيارات الحفظ',
+    save_and_variations: 'حفظ والانتقال إلى إنشاء المتغيرات',
+    save_and_list: 'حفظ والانتقال إلى القائمة',
     create_success: 'تم إنشاء المنتج',
+    create_id_missing: 'تم إنشاء المنتج، لكن تعذر قراءة المعرّف. سيتم التوجيه إلى قائمة المنتجات.',
     categories_load_error: 'تعذر تحميل التصنيفات.',
     units_load_error: 'تعذر تحميل الوحدات.',
     not_authenticated: 'يجب تسجيل الدخول لإنشاء منتج.',

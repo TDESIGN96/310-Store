@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowRight, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,6 +40,10 @@ type WarehouseItem = {
 }
 
 const warehouses = ref<WarehouseItem[]>([])
+const defaultWarehouseId = ref<number | null>(null)
+const defaultQuantity = ref(0)
+const defaultMinQuantity = ref(0)
+const defaultAllowNotification = ref(true)
 
 interface InventoryRowForm {
   _key: number
@@ -53,22 +57,182 @@ let inventoryRowKeyCounter = 0
 
 const createEmptyInventoryRow = (row: Partial<Omit<InventoryRowForm, '_key'>> = {}): InventoryRowForm => ({
   _key: ++inventoryRowKeyCounter,
-  warehouse_id: row.warehouse_id ?? null,
-  quantity: Number(row.quantity ?? 0),
-  min_quantity: Number(row.min_quantity ?? 0),
-  allow_notification: row.allow_notification ?? true,
+  warehouse_id: row.warehouse_id ?? defaultWarehouseId.value,
+  quantity: row.quantity !== undefined ? Number(row.quantity) : defaultQuantity.value,
+  min_quantity: row.min_quantity !== undefined ? Number(row.min_quantity) : defaultMinQuantity.value,
+  allow_notification: row.allow_notification !== undefined ? Boolean(row.allow_notification) : defaultAllowNotification.value,
 })
 
-const form = ref({
+interface VariationForm {
+  sku: string
+  barcode: string
+  price: number
+  buying_price: number
+  is_active: boolean
+  selectedValues: Record<number, number>
+  tiered_prices: Array<{ quantity_from: number; quantity_to: number; price: number }>
+  inventoryRows: InventoryRowForm[]
+}
+
+const form = ref<VariationForm>({
   sku: '',
   barcode: '',
   price: 0,
   buying_price: 0,
   is_active: true,
-  selectedValues: {} as Record<number, number>,
-  tiered_prices: [] as Array<{ quantity_from: number, quantity_to: number, price: number }>,
-  inventoryRows: [createEmptyInventoryRow()] as InventoryRowForm[],
+  selectedValues: {},
+  tiered_prices: [],
+  inventoryRows: [createEmptyInventoryRow()],
 })
+
+// ── Bulk generator ──────────────────────────────────────────────────────────
+const newVariations = ref<VariationForm[]>([])
+const bulkSelectedValues = ref<Record<number, number[]>>({})
+const bulkPrice = ref(0)
+const bulkBuyingPrice = ref(0)
+const bulkTieredPrices = ref<Array<{ quantity_from: number; quantity_to: number; price: number }>>([])
+
+function cartesian(arrays: number[][]): number[][] {
+  return arrays.reduce<number[][]>(
+    (acc, arr) => acc.flatMap(combo => arr.map(val => [...combo, val])),
+    [[]],
+  )
+}
+
+const toggleBulkValue = (attributeId: number, valueId: number) => {
+  const current = bulkSelectedValues.value[attributeId] ?? []
+  const idx = current.indexOf(valueId)
+  bulkSelectedValues.value[attributeId] = idx === -1
+    ? [...current, valueId]
+    : current.filter(id => id !== valueId)
+}
+
+const isBulkValueSelected = (attributeId: number, valueId: number) =>
+  (bulkSelectedValues.value[attributeId] ?? []).includes(valueId)
+
+const canBulkGenerate = computed(() =>
+  productsStore.draft.attribute_ids.length > 0
+  && productsStore.draft.attribute_ids.every(
+    attrId => (bulkSelectedValues.value[attrId]?.length ?? 0) > 0,
+  )
+  && bulkPrice.value > 0
+  && bulkBuyingPrice.value > 0,
+)
+
+const generateSkuForCombo = (selectedValues: Record<number, number>): string => {
+  return productsStore.draft.attribute_ids
+    .map((attrId) => {
+      const values = attributesStore.valuesByAttributeId.get(attrId) ?? []
+      const val = values.find(v => v.id === selectedValues[attrId])
+      return (val?.name ?? '').toLowerCase().replace(/\s+/g, '-')
+    })
+    .filter(Boolean)
+    .join('-')
+}
+
+const generateBulkVariations = () => {
+  const attrIds = productsStore.draft.attribute_ids
+  const arrays = attrIds.map(attrId => bulkSelectedValues.value[attrId] ?? [])
+  const combos = cartesian(arrays)
+
+  const newRows: VariationForm[] = combos.map((combo) => {
+    const selectedValues: Record<number, number> = {}
+    attrIds.forEach((attrId, i) => {
+      selectedValues[attrId] = combo[i]!
+    })
+    return {
+      sku: generateSkuForCombo(selectedValues),
+      barcode: '',
+      price: bulkPrice.value,
+      buying_price: bulkBuyingPrice.value,
+      is_active: true,
+      selectedValues,
+      tiered_prices: bulkTieredPrices.value.map(tp => ({ ...tp })),
+      inventoryRows: [createEmptyInventoryRow()],
+    }
+  })
+
+  newVariations.value.push(...newRows)
+}
+
+const addBulkTierPrice = () => {
+  bulkTieredPrices.value.push({ quantity_from: 0, quantity_to: 0, price: 0 })
+}
+
+const removeBulkTierPrice = (idx: number) => {
+  bulkTieredPrices.value.splice(idx, 1)
+}
+
+const bulkTieredRows = computed(() =>
+  bulkTieredPrices.value.map((tp, idx) => ({
+    key: idx,
+    minQty: tp.quantity_from,
+    maxQty: tp.quantity_to,
+    price: tp.price,
+  })),
+)
+
+const updateBulkTieredMin = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = bulkTieredPrices.value[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tier.quantity_from = cleaned === '' ? 0 : Number(cleaned)
+}
+
+const updateBulkTieredMax = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = bulkTieredPrices.value[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tier.quantity_to = cleaned === '' ? 0 : Number(cleaned)
+}
+
+const updateBulkTieredPrice = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = bulkTieredPrices.value[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9.]/g, '')
+  tier.price = cleaned === '' ? 0 : Number(cleaned)
+}
+
+const removeNewVariation = (idx: number) => {
+  newVariations.value.splice(idx, 1)
+}
+
+const createVariationPayload = (row: VariationForm) => {
+  const attributeValueIds = Object.values(row.selectedValues).map(v => Number(v)).filter(Boolean)
+  const tieredPrices = row.tiered_prices
+    .map(tp => ({
+      quantity_from: Number(tp.quantity_from ?? 0),
+      quantity_to: Number(tp.quantity_to ?? 0),
+      price: Number(tp.price ?? 0),
+    }))
+    .filter(tp => tp.quantity_from > 0 || tp.quantity_to > 0 || tp.price > 0)
+  const inventory = row.inventoryRows
+    .filter(invRow => invRow.warehouse_id)
+    .map(invRow => ({
+      warehouse_id: Number(invRow.warehouse_id),
+      quantity: Number(invRow.quantity ?? 0),
+      min_quantity: Number(invRow.min_quantity ?? 0),
+      allow_notification: Boolean(invRow.allow_notification),
+    }))
+
+  const payload: Record<string, unknown> = {
+    sku: row.sku,
+    barcode: row.barcode,
+    price: row.price,
+    buying_price: row.buying_price,
+    stock_quantity: inventory.reduce((sum, invRow) => sum + Number(invRow.quantity ?? 0), 0),
+    is_active: row.is_active,
+    tiered_prices: tieredPrices.length ? tieredPrices : [],
+  }
+
+  if (attributeValueIds.length) payload.attribute_value_ids = attributeValueIds
+  if (inventory.length) payload.inventory = inventory
+  return payload
+}
+// ── End bulk generator ──────────────────────────────────────────────────────
 
 const selectedAttributeIds = computed(() => productsStore.draft.attribute_ids)
 const isWarehouseActive = (warehouse: WarehouseItem) => {
@@ -95,10 +259,6 @@ const validateForm = () => {
 
   if (!form.value.sku.trim()) {
     fieldErrors.value.sku = t('products_form.validation_sku_required')
-    valid = false
-  }
-  if (!form.value.barcode.trim()) {
-    fieldErrors.value.barcode = t('products_variations.validation_barcode_required')
     valid = false
   }
   if (!(Number(form.value.price) > 0)) {
@@ -155,8 +315,25 @@ const validateForm = () => {
   return valid
 }
 
+watch([defaultWarehouseId, defaultQuantity, defaultMinQuantity, defaultAllowNotification], ([newId, newQty, newMin, newNotif]) => {
+  for (const row of form.value.inventoryRows) {
+    row.warehouse_id = newId as number | null
+    row.quantity = Number(newQty)
+    row.min_quantity = Number(newMin)
+    row.allow_notification = Boolean(newNotif)
+  }
+  for (const variation of newVariations.value) {
+    for (const row of variation.inventoryRows) {
+      row.warehouse_id = newId as number | null
+      row.quantity = Number(newQty)
+      row.min_quantity = Number(newMin)
+      row.allow_notification = Boolean(newNotif)
+    }
+  }
+})
+
 const addInventoryRow = () => {
-  form.value.inventoryRows.push(createEmptyInventoryRow())
+  form.value.inventoryRows.push(createEmptyInventoryRow({ warehouse_id: defaultWarehouseId.value }))
 }
 
 const removeInventoryRow = (inventoryRowKey: number) => {
@@ -266,6 +443,11 @@ const saveVariation = async () => {
       tiered_prices: tieredPrices.length ? tieredPrices : [],
       inventory,
     })
+
+    for (const row of newVariations.value) {
+      await productsStore.createVariation(productId.value, createVariationPayload(row))
+    }
+
     toast.success(t('toasts.save_success'))
     await navigateTo(`/products/variations/${productId.value}`)
   }
@@ -311,6 +493,7 @@ onMounted(async () => {
     form.value.inventoryRows = inventoryRows.length
       ? inventoryRows.map(row => createEmptyInventoryRow(row))
       : [createEmptyInventoryRow()]
+    defaultWarehouseId.value = form.value.inventoryRows[0]?.warehouse_id ?? null
     form.value.tiered_prices = (variation?.tiered_prices ?? []).map((tp: any) => ({
       quantity_from: Number(tp.quantity_from ?? 0),
       quantity_to: Number(tp.quantity_to ?? 0),
@@ -359,16 +542,49 @@ onMounted(async () => {
     </div>
 
     <div v-else class="rounded-lg border p-5 space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div class="rounded-md border bg-[#2254620a] p-4 space-y-3">
+        <div>
+          <h3 class="font-semibold text-secondary-foreground">{{ t('products_variations.shared_defaults_title') }}</h3>
+          <p class="text-xs text-muted-foreground mt-0.5">{{ t('products_variations.shared_defaults_hint') }}</p>
+        </div>
+        <label class="text-sm font-semibold text-secondary-foreground">{{ t('products_variations.global_warehouse') }}</label>
+        <Select
+          :model-value="defaultWarehouseId ? String(defaultWarehouseId) : ''"
+          @update:model-value="v => { defaultWarehouseId = v ? Number(v) : null }"
+        >
+          <SelectTrigger class="max-w-xs">
+            <SelectValue :placeholder="t('products_page.filter_warehouse')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="w in warehouses.filter(isWarehouseActive)" :key="w.id" :value="String(w.id)">
+              {{ w.name_en || w.name_ar || `#${w.id}` }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div>
+            <label class="text-xs font-medium">{{ t('warehouse_assignment.col_stock') }}</label>
+            <Input v-model.number="defaultQuantity" type="number" min="0" />
+          </div>
+          <div>
+            <label class="text-xs font-medium">{{ t('warehouse_assignment.col_min_qty') }}</label>
+            <Input v-model.number="defaultMinQuantity" type="number" min="0" />
+          </div>
+          <div class="flex flex-col justify-end">
+            <label class="text-xs font-medium block mb-2">{{ t('warehouse_assignment.col_notifications') }}</label>
+            <label class="inline-flex items-center gap-2 text-sm">
+              <Checkbox :model-value="defaultAllowNotification" @update:model-value="v => defaultAllowNotification = Boolean(v)" />
+              <span>{{ t('warehouse_assignment.col_notifications') }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
           <label class="text-xs font-medium">{{ t('products_variations.variation_sku') }}</label>
           <Input v-model="form.sku" @input="clearFieldError('sku')" />
           <p v-if="fieldErrors.sku" class="text-xs text-red-600">{{ fieldErrors.sku }}</p>
-        </div>
-        <div>
-          <label class="text-xs font-medium">{{ t('products_variations.variation_barcode') }}</label>
-          <Input v-model="form.barcode" @input="clearFieldError('barcode')" />
-          <p v-if="fieldErrors.barcode" class="text-xs text-red-600">{{ fieldErrors.barcode }}</p>
         </div>
         <div>
           <label class="text-xs font-medium">{{ t('products_variations.variation_price') }}</label>
@@ -475,6 +691,83 @@ onMounted(async () => {
         @update-price="updateTieredPrice"
       />
       <p v-if="fieldErrors.tiered_prices" class="text-xs text-red-600">{{ fieldErrors.tiered_prices }}</p>
+    </div>
+
+    <div class="rounded-lg border bg-[#f1fffa] p-5 space-y-4">
+      <div>
+        <h2 class="font-semibold">{{ t('products_variations.bulk_generate') }}</h2>
+        <p class="text-xs text-muted-foreground mt-0.5">{{ t('products_variations.bulk_generate_hint') }}</p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div v-for="attrId in selectedAttributeIds" :key="attrId" class="space-y-2">
+          <p class="text-xs font-medium">{{ attributesStore.attributeName(attrId) }}</p>
+          <div class="flex flex-wrap gap-x-4 gap-y-1.5">
+            <label
+              v-for="val in attributesStore.valuesByAttributeId.get(attrId) || []"
+              :key="val.id"
+              class="inline-flex items-center gap-1.5 text-sm cursor-pointer select-none"
+            >
+              <Checkbox
+                :model-value="isBulkValueSelected(attrId, val.id)"
+                @update:model-value="() => toggleBulkValue(attrId, val.id)"
+              />
+              {{ val.name }}
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="text-xs font-medium">{{ t('products_variations.bulk_price') }}</label>
+          <Input v-model.number="bulkPrice" type="number" min="0" />
+        </div>
+        <div>
+          <label class="text-xs font-medium">{{ t('products_variations.bulk_buying_price') }}</label>
+          <Input v-model.number="bulkBuyingPrice" type="number" min="0" />
+        </div>
+      </div>
+
+      <TieredPriceTableSection
+        :table-title="t('products_variations.tiered_prices')"
+        :min-qty-label="t('price_assignment.col_min_qty')"
+        :max-qty-label="t('price_assignment.col_max_qty')"
+        :price-label="t('price_assignment.col_price_per_unit')"
+        :actions-label="t('price_assignment.col_actions')"
+        :add-row-label="t('products_variations.add_tier_price')"
+        :clear-all-label="t('price_assignment.clear_all')"
+        :empty-hint="t('price_assignment.empty_hint')"
+        :price-placeholder="t('price_assignment.placeholder_price')"
+        :rows="bulkTieredRows"
+        :field-error-by-key="{}"
+        @add-row="addBulkTierPrice"
+        @remove-row="(key) => removeBulkTierPrice(Number(key))"
+        @clear-rows="bulkTieredPrices = []"
+        @update-min-qty="updateBulkTieredMin"
+        @update-max-qty="updateBulkTieredMax"
+        @update-price="updateBulkTieredPrice"
+      />
+
+      <Button :disabled="!canBulkGenerate" @click="generateBulkVariations">
+        <Plus class="size-4 mr-1" />
+        {{ t('products_variations.bulk_generate_button') }}
+      </Button>
+
+      <div v-if="newVariations.length" class="space-y-2 pt-2 border-t">
+        <p class="text-xs font-medium text-muted-foreground">{{ t('products_variations.bulk_generate_button') }} ({{ newVariations.length }})</p>
+        <div
+          v-for="(row, idx) in newVariations"
+          :key="idx"
+          class="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+        >
+          <span class="font-mono text-xs">{{ row.sku || `#${idx + 1}` }}</span>
+          <span class="text-muted-foreground">{{ row.price }}</span>
+          <Button variant="ghost" size="sm" @click="removeNewVariation(idx)">
+            <Trash2 class="size-4" />
+          </Button>
+        </div>
+      </div>
     </div>
 
     <div v-if="canEditVariation" class="flex justify-end gap-2">

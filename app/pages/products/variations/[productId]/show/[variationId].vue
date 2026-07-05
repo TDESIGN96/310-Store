@@ -44,6 +44,11 @@ const formatDateTime = (value: string) => {
   return formatDisplayDate(value, { withTime: true })
 }
 
+const mainWarehouse = computed(() => {
+  const inventory = variation.value?.inventory as any[] | undefined
+  return inventory?.[0] ?? null
+})
+
 const warehouseDisplayName = (inventoryRow: any) => {
   const warehouse = inventoryRow?.warehouse
   if (warehouse && typeof warehouse === 'object') {
@@ -113,6 +118,10 @@ onMounted(() => {
 
     <div v-else-if="variation" class="rounded-lg border p-5 space-y-3">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <p class="text-xs text-muted-foreground">{{ t('products_variations.global_warehouse') }}</p>
+          <p>{{ mainWarehouse ? warehouseDisplayName(mainWarehouse) : '—' }}</p>
+        </div>
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_sku') }}</p><p>{{ variation.sku || '—' }}</p></div>
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_barcode') }}</p><p>{{ variation.barcode || '—' }}</p></div>
         <div><p class="text-xs text-muted-foreground">{{ t('products_variations.variation_price') }}</p><p class="tabular-nums">{{ money(variation.price) }}</p></div>

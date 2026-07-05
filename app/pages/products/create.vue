@@ -12,6 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toast } from 'vue-sonner'
 
 definePageMeta({ layout: 'default' })
@@ -117,7 +123,20 @@ const validate = () => {
   return Object.keys(errors).length === 0
 }
 
-const saveProduct = async () => {
+type SaveMode = 'variations' | 'list'
+
+const extractCreatedProductId = (response: unknown): number | null => {
+  if (!response || typeof response !== 'object') return null
+  const root = response as Record<string, unknown>
+  const nested = root.data && typeof root.data === 'object'
+    ? root.data as Record<string, unknown>
+    : null
+  const product = (nested?.product ?? root.product ?? null) as Record<string, unknown> | null
+  const id = Number(product?.id)
+  return Number.isFinite(id) && id > 0 ? id : null
+}
+
+const saveProduct = async (mode: SaveMode) => {
   errorMessage.value = ''
   if (!validate()) return
   submitting.value = true
@@ -138,9 +157,24 @@ const saveProduct = async () => {
     }
 
     const payload = productsStore.createProductPayload(true)
-    await $api('/products', { method: 'POST', body: payload })
+    const response = await $api('/products', { method: 'POST', body: payload })
     toast.success(t('products_form.create_success'))
-    await navigateTo('/products')
+
+    if (mode === 'list') {
+      productsStore.resetDraft()
+      await navigateTo('/products')
+      return
+    }
+
+    const productId = extractCreatedProductId(response)
+    if (!productId) {
+      errorMessage.value = t('products_form.create_id_missing')
+      await navigateTo('/products')
+      return
+    }
+
+    productsStore.resetDraft()
+    await navigateTo(`/products/variations/${productId}/create`)
   }
   catch (error: unknown) {
     errorMessage.value = getErrorMessage(error)
@@ -303,19 +337,30 @@ onMounted(async () => {
       </CardContent>
     </Card>
 
-    <div class="flex flex-wrap items-center justify-end gap-2 pb-6">
-      <Button type="button" variant="outline" :disabled="submitting" @click="navigateTo('/products')">
+    <div class="flex flex-col-reverse gap-3 rounded-xl border bg-card/80 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-end sm:px-5 pb-6">
+      <Button type="button" variant="outline" class="w-full sm:w-auto" :disabled="submitting" @click="navigateTo('/products')">
         {{ t('common.cancel') }}
       </Button>
-      <Button
-        type="button"
-        class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white min-w-[120px]"
-        :disabled="submitting"
-        @click="saveProduct"
-      >
-        <Loader2 v-if="submitting" class="size-4 shrink-0 animate-spin" />
-        <span>{{ submitting ? t('common.saving') : t('products_form.save') }}</span>
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button
+            type="button"
+            class="w-full gap-2 sm:w-auto sm:min-w-[170px]"
+            :disabled="submitting"
+          >
+            <Loader2 v-if="submitting" class="size-4 shrink-0 animate-spin" />
+            <span>{{ submitting ? t('common.saving') : t('products_form.save_options') }}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem @click="saveProduct('variations')">
+            {{ t('products_form.save_and_variations') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="saveProduct('list')">
+            {{ t('products_form.save_and_list') }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   </div>
 </template>

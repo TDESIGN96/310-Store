@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowRight, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,14 +66,30 @@ interface VariationForm {
   inventoryRows: InventoryRowForm[]
 }
 
+const defaultWarehouseId = ref<number | null>(null)
+const defaultQuantity = ref(0)
+const defaultMinQuantity = ref(0)
+const defaultAllowNotification = ref(true)
+
 let inventoryRowKeyCounter = 0
 
 const createEmptyInventoryRow = (): InventoryRowForm => ({
   _key: ++inventoryRowKeyCounter,
-  warehouse_id: null,
-  quantity: 0,
-  min_quantity: 0,
-  allow_notification: true,
+  warehouse_id: defaultWarehouseId.value,
+  quantity: defaultQuantity.value,
+  min_quantity: defaultMinQuantity.value,
+  allow_notification: defaultAllowNotification.value,
+})
+
+watch([defaultWarehouseId, defaultQuantity, defaultMinQuantity, defaultAllowNotification], ([newId, newQty, newMin, newNotif]) => {
+  for (const variation of variations.value) {
+    for (const row of variation.inventoryRows) {
+      row.warehouse_id = newId as number | null
+      row.quantity = Number(newQty)
+      row.min_quantity = Number(newMin)
+      row.allow_notification = Boolean(newNotif)
+    }
+  }
 })
 
 const createEmptyVariation = (): VariationForm => ({
@@ -88,6 +104,124 @@ const createEmptyVariation = (): VariationForm => ({
 })
 
 const variations = ref<VariationForm[]>([createEmptyVariation()])
+
+// ── Bulk generator ──────────────────────────────────────────────────────────
+const bulkSelectedValues = ref<Record<number, number[]>>({})
+const bulkPrice = ref(0)
+const bulkBuyingPrice = ref(0)
+const bulkTieredPrices = ref<TierPriceForm[]>([])
+
+function cartesian(arrays: number[][]): number[][] {
+  return arrays.reduce<number[][]>(
+    (acc, arr) => acc.flatMap(combo => arr.map(val => [...combo, val])),
+    [[]],
+  )
+}
+
+const toggleBulkValue = (attributeId: number, valueId: number) => {
+  const current = bulkSelectedValues.value[attributeId] ?? []
+  const idx = current.indexOf(valueId)
+  bulkSelectedValues.value[attributeId] = idx === -1
+    ? [...current, valueId]
+    : current.filter(id => id !== valueId)
+}
+
+const isBulkValueSelected = (attributeId: number, valueId: number) =>
+  (bulkSelectedValues.value[attributeId] ?? []).includes(valueId)
+
+const canBulkGenerate = computed(() =>
+  productsStore.draft.attribute_ids.length > 0
+  && productsStore.draft.attribute_ids.every(
+    attrId => (bulkSelectedValues.value[attrId]?.length ?? 0) > 0,
+  )
+  && bulkPrice.value > 0
+  && bulkBuyingPrice.value > 0,
+)
+
+const generateSkuForCombo = (selectedValues: Record<number, number>): string => {
+  return productsStore.draft.attribute_ids
+    .map((attrId) => {
+      const values = attributesStore.valuesByAttributeId.get(attrId) ?? []
+      const val = values.find(v => v.id === selectedValues[attrId])
+      return (val?.name ?? '').toLowerCase().replace(/\s+/g, '-')
+    })
+    .filter(Boolean)
+    .join('-')
+}
+
+const generateBulkVariations = () => {
+  const attrIds = productsStore.draft.attribute_ids
+  const arrays = attrIds.map(attrId => bulkSelectedValues.value[attrId] ?? [])
+  const combos = cartesian(arrays)
+
+  const newRows: VariationForm[] = combos.map((combo) => {
+    const selectedValues: Record<number, number> = {}
+    attrIds.forEach((attrId, i) => {
+      selectedValues[attrId] = combo[i]!
+    })
+    return {
+      sku: generateSkuForCombo(selectedValues),
+      barcode: '',
+      price: bulkPrice.value,
+      buying_price: bulkBuyingPrice.value,
+      is_active: true,
+      selectedValues,
+      tiered_prices: bulkTieredPrices.value.map(tp => ({ ...tp })),
+      inventoryRows: [createEmptyInventoryRow()],
+    }
+  })
+
+  variations.value = variations.value.filter(v =>
+    v.sku.trim() !== ''
+    || Number(v.price) > 0
+    || Number(v.buying_price) > 0
+    || Object.keys(v.selectedValues).length > 0,
+  )
+
+  variations.value.push(...newRows)
+}
+
+const addBulkTierPrice = () => {
+  bulkTieredPrices.value.push({ quantity_from: 0, quantity_to: 0, price: 0 })
+}
+
+const removeBulkTierPrice = (idx: number) => {
+  bulkTieredPrices.value.splice(idx, 1)
+}
+
+const bulkTieredRows = computed(() =>
+  bulkTieredPrices.value.map((tp, idx) => ({
+    key: idx,
+    minQty: tp.quantity_from,
+    maxQty: tp.quantity_to,
+    price: tp.price,
+  })),
+)
+
+const updateBulkTieredMin = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = bulkTieredPrices.value[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tier.quantity_from = cleaned === '' ? 0 : Number(cleaned)
+}
+
+const updateBulkTieredMax = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = bulkTieredPrices.value[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9]/g, '')
+  tier.quantity_to = cleaned === '' ? 0 : Number(cleaned)
+}
+
+const updateBulkTieredPrice = (payload: { key: string | number; value: string }) => {
+  const idx = Number(payload.key)
+  const tier = bulkTieredPrices.value[idx]
+  if (!tier) return
+  const cleaned = payload.value.replace(/[^0-9.]/g, '')
+  tier.price = cleaned === '' ? 0 : Number(cleaned)
+}
+// ── End bulk generator ──────────────────────────────────────────────────────
 
 const selectedAttributeIds = computed(() => productsStore.draft.attribute_ids)
 const isWarehouseActive = (warehouse: WarehouseItem) => {
@@ -251,10 +385,6 @@ const validateRow = (row: VariationForm, rowIndex: number) => {
     fieldErrors.value[rowFieldKey(rowIndex, 'sku')] = t('products_form.validation_sku_required')
     valid = false
   }
-  if (!row.barcode.trim()) {
-    fieldErrors.value[rowFieldKey(rowIndex, 'barcode')] = t('products_variations.validation_barcode_required')
-    valid = false
-  }
   if (!(Number(row.price) > 0)) {
     fieldErrors.value[rowFieldKey(rowIndex, 'price')] = t('price_assignment.validation_standard_required')
     valid = false
@@ -412,6 +542,117 @@ onMounted(async () => {
       <div v-if="submitErrorMessage" class="rounded-md bg-red-500/10 border border-red-200 text-red-600 text-sm px-4 py-3">
         {{ submitErrorMessage }}
       </div>
+
+      <div class="rounded-md border bg-[#2254620a] p-4 space-y-3">
+        <div>
+          <h3 class="font-semibold text-secondary-foreground">{{ t('products_variations.shared_defaults_title') }}</h3>
+          <p class="text-xs text-muted-foreground mt-0.5">{{ t('products_variations.shared_defaults_hint') }}</p>
+        </div>
+        <label class="text-sm font-semibold text-secondary-foreground">{{ t('products_variations.global_warehouse') }}</label>
+        <Select
+          :model-value="defaultWarehouseId ? String(defaultWarehouseId) : ''"
+          @update:model-value="v => { defaultWarehouseId = v ? Number(v) : null }"
+        >
+          <SelectTrigger class="max-w-xs">
+            <SelectValue :placeholder="t('products_page.filter_warehouse')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="w in warehouses.filter(isWarehouseActive)" :key="w.id" :value="String(w.id)">
+              {{ w.name_en || w.name_ar || `#${w.id}` }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div>
+            <label class="text-xs font-medium">{{ t('warehouse_assignment.col_stock') }}</label>
+            <Input v-model.number="defaultQuantity" type="number" min="0" />
+          </div>
+          <div>
+            <label class="text-xs font-medium">{{ t('warehouse_assignment.col_min_qty') }}</label>
+            <Input v-model.number="defaultMinQuantity" type="number" min="0" />
+          </div>
+          <div class="flex flex-col justify-end">
+            <label class="text-xs font-medium block mb-2">{{ t('warehouse_assignment.col_notifications') }}</label>
+            <label class="inline-flex items-center gap-2 text-sm">
+              <Checkbox :model-value="defaultAllowNotification" @update:model-value="v => defaultAllowNotification = Boolean(v)" />
+              <span>{{ t('warehouse_assignment.col_notifications') }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-md border bg-[#f1fffa] p-4 space-y-4">
+        <div>
+          <h3 class="font-semibold">{{ t('products_variations.bulk_generate') }}</h3>
+          <p class="text-xs text-muted-foreground mt-0.5">{{ t('products_variations.bulk_generate_hint') }}</p>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div v-for="attrId in selectedAttributeIds" :key="attrId" class="space-y-2">
+            <p class="text-xs font-medium">{{ attributesStore.attributeName(attrId) }}</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-1.5">
+              <label
+                v-for="val in attributesStore.valuesByAttributeId.get(attrId) || []"
+                :key="val.id"
+                class="inline-flex items-center gap-1.5 text-sm cursor-pointer select-none"
+              >
+                <Checkbox
+                  :model-value="isBulkValueSelected(attrId, val.id)"
+                  @update:model-value="() => toggleBulkValue(attrId, val.id)"
+                />
+                {{ val.name }}
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="text-xs font-medium">{{ t('products_variations.bulk_price') }}</label>
+            <Input v-model.number="bulkPrice" type="number" min="0" />
+          </div>
+          <div>
+            <label class="text-xs font-medium">{{ t('products_variations.bulk_buying_price') }}</label>
+            <Input v-model.number="bulkBuyingPrice" type="number" min="0" />
+          </div>
+        </div>
+
+        <TieredPriceTableSection
+          :table-title="t('products_variations.tiered_prices')"
+          :min-qty-label="t('price_assignment.col_min_qty')"
+          :max-qty-label="t('price_assignment.col_max_qty')"
+          :price-label="t('price_assignment.col_price_per_unit')"
+          :actions-label="t('price_assignment.col_actions')"
+          :add-row-label="t('products_variations.add_tier_price')"
+          :clear-all-label="t('price_assignment.clear_all')"
+          :empty-hint="t('price_assignment.empty_hint')"
+          :price-placeholder="t('price_assignment.placeholder_price')"
+          :rows="bulkTieredRows"
+          :field-error-by-key="{}"
+          @add-row="addBulkTierPrice"
+          @remove-row="(key) => removeBulkTierPrice(Number(key))"
+          @clear-rows="bulkTieredPrices = []"
+          @update-min-qty="updateBulkTieredMin"
+          @update-max-qty="updateBulkTieredMax"
+          @update-price="updateBulkTieredPrice"
+        />
+
+        <div class="flex items-center gap-2">
+          <Button :disabled="!canBulkGenerate" @click="generateBulkVariations">
+            <Plus class="size-4 mr-1" />
+            {{ t('products_variations.bulk_generate_button') }}
+          </Button>
+          <Button
+            variant="outline"
+            :disabled="!variations.length"
+            @click="variations = [createEmptyVariation()]"
+          >
+            <Trash2 class="size-4 mr-1" />
+            {{ t('products_variations.bulk_clear_variations') }}
+          </Button>
+        </div>
+      </div>
+
       <div
         v-for="(row, rowIndex) in variations"
         :key="rowIndex"
@@ -432,16 +673,11 @@ onMounted(async () => {
           </Button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label class="text-xs font-medium">{{ t('products_variations.variation_sku') }}</label>
             <Input v-model="row.sku" @input="clearFieldError(rowFieldKey(rowIndex, 'sku'))" />
             <p v-if="fieldErrors[rowFieldKey(rowIndex, 'sku')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'sku')] }}</p>
-          </div>
-          <div>
-            <label class="text-xs font-medium">{{ t('products_variations.variation_barcode') }}</label>
-            <Input v-model="row.barcode" @input="clearFieldError(rowFieldKey(rowIndex, 'barcode'))" />
-            <p v-if="fieldErrors[rowFieldKey(rowIndex, 'barcode')]" class="text-xs text-red-600">{{ fieldErrors[rowFieldKey(rowIndex, 'barcode')] }}</p>
           </div>
           <div>
             <label class="text-xs font-medium">{{ t('products_variations.variation_price') }}</label>

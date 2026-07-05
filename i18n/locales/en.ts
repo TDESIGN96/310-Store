@@ -1038,6 +1038,8 @@ export default {
   products_variations: {
     product_info: 'Product information',
     attributes: 'Product attributes',
+    shared_defaults_title: 'Shared Defaults',
+    shared_defaults_hint: 'These settings are applied to every variation row automatically.',
     global_warehouse: 'Global warehouse',
     main_image_url: 'Main image URL',
     additional_images: 'Additional image URLs',
@@ -1091,6 +1093,12 @@ export default {
     hint_variation_warehouse: 'Choose the warehouse for this variation stock.',
     hint_min_qty: 'Minimum stock threshold before warning.',
     hint_values_by_attribute: 'Pick one value for each selected attribute.',
+    bulk_generate: 'Generate Multiple Variations',
+    bulk_generate_hint: 'Select values for each attribute and a shared price, then click Generate to create all combinations at once.',
+    bulk_generate_button: 'Generate Variations',
+    bulk_clear_variations: 'Clear Variations',
+    bulk_price: 'Shared Price',
+    bulk_buying_price: 'Shared Buying Price',
   },
 
   products_create: {
@@ -2056,7 +2064,11 @@ export default {
     images_count: '{current} / {max} photos',
     remove_image: 'Remove',
     save: 'Save',
+    save_options: 'Save options',
+    save_and_variations: 'Save and go to Variations',
+    save_and_list: 'Save and go to list',
     create_success: 'Product created',
+    create_id_missing: 'Product was created, but its ID could not be read. Redirecting to the product list.',
     categories_load_error: 'Could not load categories.',
     units_load_error: 'Could not load units.',
     not_authenticated: 'You must be signed in to create a product.',
