@@ -19,6 +19,9 @@ export interface InvoicePagination {
 
 export type InvoiceStatus = 'issued' | 'paid' | 'partially_returned' | 'returned' | string
 
+export const INVOICE_STATUS_OPTIONS = ['pending', 'printed', 'ready', 'shipped', 'delivered', 'settled', 'returned', 'partially_returned'] as const
+export type InvoiceStatusOption = typeof INVOICE_STATUS_OPTIONS[number]
+
 export interface InvoiceListItem {
   id: number
   reference_number: string
@@ -121,6 +124,8 @@ export interface InvoiceDraftItem {
   unit_price_manual: boolean
 }
 
+export type InvoiceDeliveryBy = 'shipping_company' | 'delivery_agent' | 'other'
+
 export interface InvoiceDraft {
   id: number | null
   reference_number: string
@@ -138,6 +143,10 @@ export interface InvoiceDraft {
   notes: string
   delivery_fees: number
   other_fees: number
+  delivery_by: InvoiceDeliveryBy
+  delivery_agent_name: string
+  delivery_agent_mobile: string
+  attachment_path: string
   items: InvoiceDraftItem[]
 }
 
@@ -183,6 +192,10 @@ const createEmptyDraft = (): InvoiceDraft => ({
   notes: '',
   delivery_fees: 0,
   other_fees: 0,
+  delivery_by: 'shipping_company',
+  delivery_agent_name: '',
+  delivery_agent_mobile: '',
+  attachment_path: '',
   items: [createEmptyItem()],
 })
 
@@ -250,6 +263,12 @@ export const useInvoicesStore = defineStore('invoices', () => {
     const status = String(value ?? '').toLowerCase()
     if (status === 'issued' || status === 'paid' || status === 'partially_returned' || status === 'returned') return status
     return status || 'issued'
+  }
+
+  const normalizeDeliveryBy = (value: unknown): InvoiceDeliveryBy => {
+    const raw = String(value ?? '').trim().toLowerCase()
+    if (raw === 'delivery_agent' || raw === 'other') return raw
+    return 'shipping_company'
   }
 
   const extractPagination = (payload: unknown): InvoicePagination | null => {
@@ -613,6 +632,10 @@ export const useInvoicesStore = defineStore('invoices', () => {
           0,
         ),
       ),
+      delivery_by: normalizeDeliveryBy(invoice.delivery_by),
+      delivery_agent_name: String(invoice.delivery_agent_name ?? ''),
+      delivery_agent_mobile: String(invoice.delivery_agent_mobile ?? ''),
+      attachment_path: String(invoice.attachment_path ?? ''),
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -710,6 +733,10 @@ export const useInvoicesStore = defineStore('invoices', () => {
       notes: String(quotation.notes ?? ''),
       delivery_fees: Math.max(0, resolvedConvertedDeliveryFees),
       other_fees: Math.max(0, resolvedConvertedOtherFees),
+      delivery_by: 'shipping_company',
+      delivery_agent_name: '',
+      delivery_agent_mobile: '',
+      attachment_path: '',
       items: items.length ? items : [createEmptyItem()],
     }
   }
@@ -843,6 +870,14 @@ export const useInvoicesStore = defineStore('invoices', () => {
     notes: draft.value.notes || undefined,
     delivery_fees: draft.value.delivery_fees || 0,
     other_fees: draft.value.other_fees || 0,
+    delivery_by: draft.value.delivery_by,
+    delivery_agent_name: draft.value.delivery_by === 'shipping_company'
+      ? null
+      : (draft.value.delivery_agent_name.trim() || null),
+    delivery_agent_mobile: draft.value.delivery_by === 'shipping_company'
+      ? null
+      : (draft.value.delivery_agent_mobile.trim() || null),
+    attachment_path: draft.value.attachment_path.trim() || null,
     subtotal: summary.value.subtotal,
     total_discount: summary.value.totalDiscount,
     grand_total: summary.value.grandTotal,
@@ -907,6 +942,10 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
   const deleteInvoice = async (id: string | number) => {
     return await $api(`${INVOICES_ENDPOINT}/${id}`, { method: 'DELETE' })
+  }
+
+  const updateInvoiceStatus = async (id: string | number, status: InvoiceStatusOption) => {
+    return await $api(`${INVOICES_ENDPOINT}/${id}/status`, { method: 'PATCH', body: { status } })
   }
 
   const createInvoiceReturn = async (invoiceId: string | number, payload: InvoiceReturnCreatePayload) => {
@@ -991,5 +1030,6 @@ export const useInvoicesStore = defineStore('invoices', () => {
     loadInvoiceReturnsForInvoice,
     updateInvoice,
     deleteInvoice,
+    updateInvoiceStatus,
   }
 })

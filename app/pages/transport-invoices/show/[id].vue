@@ -44,6 +44,34 @@ const otherFeeValue = computed(() => {
 })
 const showDeliveryFee = computed(() => deliveryFeeValue.value > 0)
 const showOtherFee = computed(() => otherFeeValue.value > 0)
+const statusLabel = computed(() => {
+  const current = invoice.value
+  if (!current) return '—'
+  const status = String(current.status ?? '').trim()
+  if (status === 'pending') return t('transport_invoices_page.status_pending')
+  if (status === 'printed') return t('transport_invoices_page.status_printed')
+  if (status === 'ready') return t('transport_invoices_page.status_ready')
+  if (status === 'shipped') return t('transport_invoices_page.status_shipped')
+  if (status === 'delivered') return t('transport_invoices_page.status_delivered')
+  if (status === 'settled') return t('transport_invoices_page.status_settled')
+  if (status === 'returned') return t('transport_invoices_page.status_returned')
+  if (status === 'partially_returned') return t('transport_invoices_page.status_partially_returned')
+  if (status === 'in_delivery') return t('transport_invoices_page.status_in_delivery')
+  if (status === 'complete') return t('transport_invoices_page.status_complete')
+  return String(current.status_label ?? status ?? '—') || '—'
+})
+const deliveryBy = computed(() => String(invoice.value?.delivery_by ?? '').trim())
+const deliveryByLabel = computed(() => {
+  const value = deliveryBy.value
+  if (value === 'delivery_agent') return t('transport_invoices_page.delivery_by_delivery_agent')
+  if (value === 'other') return t('transport_invoices_page.delivery_by_other')
+  if (value === 'shipping_company') return t('transport_invoices_page.delivery_by_shipping_company')
+  return '—'
+})
+const showDeliveryAgentFields = computed(() => deliveryBy.value === 'delivery_agent' || deliveryBy.value === 'other')
+const deliveryAgentName = computed(() => String(invoice.value?.delivery_agent_name ?? '').trim())
+const deliveryAgentMobile = computed(() => String(invoice.value?.delivery_agent_mobile ?? '').trim())
+const attachmentUrl = computed(() => String(invoice.value?.attachment_path ?? '').trim())
 const items = computed(() => {
   const raw = invoice.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []
@@ -137,6 +165,7 @@ onMounted(async () => {
         <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.reference_number') }}</p><p class="text-sm font-medium">{{ invoice.reference_number || `#${invoice.id}` }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.shipment_status_label') }}</p><p class="text-sm font-medium">{{ invoice.shipment_status_label || '—' }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.col_status') }}</p><p class="text-sm font-medium">{{ statusLabel }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.customer_name') }}</p><p class="text-sm">{{ invoice.customer_name || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.warehouse') }}</p><p class="text-sm">{{ warehouseName }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.customer_mobile') }}</p><p class="text-sm">{{ invoice.customer_mobile || '—' }}</p></div>
@@ -144,6 +173,18 @@ onMounted(async () => {
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.address') }}</p><p class="text-sm">{{ invoice.address || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.invoice_date') }}</p><p class="text-sm">{{ fmtDate(invoice.invoice_date) }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.supply_date') }}</p><p class="text-sm">{{ fmtDate(invoice.supply_date) }}</p></div>
+          <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.delivery_by') }}</p><p class="text-sm">{{ deliveryByLabel }}</p></div>
+          <template v-if="showDeliveryAgentFields">
+            <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.delivery_agent_name') }}</p><p class="text-sm">{{ deliveryAgentName || '—' }}</p></div>
+            <div><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.delivery_agent_mobile') }}</p><p class="text-sm">{{ deliveryAgentMobile || '—' }}</p></div>
+            <div>
+              <p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.attachment') }}</p>
+              <p class="text-sm">
+                <a v-if="attachmentUrl" :href="attachmentUrl" target="_blank" rel="noopener noreferrer" class="text-primary underline">{{ t('transport_invoices_page.attachment_current_file') }}</a>
+                <template v-else>—</template>
+              </p>
+            </div>
+          </template>
           <div class="sm:col-span-2"><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.invoice_description') }}</p><div class="prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="invoice.description || '—'" /></div>
         </CardContent>
       </Card>

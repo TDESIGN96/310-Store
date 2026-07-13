@@ -11,10 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import RichTextEditor from '@/components/quotations/RichTextEditor.vue'
+import DeliveryFields from '@/components/invoices/DeliveryFields.vue'
 import { useInvoicesStore } from '@/stores/invoices'
+import type { InvoiceDeliveryBy } from '@/stores/invoices'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { firstInvoiceValidationToastDescription, validateInvoiceDraft } from '@/composables/useInvoiceDraftValidation'
+import { useInvoiceAttachment } from '@/composables/useInvoiceAttachment'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
@@ -29,6 +32,14 @@ const { searchProducts, lookupBarcode, loadingProducts } = useQuotationProducts(
 const { loadActiveWarehouses, loadingWarehouses } = useInvoiceWarehouses()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
+const authStore = useAuthStore()
+const {
+  attachmentFile,
+  attachmentError,
+  onAttachmentFileChange,
+  removeAttachmentFile,
+  uploadAttachmentIfNeeded,
+} = useInvoiceAttachment('invoices_page')
 
 const loading = ref(false)
 const formErrors = ref<Record<string, string>>({})
@@ -149,6 +160,7 @@ const saveInvoice = async (mode: SaveMode) => {
   invoicesStore.submitting = true
   errorMessage.value = ''
   try {
+    draft.value.attachment_path = await uploadAttachmentIfNeeded(authStore.token, draft.value.attachment_path)
     await invoicesStore.updateInvoice(id.value)
     await invoicesStore.loadDraftById(id.value)
     if (mode === 'close') {
@@ -256,7 +268,20 @@ onMounted(async () => {
             </div>
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('invoices_page.invoice_date') }}</label><Input v-model="draft.invoice_date" type="date" /></div>
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('invoices_page.supply_date') }}</label><Input v-model="draft.supply_date" type="date" /></div>
-            
+            <DeliveryFields
+              :delivery-by="draft.delivery_by"
+              :delivery-agent-name="draft.delivery_agent_name"
+              :delivery-agent-mobile="draft.delivery_agent_mobile"
+              :attachment-path="draft.attachment_path"
+              :attachment-file="attachmentFile"
+              :attachment-error="attachmentError"
+              i18n-prefix="invoices_page"
+              @update:delivery-by="value => draft.delivery_by = (value as InvoiceDeliveryBy)"
+              @update:delivery-agent-name="value => draft.delivery_agent_name = value"
+              @update:delivery-agent-mobile="value => draft.delivery_agent_mobile = value"
+              @attachment-change="onAttachmentFileChange"
+              @attachment-remove-existing="() => { removeAttachmentFile(); draft.attachment_path = '' }"
+            />
           </div>
           <div class="space-y-2"><label class="text-sm font-medium">{{ t('invoices_page.invoice_description') }}</label><RichTextEditor v-model="draft.description" /></div>
         </CardContent>

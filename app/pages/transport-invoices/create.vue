@@ -14,7 +14,6 @@ import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -47,10 +46,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import RichTextEditor from '@/components/quotations/RichTextEditor.vue'
+import DeliveryFields from '@/components/invoices/DeliveryFields.vue'
 import { useInvoicesStore } from '@/stores/invoices'
+import type { InvoiceDeliveryBy } from '@/stores/invoices'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { firstInvoiceValidationToastDescription, validateInvoiceDraft } from '@/composables/useInvoiceDraftValidation'
+import { useInvoiceAttachment } from '@/composables/useInvoiceAttachment'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
@@ -64,6 +66,14 @@ const { searchProducts, lookupBarcode, loadingProducts } = useQuotationProducts(
 const { loadActiveWarehouses, loadingWarehouses } = useInvoiceWarehouses()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
+const authStore = useAuthStore()
+const {
+  attachmentFile,
+  attachmentError,
+  onAttachmentFileChange,
+  removeAttachmentFile,
+  uploadAttachmentIfNeeded,
+} = useInvoiceAttachment('transport_invoices_page')
 
 const formErrors = ref<Record<string, string>>({})
 const errorMessage = ref('')
@@ -197,6 +207,7 @@ const saveInvoice = async (mode: SaveMode) => {
   invoicesStore.submitting = true
   errorMessage.value = ''
   try {
+    draft.value.attachment_path = await uploadAttachmentIfNeeded(authStore.token, draft.value.attachment_path)
     const res = await invoicesStore.createInvoice()
     const root = res as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null
@@ -341,15 +352,20 @@ onMounted(() => {
               <label class="text-sm font-medium">{{ t('transport_invoices_page.supply_date') }}</label>
               <Input v-model="draft.supply_date" type="date" />
             </div>
-            <div class="flex items-center gap-2">
-              <Checkbox
-                :model-value="draft.send_to_shipping"
-                @update:model-value="draft.send_to_shipping = Boolean($event)"
-              />
-              <label class="text-sm font-medium cursor-pointer" @click="draft.send_to_shipping = !draft.send_to_shipping">
-                {{ t('transport_invoices_page.send_to_shipping') }}
-              </label>
-            </div>
+            <DeliveryFields
+              :delivery-by="draft.delivery_by"
+              :delivery-agent-name="draft.delivery_agent_name"
+              :delivery-agent-mobile="draft.delivery_agent_mobile"
+              :attachment-path="draft.attachment_path"
+              :attachment-file="attachmentFile"
+              :attachment-error="attachmentError"
+              i18n-prefix="transport_invoices_page"
+              @update:delivery-by="value => draft.delivery_by = (value as InvoiceDeliveryBy)"
+              @update:delivery-agent-name="value => draft.delivery_agent_name = value"
+              @update:delivery-agent-mobile="value => draft.delivery_agent_mobile = value"
+              @attachment-change="onAttachmentFileChange"
+              @attachment-remove-existing="() => { removeAttachmentFile(); draft.attachment_path = '' }"
+            />
           </div>
           <div class="space-y-2">
             <label class="text-sm font-medium">{{ t('transport_invoices_page.invoice_description') }}</label>

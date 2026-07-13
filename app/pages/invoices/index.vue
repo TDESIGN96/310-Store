@@ -22,8 +22,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import type { InvoiceListItem } from '@/stores/invoices'
-import { useInvoicesStore } from '@/stores/invoices'
+import type { InvoiceListItem, InvoiceStatusOption } from '@/stores/invoices'
+import { INVOICE_STATUS_OPTIONS, useInvoicesStore } from '@/stores/invoices'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
 import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
@@ -40,7 +40,7 @@ const canDeleteInvoice = computed(() => canDelete('invoices'))
 const canCreateInvoiceReturn = computed(() => can('invoice_returns.store'))
 
 const search = ref('')
-const filterStatus = ref<'all' | 'pending' | 'in_delivery' | 'complete'>('all')
+const filterStatus = ref<'all' | InvoiceStatusOption>('all')
 const invoiceDate = ref('')
 const supplyDate = ref('')
 const currentPage = ref(1)
@@ -131,6 +131,18 @@ const warehouseLabel = (row: InvoiceListItem) => {
   return locale.value === 'ar' ? (nameAr || nameEn || '—') : (nameEn || nameAr || '—')
 }
 
+const statusOptionLabel = (option: InvoiceStatusOption) => {
+  if (option === 'pending') return t('invoices_page.status_pending')
+  if (option === 'printed') return t('invoices_page.status_printed')
+  if (option === 'ready') return t('invoices_page.status_ready')
+  if (option === 'shipped') return t('invoices_page.status_shipped')
+  if (option === 'delivered') return t('invoices_page.status_delivered')
+  if (option === 'settled') return t('invoices_page.status_settled')
+  if (option === 'returned') return t('invoices_page.status_returned')
+  if (option === 'partially_returned') return t('invoices_page.status_partially_returned')
+  return option
+}
+
 const statusLabel = (row: InvoiceListItem) => {
   if (row.status_label) return row.status_label
   if (row.status === 'issued') return t('invoices_page.status_issued')
@@ -138,9 +150,35 @@ const statusLabel = (row: InvoiceListItem) => {
   if (row.status === 'partially_returned') return t('invoices_page.status_partially_returned')
   if (row.status === 'returned') return t('invoices_page.status_returned')
   if (row.status === 'pending') return t('invoices_page.status_pending')
+  if (row.status === 'printed') return t('invoices_page.status_printed')
+  if (row.status === 'ready') return t('invoices_page.status_ready')
+  if (row.status === 'shipped') return t('invoices_page.status_shipped')
+  if (row.status === 'delivered') return t('invoices_page.status_delivered')
+  if (row.status === 'settled') return t('invoices_page.status_settled')
   if (row.status === 'in_delivery') return t('invoices_page.status_in_delivery')
   if (row.status === 'complete') return t('invoices_page.status_complete')
   return row.status || '—'
+}
+
+const statusUpdatingIds = ref<Set<number>>(new Set())
+
+const changeInvoiceStatus = async (row: InvoiceListItem, value: string) => {
+  if (value === row.status) return
+  statusUpdatingIds.value = new Set(statusUpdatingIds.value).add(row.id)
+  try {
+    await invoicesStore.updateInvoiceStatus(row.id, value as InvoiceStatusOption)
+    row.status = value
+    row.status_label = statusOptionLabel(value as InvoiceStatusOption)
+    toast.success(t('invoices_page.status_update_success'))
+  }
+  catch {
+    toast.error(t('invoices_page.status_update_error'))
+  }
+  finally {
+    const next = new Set(statusUpdatingIds.value)
+    next.delete(row.id)
+    statusUpdatingIds.value = next
+  }
 }
 
 const loadRows = async (page = currentPage.value) => {
@@ -296,9 +334,7 @@ const goToPage = (page: number) => {
             <SelectTrigger class="h-9 w-full sm:w-[220px] gap-2"><Filter class="size-3.5 shrink-0 text-muted-foreground" /><SelectValue :placeholder="t('invoices_page.filter_status')" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{{ t('invoices_page.filter_status_all') }}</SelectItem>
-              <SelectItem value="pending">{{ t('invoices_page.status_pending') }}</SelectItem>
-              <SelectItem value="in_delivery">{{ t('invoices_page.status_in_delivery') }}</SelectItem>
-              <SelectItem value="complete">{{ t('invoices_page.status_complete') }}</SelectItem>
+              <SelectItem v-for="option in INVOICE_STATUS_OPTIONS" :key="option" :value="option">{{ statusOptionLabel(option) }}</SelectItem>
             </SelectContent>
           </Select>
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('invoices_page.reset_filters') }}</Button>
@@ -424,7 +460,20 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_status') }}</span>
-                <span class="text-sm text-muted-foreground rtl:text-start">{{ statusLabel(row) }}</span>
+                <Select
+                  v-if="canEditInvoice"
+                  :model-value="row.status"
+                  :disabled="statusUpdatingIds.has(row.id)"
+                  @update:model-value="value => changeInvoiceStatus(row, String(value))"
+                >
+                  <SelectTrigger class="h-8 w-full md:w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="option in INVOICE_STATUS_OPTIONS" :key="option" :value="option">
+                      {{ statusOptionLabel(option) }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <span v-else class="text-sm text-muted-foreground rtl:text-start">{{ statusLabel(row) }}</span>
               </TableCell>
               <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions
