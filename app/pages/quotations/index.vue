@@ -157,7 +157,7 @@ const isEditable = (row: QuotationListItem) => {
 const isDeletable = (row: QuotationListItem) => {
   return row.status === 'active' || row.status === 'expired'
 }
-const canEditRow = (row: QuotationListItem) => canEditQuotation.value && isEditable(row)
+const canEditRow = (row: QuotationListItem) => canEditQuotation.value && isEditable(row) && row.can_be_edited
 
 const loadRows = async (page = currentPage.value) => {
   if (!canViewQuotations.value) return
@@ -651,7 +651,7 @@ const goToPage = (page: number) => {
               <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                 <TableRowActions
                   :actions="[
-                    { key: `edit-${row.id}`, label: t('common.edit'), type: canEditRow(row) ? 'link' : 'button', to: canEditRow(row) ? `/quotations/edit/${row.id}` : undefined, icon: Pencil, tone: 'default', disabled: !canEditRow(row) },
+                    { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: `/quotations/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditRow(row) },
                     // { key: `copy-${row.id}`, label: t('common.copy'), type: 'button', icon: Copy, tone: 'default', visible: canCreateQuotation, disabled: copyingId === row.id || loading, loading: copyingId === row.id, onClick: () => cloneQuotation(row) },
                     // { key: `convert-${row.id}`, label: t('quotations_page.action_convert'), type: 'button', icon: FilePlus2, tone: 'default', disabled: convertingId === row.id || loading, loading: convertingId === row.id, onClick: () => convertToInvoice(row) },
                     { key: `delete-${row.id}`, label: t('common.delete'), type: 'button', icon: Trash2, tone: 'danger', disabled: !canDeleteQuotation || !isDeletable(row), onClick: () => requestDelete(row) },

@@ -29,6 +29,7 @@ export interface QuotationListItem {
   district_name: string
   total_discount: number
   grand_total: number
+  can_be_edited: boolean
   created_at: string
   updated_at: string
 }
@@ -183,6 +184,9 @@ export const useQuotationsStore = defineStore('quotations', () => {
     ),
     total_discount: toNumber(payload.total_discount, 0),
     grand_total: toNumber(payload.grand_total, 0),
+    can_be_edited: payload.can_be_edited === true
+      || payload.can_be_edited === 1
+      || payload.can_be_edited === '1',
     created_at: String(payload.created_at ?? ''),
     updated_at: String(payload.updated_at ?? ''),
   })
