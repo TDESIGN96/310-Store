@@ -16,6 +16,7 @@ import {
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import WarehouseMultiSelect from '@/components/reports/WarehouseMultiSelect.vue'
 import ReportMultiSelect from '@/components/reports/ReportMultiSelect.vue'
+import ReportFilterField from '@/components/reports/ReportFilterField.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 import { fetchAllCategoriesPages } from '@/utils/categoryList'
@@ -283,62 +284,53 @@ const entityLabel = (entity: { name_ar?: string, name_en?: string } | null) =>
           <h2 class="text-base font-semibold">{{ t('reports_sales_returns_analysis.generate_report') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6">
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_returns_analysis.filter_from_date') }} <span class="text-red-500">*</span>
-              </label>
+          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <ReportFilterField
+              :label="t('reports_sales_returns_analysis.filter_from_date')"
+              required
+              :error="fieldErrors.from_date"
+            >
               <DatePickerInput
                 v-model="dateFrom"
                 class="w-full"
                 @update:model-value="fieldErrors.from_date = ''"
               />
-              <p v-if="fieldErrors.from_date" class="text-xs text-red-600">{{ fieldErrors.from_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_returns_analysis.filter_to_date') }} <span class="text-red-500">*</span>
-              </label>
+            </ReportFilterField>
+            <ReportFilterField
+              :label="t('reports_sales_returns_analysis.filter_to_date')"
+              required
+              :error="fieldErrors.to_date"
+            >
               <DatePickerInput
                 v-model="dateTo"
                 class="w-full"
                 @update:model-value="fieldErrors.to_date = ''"
               />
-              <p v-if="fieldErrors.to_date" class="text-xs text-red-600">{{ fieldErrors.to_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_returns_analysis.filter_warehouse') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_sales_returns_analysis.filter_warehouse')">
               <WarehouseMultiSelect
                 v-model="selectedWarehouseIds"
                 :warehouses="warehouseOptions"
                 :placeholder="t('reports_sales_returns_analysis.filter_warehouse')"
                 :all-label="t('reports_sales_returns_analysis.filter_warehouse_all')"
               />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_returns_analysis.filter_distributor') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_sales_returns_analysis.filter_distributor')">
               <ReportMultiSelect
                 v-model="selectedDistributorIds"
                 :items="distributorSelectItems"
                 :placeholder="t('reports_sales_returns_analysis.filter_distributor')"
                 :all-label="t('reports_sales_returns_analysis.filter_distributor_all')"
               />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_returns_analysis.filter_category') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_sales_returns_analysis.filter_category')">
               <ReportMultiSelect
                 v-model="selectedCategoryIds"
                 :items="categorySelectItems"
                 :placeholder="t('reports_sales_returns_analysis.filter_category')"
                 :all-label="t('reports_sales_returns_analysis.filter_category_all')"
               />
-            </div>
+            </ReportFilterField>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -383,7 +375,7 @@ const entityLabel = (entity: { name_ar?: string, name_en?: string } | null) =>
           <div class="flex items-center gap-2 border-b bg-section-items border-section-items px-4 py-3.5 text-white sm:px-6">
             <h2 class="text-base font-semibold">{{ t('reports_sales_returns_analysis.summary_title') }}</h2>
           </div>
-          <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+          <CardContent class="grid items-center gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
             <div>
               <p class="text-xs text-muted-foreground">{{ t('reports_sales_returns_analysis.summary_total_returned_items') }}</p>
               <p class="text-lg font-semibold tabular-nums">{{ count(summary.total_returned_items) }}</p>
@@ -412,13 +404,13 @@ const entityLabel = (entity: { name_ar?: string, name_en?: string } | null) =>
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead class="font-medium">{{ t('reports_sales_returns_analysis.col_product_name') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_sales_returns_analysis.col_category') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_sales_returns_analysis.col_return_reason') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_sales_returns_analysis.col_quantity_sold') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_sales_returns_analysis.col_quantity_returned') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_sales_returns_analysis.col_returned_value') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_sales_returns_analysis.col_return_rate') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_sales_returns_analysis.col_product_name') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_sales_returns_analysis.col_category') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_sales_returns_analysis.col_return_reason') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_sales_returns_analysis.col_quantity_sold') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_sales_returns_analysis.col_quantity_returned') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_sales_returns_analysis.col_returned_value') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_sales_returns_analysis.col_return_rate') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -437,13 +429,13 @@ const entityLabel = (entity: { name_ar?: string, name_en?: string } | null) =>
                     v-for="row in records"
                     :key="row.key"
                   >
-                    <TableCell class="font-medium">{{ entityLabel(row.product) }}</TableCell>
-                    <TableCell>{{ entityLabel(row.category) }}</TableCell>
-                    <TableCell>{{ returnReasonLabel(row.return_reason) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ count(row.quantity_sold) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ count(row.quantity_returned) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.returned_value) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ formatPercent(row.return_rate) }}</TableCell>
+                    <TableCell class="font-medium text-start align-middle">{{ entityLabel(row.product) }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ entityLabel(row.category) }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ returnReasonLabel(row.return_reason) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ count(row.quantity_sold) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ count(row.quantity_returned) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.returned_value) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ formatPercent(row.return_rate) }}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

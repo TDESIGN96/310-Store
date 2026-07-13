@@ -824,13 +824,19 @@ onMounted(async () => {
         </div>
 
         <div class="overflow-x-auto">
-          <Table>
+          <Table class="table-fixed w-full min-w-[720px]">
+            <colgroup>
+              <col style="width: auto">
+              <col style="width: 11rem">
+              <col style="width: 13rem">
+              <col style="width: 3rem">
+            </colgroup>
             <TableHeader class="hidden md:table-header-group">
               <TableRow class="bg-muted/40 hover:bg-muted/40">
                 <TableHead class="min-w-[320px] text-start">{{ $t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                <TableHead class="w-24 text-start">{{ $t('distributors_show.allocation_quantity') }}</TableHead>
-                <TableHead class="w-32 text-start">{{ $t('distributors_show.allocation_unit_price') }}</TableHead>
-                <TableHead class="w-12 text-start">{{ $t('distributors_show.stock_allocation_col_actions') }}</TableHead>
+                <TableHead class="text-start">{{ $t('distributors_show.allocation_quantity') }}</TableHead>
+                <TableHead class="text-start">{{ $t('distributors_show.allocation_unit_price') }}</TableHead>
+                <TableHead class="text-start">{{ $t('distributors_show.stock_allocation_col_actions') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -841,7 +847,7 @@ onMounted(async () => {
                        md:table-row md:border-0 md:rounded-none md:p-0 md:mb-0 md:shadow-none"
               >
                 <!-- Product cell (nested: variation, warehouse, stock, pricing) -->
-                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[320px] md:py-3">
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:min-w-[320px] md:overflow-hidden md:whitespace-normal md:py-3">
                   <span class="block text-xs font-medium text-muted-foreground mb-2 md:hidden">
                     {{ $t('distributors_show.stock_allocation_col_product_name') }}
                   </span>
@@ -892,7 +898,7 @@ onMounted(async () => {
                             </SelectItem>
                           </SelectContent>
                         </Select>
-                        <p v-if="getRowError(row).variation_id" class="text-xs text-red-600">{{ getRowError(row).variation_id }}</p>
+                        <p v-if="getRowError(row).variation_id" class="max-w-full whitespace-normal break-words text-xs text-red-600">{{ getRowError(row).variation_id }}</p>
                       </div>
 
                       <div class="space-y-1.5">
@@ -918,7 +924,7 @@ onMounted(async () => {
                             </SelectItem>
                           </SelectContent>
                         </Select>
-                        <p v-if="getRowError(row).warehouse_id" class="text-xs text-red-600">{{ getRowError(row).warehouse_id }}</p>
+                        <p v-if="getRowError(row).warehouse_id" class="max-w-full whitespace-normal break-words text-xs text-red-600">{{ getRowError(row).warehouse_id }}</p>
                       </div>
                     </div>
 
@@ -976,7 +982,7 @@ onMounted(async () => {
                         <Button type="button" variant="outline" size="sm" class="h-8 text-xs" @click="addTier(row)">
                           {{ $t('distributors_show.allocation_add_tier') }}
                         </Button>
-                        <p v-if="getRowError(row).tiers" class="text-xs text-red-600">{{ getRowError(row).tiers }}</p>
+                        <p v-if="getRowError(row).tiers" class="max-w-full whitespace-normal break-words text-xs text-red-600">{{ getRowError(row).tiers }}</p>
                       </div>
                     </div>
                   </div>
@@ -985,11 +991,11 @@ onMounted(async () => {
                
 
                 <!-- Qty -->
-                <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:overflow-hidden md:whitespace-normal md:py-3">
                   <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
                     {{ $t('distributors_show.allocation_quantity') }}
                   </span>
-                  <div class="flex w-full flex-col gap-1 md:ms-auto md:max-w-24 md:items-end">
+                  <div class="flex w-full max-w-full min-w-0 flex-col gap-1">
                     <Input
                       :model-value="row.quantity"
                       type="number"
@@ -997,16 +1003,16 @@ onMounted(async () => {
                       class="h-9 w-full text-start tabular-nums"
                       @update:model-value="value => row.quantity = Math.max(0, Number(value) || 0)"
                     />
-                    <p v-if="getRowError(row).quantity" class="w-full text-start text-xs text-red-600">{{ getRowError(row).quantity }}</p>
+                    <p v-if="getRowError(row).quantity" class="max-w-full whitespace-normal break-words text-start text-xs leading-snug text-red-600">{{ getRowError(row).quantity }}</p>
                   </div>
                 </TableCell>
 
                 <!-- Unit Price -->
-                <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:overflow-hidden md:whitespace-normal md:py-3">
                   <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
                     {{ $t('distributors_show.allocation_unit_price') }}
                   </span>
-                  <div class="flex w-full flex-col gap-1 md:ms-auto md:max-w-32 md:items-end">
+                  <div class="flex w-full max-w-full min-w-0 flex-col gap-1">
                     <Input
                       :model-value="row.standard_price"
                       type="number"
@@ -1015,7 +1021,7 @@ onMounted(async () => {
                       class="h-9 w-full text-start tabular-nums"
                       @update:model-value="value => row.standard_price = Math.max(0, Number(value) || 0)"
                     />
-                    <p v-if="getRowError(row).standard_price" class="w-full text-start text-xs text-red-600">{{ getRowError(row).standard_price }}</p>
+                    <p v-if="getRowError(row).standard_price" class="max-w-full whitespace-normal break-words text-start text-xs leading-snug text-red-600">{{ getRowError(row).standard_price }}</p>
                   </div>
                 </TableCell>
 

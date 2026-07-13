@@ -379,7 +379,7 @@ export default {
     no_results: 'لا توجد نتائج',
     clear_filters: 'مسح الفلاتر',
     select: 'اختر',
-    select_placeholder: 'اختر…',
+    select_placeholder: 'اختار',
     page_of: 'صفحة {current} من {total}',
     showing_range: 'عرض {from}–{to} من إجمالي {total}',
     total_label: 'إجمالي {count}',

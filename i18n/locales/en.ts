@@ -379,7 +379,7 @@ export default {
     no_results: 'No matching results',
     clear_filters: 'Clear filters',
     select: 'Select',
-    select_placeholder: 'Select…',
+    select_placeholder: 'Select',
     page_of: 'Page {current} of {total}',
     showing_range: 'Showing {from}–{to} of {total}',
     total_label: 'Total: {count}',

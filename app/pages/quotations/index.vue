@@ -630,7 +630,7 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('quotations_page.col_status') }}</span>
-                <Badge :variant="row.status === 'active' ? 'outline' : 'secondary'">
+                <Badge :variant="row.status === 'active' ? 'secondary' : 'outline'">
                   {{
                     row.status === 'active'
                       ? t('quotations_page.filter_status_active')

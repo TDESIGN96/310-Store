@@ -16,6 +16,7 @@ import {
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import WarehouseMultiSelect from '@/components/reports/WarehouseMultiSelect.vue'
 import ReportStringMultiSelect from '@/components/reports/ReportStringMultiSelect.vue'
+import ReportFilterField from '@/components/reports/ReportFilterField.vue'
 import type { ReportStringMultiSelectItem } from '@/components/reports/ReportStringMultiSelect.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import type { DamageAnalysisReason, DamageAnalysisReasonValue } from '@/stores/reports'
@@ -239,51 +240,45 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('reports_damage_analysis.generate_report') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6">
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_damage_analysis.filter_from_date') }} <span class="text-red-500">*</span>
-              </label>
+          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <ReportFilterField
+              :label="t('reports_damage_analysis.filter_from_date')"
+              required
+              :error="fieldErrors.from_date"
+            >
               <DatePickerInput
                 v-model="dateFrom"
                 class="w-full"
                 @update:model-value="fieldErrors.from_date = ''"
               />
-              <p v-if="fieldErrors.from_date" class="text-xs text-red-600">{{ fieldErrors.from_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_damage_analysis.filter_to_date') }} <span class="text-red-500">*</span>
-              </label>
+            </ReportFilterField>
+            <ReportFilterField
+              :label="t('reports_damage_analysis.filter_to_date')"
+              required
+              :error="fieldErrors.to_date"
+            >
               <DatePickerInput
                 v-model="dateTo"
                 class="w-full"
                 @update:model-value="fieldErrors.to_date = ''"
               />
-              <p v-if="fieldErrors.to_date" class="text-xs text-red-600">{{ fieldErrors.to_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_damage_analysis.filter_warehouse') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_damage_analysis.filter_warehouse')">
               <WarehouseMultiSelect
                 v-model="selectedWarehouseIds"
                 :warehouses="warehouseOptions"
                 :placeholder="t('reports_damage_analysis.filter_warehouse')"
                 :all-label="t('reports_damage_analysis.filter_warehouse_all')"
               />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_damage_analysis.filter_reason') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_damage_analysis.filter_reason')">
               <ReportStringMultiSelect
                 v-model="selectedReasons"
                 :items="reasonSelectItems"
                 :placeholder="t('reports_damage_analysis.filter_reason')"
                 :all-label="t('reports_damage_analysis.filter_reason_all')"
               />
-            </div>
+            </ReportFilterField>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -328,7 +323,7 @@ onMounted(async () => {
           <div class="flex items-center gap-2 border-b bg-section-items border-section-items px-4 py-3.5 text-white sm:px-6">
             <h2 class="text-base font-semibold">{{ t('reports_damage_analysis.summary_title') }}</h2>
           </div>
-          <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+          <CardContent class="grid items-center gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
             <div>
               <p class="text-xs text-muted-foreground">{{ t('reports_damage_analysis.summary_total_damaged_items') }}</p>
               <p class="text-lg font-semibold tabular-nums">{{ count(summary.total_damaged_items) }}</p>
@@ -357,13 +352,13 @@ onMounted(async () => {
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead class="font-medium">{{ t('reports_damage_analysis.col_product_name') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_damage_analysis.col_warehouse') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_damage_analysis.col_damage_reason') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_damage_analysis.col_damaged_quantity') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_damage_analysis.col_cost_price') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_damage_analysis.col_financial_loss') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_damage_analysis.col_percentage_of_total_loss') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_damage_analysis.col_product_name') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_damage_analysis.col_warehouse') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_damage_analysis.col_damage_reason') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_damage_analysis.col_damaged_quantity') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_damage_analysis.col_cost_price') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_damage_analysis.col_financial_loss') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_damage_analysis.col_percentage_of_total_loss') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -382,13 +377,13 @@ onMounted(async () => {
                     v-for="row in records"
                     :key="row.key"
                   >
-                    <TableCell class="font-medium">{{ localizedName(row.product) }}</TableCell>
-                    <TableCell>{{ localizedName(row.warehouse) }}</TableCell>
-                    <TableCell>{{ damageReasonLabel(row.reason) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ count(row.damaged_quantity) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.cost_price) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.financial_loss) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ formatPercent(row.percentage_of_total_loss) }}</TableCell>
+                    <TableCell class="font-medium text-start align-middle">{{ localizedName(row.product) }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ localizedName(row.warehouse) }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ damageReasonLabel(row.reason) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ count(row.damaged_quantity) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.cost_price) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.financial_loss) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ formatPercent(row.percentage_of_total_loss) }}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

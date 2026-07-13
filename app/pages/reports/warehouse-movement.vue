@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import ReportMultiSelect from '@/components/reports/ReportMultiSelect.vue'
+import ReportFilterField from '@/components/reports/ReportFilterField.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import type { WarehouseMovementRecord, WarehouseMovementType } from '@/stores/reports'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
@@ -272,16 +273,17 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('reports_warehouse_movement.generate_report') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6">
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_warehouse_movement.filter_warehouse') }} <span class="text-red-500">*</span>
-              </label>
+          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <ReportFilterField
+              :label="t('reports_warehouse_movement.filter_warehouse')"
+              required
+              :error="fieldErrors.warehouse_id"
+            >
               <Select
                 :model-value="selectedWarehouseId ? String(selectedWarehouseId) : ''"
                 @update:model-value="(val) => { selectedWarehouseId = val ? Number(val) : null; fieldErrors.warehouse_id = '' }"
               >
-                <SelectTrigger class="w-full">
+                <SelectTrigger class="h-9 w-full">
                   <SelectValue :placeholder="t('reports_warehouse_movement.filter_warehouse_placeholder')" />
                 </SelectTrigger>
                 <SelectContent>
@@ -294,39 +296,35 @@ onMounted(async () => {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <p v-if="fieldErrors.warehouse_id" class="text-xs text-red-600">{{ fieldErrors.warehouse_id }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_warehouse_movement.filter_from_date') }} <span class="text-red-500">*</span>
-              </label>
+            </ReportFilterField>
+            <ReportFilterField
+              :label="t('reports_warehouse_movement.filter_from_date')"
+              required
+              :error="fieldErrors.from_date"
+            >
               <DatePickerInput
                 v-model="dateFrom"
                 class="w-full"
                 @update:model-value="fieldErrors.from_date = ''"
               />
-              <p v-if="fieldErrors.from_date" class="text-xs text-red-600">{{ fieldErrors.from_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_warehouse_movement.filter_to_date') }} <span class="text-red-500">*</span>
-              </label>
+            </ReportFilterField>
+            <ReportFilterField
+              :label="t('reports_warehouse_movement.filter_to_date')"
+              required
+              :error="fieldErrors.to_date"
+            >
               <DatePickerInput
                 v-model="dateTo"
                 class="w-full"
                 @update:model-value="fieldErrors.to_date = ''"
               />
-              <p v-if="fieldErrors.to_date" class="text-xs text-red-600">{{ fieldErrors.to_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_warehouse_movement.filter_movement_type') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_warehouse_movement.filter_movement_type')">
               <Select
                 :model-value="movementType"
                 @update:model-value="(val) => { movementType = (val as WarehouseMovementType) || 'all' }"
               >
-                <SelectTrigger class="w-full">
+                <SelectTrigger class="h-9 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,18 +337,15 @@ onMounted(async () => {
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_warehouse_movement.filter_product') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_warehouse_movement.filter_product')">
               <ReportMultiSelect
                 v-model="selectedProductIds"
                 :items="productSelectItems"
                 :placeholder="t('reports_warehouse_movement.filter_product')"
                 :all-label="t('reports_warehouse_movement.filter_product_all')"
               />
-            </div>
+            </ReportFilterField>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -400,13 +395,13 @@ onMounted(async () => {
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead class="font-medium">{{ t('reports_warehouse_movement.col_date') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_warehouse_movement.col_movement_type') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_warehouse_movement.col_source') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_warehouse_movement.col_reference') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_warehouse_movement.col_product_name') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_warehouse_movement.col_quantity') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_warehouse_movement.col_executed_by') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_warehouse_movement.col_date') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_warehouse_movement.col_movement_type') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_warehouse_movement.col_source') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_warehouse_movement.col_reference') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_warehouse_movement.col_product_name') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_warehouse_movement.col_quantity') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_warehouse_movement.col_executed_by') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -425,10 +420,10 @@ onMounted(async () => {
                     v-for="row in records"
                     :key="row.key"
                   >
-                    <TableCell class="tabular-nums">{{ formatDisplayDate(row.date) }}</TableCell>
-                    <TableCell>{{ rowMovementTypeLabel(row) }}</TableCell>
-                    <TableCell>{{ rowSourceLabel(row) }}</TableCell>
-                    <TableCell>
+                    <TableCell class="text-start tabular-nums align-middle">{{ formatDisplayDate(row.date) }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ rowMovementTypeLabel(row) }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ rowSourceLabel(row) }}</TableCell>
+                    <TableCell class="text-start align-middle">
                       <NuxtLink
                         v-if="referencePath(row) && row.reference?.number"
                         :to="referencePath(row)!"
@@ -438,9 +433,9 @@ onMounted(async () => {
                       </NuxtLink>
                       <span v-else>{{ row.reference?.number || '—' }}</span>
                     </TableCell>
-                    <TableCell class="font-medium">{{ localizedName(row.product) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ count(row.quantity) }}</TableCell>
-                    <TableCell>
+                    <TableCell class="font-medium text-start align-middle">{{ localizedName(row.product) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ count(row.quantity) }}</TableCell>
+                    <TableCell class="text-start align-middle">
                       <NuxtLink
                         v-if="executedByPath(row) && row.executed_by?.name"
                         :to="executedByPath(row)!"
@@ -455,7 +450,7 @@ onMounted(async () => {
               </Table>
             </div>
 
-            <div class="grid gap-4 border-t bg-muted/20 px-4 py-4 sm:grid-cols-3 sm:px-6">
+            <div class="grid items-center gap-4 border-t bg-muted/20 px-4 py-4 sm:grid-cols-3 sm:px-6">
               <div>
                 <p class="text-xs text-muted-foreground">{{ t('reports_warehouse_movement.summary_total_in') }}</p>
                 <p class="text-lg font-semibold tabular-nums">{{ count(summary.total_in) }}</p>

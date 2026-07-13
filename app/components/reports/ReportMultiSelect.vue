@@ -44,11 +44,11 @@ const toggleItem = (id: number) => {
 </script>
 
 <template>
-  <Popover>
+  <Popover class="w-full">
     <PopoverTrigger as-child>
       <Button
         variant="outline"
-        class="h-9 w-full gap-2 sm:w-auto"
+        class="h-9 w-full justify-start gap-2"
       >
         <Filter class="size-3.5 shrink-0 text-muted-foreground" />
         <span class="truncate max-w-[180px] text-sm">{{ selectedLabel }}</span>

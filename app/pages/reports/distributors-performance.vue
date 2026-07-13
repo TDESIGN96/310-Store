@@ -16,6 +16,7 @@ import {
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import WarehouseMultiSelect from '@/components/reports/WarehouseMultiSelect.vue'
 import ReportMultiSelect from '@/components/reports/ReportMultiSelect.vue'
+import ReportFilterField from '@/components/reports/ReportFilterField.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 import {
@@ -254,51 +255,45 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('reports_distributors_performance.generate_report') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6">
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_distributors_performance.filter_from_date') }} <span class="text-red-500">*</span>
-              </label>
+          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ReportFilterField
+              :label="t('reports_distributors_performance.filter_from_date')"
+              required
+              :error="fieldErrors.from_date"
+            >
               <DatePickerInput
                 v-model="dateFrom"
                 class="w-full"
                 @update:model-value="fieldErrors.from_date = ''"
               />
-              <p v-if="fieldErrors.from_date" class="text-xs text-red-600">{{ fieldErrors.from_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_distributors_performance.filter_to_date') }} <span class="text-red-500">*</span>
-              </label>
+            </ReportFilterField>
+            <ReportFilterField
+              :label="t('reports_distributors_performance.filter_to_date')"
+              required
+              :error="fieldErrors.to_date"
+            >
               <DatePickerInput
                 v-model="dateTo"
                 class="w-full"
                 @update:model-value="fieldErrors.to_date = ''"
               />
-              <p v-if="fieldErrors.to_date" class="text-xs text-red-600">{{ fieldErrors.to_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_distributors_performance.filter_warehouse') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_distributors_performance.filter_warehouse')">
               <WarehouseMultiSelect
                 v-model="selectedWarehouseIds"
                 :warehouses="warehouseOptions"
                 :placeholder="t('reports_distributors_performance.filter_warehouse')"
                 :all-label="t('reports_distributors_performance.filter_warehouse_all')"
               />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_distributors_performance.filter_distributor') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_distributors_performance.filter_distributor')">
               <ReportMultiSelect
                 v-model="selectedDistributorIds"
                 :items="distributorSelectItems"
                 :placeholder="t('reports_distributors_performance.filter_distributor')"
                 :all-label="t('reports_distributors_performance.filter_distributor_all')"
               />
-            </div>
+            </ReportFilterField>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -348,13 +343,13 @@ onMounted(async () => {
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead class="font-medium">{{ t('reports_distributors_performance.col_distributor_name') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_distributors_performance.col_total_invoices') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_distributors_performance.col_total_sales') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_distributors_performance.col_total_returns') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_distributors_performance.col_return_rate') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_distributors_performance.col_net_sales') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_distributors_performance.col_average_order_value') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_distributors_performance.col_distributor_name') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_distributors_performance.col_total_invoices') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_distributors_performance.col_total_sales') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_distributors_performance.col_total_returns') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_distributors_performance.col_return_rate') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_distributors_performance.col_net_sales') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_distributors_performance.col_average_order_value') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -373,13 +368,13 @@ onMounted(async () => {
                     v-for="row in records"
                     :key="row.key"
                   >
-                    <TableCell class="font-medium">{{ localizedName(row.distributor) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ count(row.total_invoices) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.total_sales) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.total_returns) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ formatPercent(row.return_rate) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.net_sales) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.average_order_value) }}</TableCell>
+                    <TableCell class="font-medium text-start align-middle">{{ localizedName(row.distributor) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ count(row.total_invoices) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.total_sales) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.total_returns) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ formatPercent(row.return_rate) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.net_sales) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.average_order_value) }}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

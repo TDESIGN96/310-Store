@@ -257,12 +257,12 @@ onMounted(loadAllocation)
         </div>
 
         <div class="overflow-x-auto">
-          <Table>
+          <Table class="table-fixed w-full">
             <TableHeader class="hidden md:table-header-group">
               <TableRow class="bg-muted/40 hover:bg-muted/40">
                 <TableHead class="min-w-[240px] text-start">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                <TableHead class="w-28 text-start">{{ t('distributors_show.allocation_quantity') }}</TableHead>
-                <TableHead class="w-32 text-start">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
+                <TableHead class="w-[150px] min-w-[150px] text-start">{{ t('distributors_show.allocation_quantity') }}</TableHead>
+                <TableHead class="w-[170px] min-w-[170px] text-start">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -292,11 +292,11 @@ onMounted(loadAllocation)
               
 
                 <!-- Qty (editable) -->
-                <TableCell class="block py-1.5 md:table-cell md:align-top md:py-3">
+                <TableCell class="block py-1.5 md:table-cell md:align-top md:overflow-hidden md:whitespace-normal md:py-3">
                   <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
                     {{ t('distributors_show.allocation_quantity') }}
                   </span>
-                  <div class="flex w-full flex-col gap-1 md:ms-auto md:max-w-28 md:items-end">
+                  <div class="flex w-full max-w-full min-w-0 flex-col gap-1">
                     <Input
                       :model-value="quantity"
                       type="number"
@@ -305,7 +305,7 @@ onMounted(loadAllocation)
                       :class="quantityError ? 'border-red-500 focus-visible:ring-red-500' : ''"
                       @update:model-value="value => { quantity = Math.max(0, Number(value) || 0); quantityError = '' }"
                     />
-                    <p v-if="quantityError" class="w-full text-start text-xs text-red-600">{{ quantityError }}</p>
+                    <p v-if="quantityError" class="max-w-full whitespace-normal break-words text-start text-xs leading-snug text-red-600">{{ quantityError }}</p>
                   </div>
                 </TableCell>
 

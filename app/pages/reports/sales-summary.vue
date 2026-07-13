@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import WarehouseMultiSelect from '@/components/reports/WarehouseMultiSelect.vue'
+import ReportFilterField from '@/components/reports/ReportFilterField.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
@@ -197,49 +198,46 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('reports_sales_summary.generate_report') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6">
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_summary.filter_from_date') }} <span class="text-red-500">*</span>
-              </label>
+          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ReportFilterField
+              :label="t('reports_sales_summary.filter_from_date')"
+              required
+              :error="fieldErrors.from_date"
+            >
               <DatePickerInput
                 v-model="dateFrom"
                 class="w-full"
                 @update:model-value="fieldErrors.from_date = ''"
               />
-              <p v-if="fieldErrors.from_date" class="text-xs text-red-600">{{ fieldErrors.from_date }}</p>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_summary.filter_to_date') }} <span class="text-red-500">*</span>
-              </label>
+            </ReportFilterField>
+            <ReportFilterField
+              :label="t('reports_sales_summary.filter_to_date')"
+              required
+              :error="fieldErrors.to_date"
+            >
               <DatePickerInput
                 v-model="dateTo"
                 class="w-full"
                 @update:model-value="fieldErrors.to_date = ''"
               />
-              <p v-if="fieldErrors.to_date" class="text-xs text-red-600">{{ fieldErrors.to_date }}</p>
-            </div>
-            <div class=" space-y-1.5 ">
-              <label class="text-xs font-medium text-muted-foreground">
-                {{ t('reports_sales_summary.filter_warehouse') }}
-              </label>
+            </ReportFilterField>
+            <ReportFilterField :label="t('reports_sales_summary.filter_warehouse')">
               <WarehouseMultiSelect
                 v-model="selectedWarehouseIds"
                 :warehouses="warehouseOptions"
                 :placeholder="t('reports_sales_summary.filter_warehouse')"
                 :all-label="t('reports_sales_summary.filter_warehouse_all')"
               />
-            </div>
-            <div class="flex items-end">
-              <label class="flex items-center gap-2 text-sm cursor-pointer pb-2">
+            </ReportFilterField>
+            <ReportFilterField hide-label>
+              <label class="flex h-9 w-full cursor-pointer items-center gap-2 text-sm">
                 <Checkbox
                   :model-value="includeDistributorInvoices"
                   @update:model-value="value => includeDistributorInvoices = value === true"
                 />
                 <span>{{ t('reports_sales_summary.filter_include_distributor_invoices') }}</span>
               </label>
-            </div>
+            </ReportFilterField>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button
@@ -284,7 +282,7 @@ onMounted(async () => {
           <div class="flex items-center gap-2 border-b bg-section-items border-section-items px-4 py-3.5 text-white sm:px-6">
             <h2 class="text-base font-semibold">{{ t('reports_sales_summary.summary_title') }}</h2>
           </div>
-          <CardContent class="grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 xl:grid-cols-6">
+          <CardContent class="grid items-center gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 xl:grid-cols-6">
             <div>
               <p class="text-xs text-muted-foreground">{{ t('reports_sales_summary.summary_total_invoices') }}</p>
               <p class="text-lg font-semibold tabular-nums">{{ count(summary.total_invoices) }}</p>
@@ -321,13 +319,13 @@ onMounted(async () => {
               <Table>
                 <TableHeader>
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
-                    <TableHead class="font-medium">{{ t('reports_sales_summary.col_reference') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_sales_summary.col_invoice_date') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_sales_summary.col_warehouse') }}</TableHead>
-                    <TableHead class="font-medium">{{ t('reports_sales_summary.col_distributor') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_sales_summary.col_total') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_sales_summary.col_items') }}</TableHead>
-                    <TableHead class="font-medium text-end">{{ t('reports_sales_summary.col_returns') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_sales_summary.col_reference') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_sales_summary.col_invoice_date') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_sales_summary.col_warehouse') }}</TableHead>
+                    <TableHead class="font-medium text-start">{{ t('reports_sales_summary.col_distributor') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_sales_summary.col_total') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_sales_summary.col_items') }}</TableHead>
+                    <TableHead class="font-medium text-end tabular-nums">{{ t('reports_sales_summary.col_returns') }}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -346,13 +344,13 @@ onMounted(async () => {
                     v-for="row in records"
                     :key="row.id"
                   >
-                    <TableCell class="font-medium">{{ row.reference_number || '—' }}</TableCell>
-                    <TableCell>{{ formatDisplayDate(row.invoice_date) || '—' }}</TableCell>
-                    <TableCell>{{ localizedName(row.warehouse) }}</TableCell>
-                    <TableCell>{{ localizedName(row.distributor) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.total) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ count(row.items_count) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ money(row.returns_total) }}</TableCell>
+                    <TableCell class="font-medium text-start align-middle">{{ row.reference_number || '—' }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ formatDisplayDate(row.invoice_date) || '—' }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ localizedName(row.warehouse) }}</TableCell>
+                    <TableCell class="text-start align-middle">{{ localizedName(row.distributor) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.total) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ count(row.items_count) }}</TableCell>
+                    <TableCell class="text-end tabular-nums align-middle">{{ money(row.returns_total) }}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
