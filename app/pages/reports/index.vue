@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { REPORT_VIEW_PERMISSIONS } from '@/config/reportPermissions'
 
 definePageMeta({ layout: 'default' })
 
@@ -25,7 +26,7 @@ interface ReportCard {
 
 const { t } = useI18n()
 const { can } = usePermissions()
-const canViewReports = computed(() => can('reports.index') || can('reports.show'))
+const canViewReports = computed(() => can('reports.index') || can('reports.show') || REPORT_VIEW_PERMISSIONS.some(p => can(p)))
 
 const reportCards: ReportCard[] = [
   {

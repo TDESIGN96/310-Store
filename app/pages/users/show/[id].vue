@@ -12,7 +12,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
-import { permissionIdSet } from '@/config/permissions'
 import { normalizeLoadedPermissions, type RolePermissionModule } from '@/utils/rolePermissions'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
@@ -79,6 +78,7 @@ interface UserResponse {
 const route = useRoute()
 const userId = route.params.id as string
 const { $api } = useApi()
+const { permissionIdSet, loadPermissionCatalog } = usePermissionCatalog()
 
 const user = ref<UserData | null>(null)
 const roles = ref<RoleItem[]>([])
@@ -95,7 +95,8 @@ const loadUser = async () => {
     const userData = (data.user ?? (raw && 'user' in raw ? raw.user : raw) ?? null) as UserDataApi | null
     if (userData) {
       const rawPerm = Array.isArray(userData.permissions) ? userData.permissions : []
-      const normalizedPermissions = normalizeLoadedPermissions(rawPerm).filter(p => permissionIdSet.has(p))
+      await loadPermissionCatalog()
+      const normalizedPermissions = normalizeLoadedPermissions(rawPerm).filter(p => permissionIdSet.value.has(p))
       user.value = { ...userData, permissions: normalizedPermissions }
     } else {
       user.value = null
@@ -156,6 +157,7 @@ const confirmDeleteUser = async () => {
 
 onMounted(() => {
   if (!canView.value) return
+  loadPermissionCatalog()
   loadUser()
   loadRoles()
 })

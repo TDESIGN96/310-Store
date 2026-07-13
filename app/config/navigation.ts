@@ -14,6 +14,7 @@ import {
   ClipboardList,
   AlertTriangle,
   BarChart3,
+  Archive,
 } from 'lucide-vue-next'
 import type { PermissionModule } from '@/config/permissions'
 
@@ -148,10 +149,21 @@ export const navItems: NavGroup[] = [
         path: '/invoice-returns',
         module: 'invoice_returns',
       },
+    ],
+  },
+  {
+    groupKey: 'nav.groups.reports',
+    items: [
       {
         labelKey: 'nav.items.reports',
         icon: BarChart3,
         path: '/reports',
+        module: 'reports',
+      },
+      {
+        labelKey: 'nav.items.reports_center',
+        icon: Archive,
+        path: '/reports-center',
         module: 'reports',
       },
     ],

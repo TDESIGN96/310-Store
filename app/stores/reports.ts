@@ -1,4 +1,17 @@
 import { ref } from 'vue'
+import type { ReportsCenterItem } from '@/stores/reportsCenter'
+import { normalizeReportsCenterItem } from '@/stores/reportsCenter'
+
+export type ReportExportFormat = 'excel' | 'pdf'
+
+export type ReportExportSlug =
+  | 'sales-summary'
+  | 'purchase-summary'
+  | 'sales-returns'
+  | 'damage-analysis'
+  | 'product-profitability'
+  | 'distributor-performance'
+  | 'warehouse-movement'
 
 export interface SalesSummaryWarehouse {
   id: number
@@ -869,6 +882,16 @@ export const useReportsStore = defineStore('reports', () => {
   const DISTRIBUTOR_PERFORMANCE_ENDPOINT = '/reports/distributor-performance'
   const WAREHOUSE_MOVEMENT_ENDPOINT = '/reports/warehouse-movement'
 
+  const REPORT_EXPORT_ENDPOINTS: Record<ReportExportSlug, string> = {
+    'sales-summary': SALES_SUMMARY_ENDPOINT,
+    'purchase-summary': PURCHASE_SUMMARY_ENDPOINT,
+    'sales-returns': SALES_RETURNS_ENDPOINT,
+    'damage-analysis': DAMAGE_ANALYSIS_ENDPOINT,
+    'product-profitability': PRODUCT_PROFITABILITY_ENDPOINT,
+    'distributor-performance': DISTRIBUTOR_PERFORMANCE_ENDPOINT,
+    'warehouse-movement': WAREHOUSE_MOVEMENT_ENDPOINT,
+  }
+
   const salesSummaryLoading = ref(false)
   const salesSummaryGenerated = ref(false)
   const salesSummary = ref<SalesSummarySummary>(defaultSummary())
@@ -1175,7 +1198,23 @@ export const useReportsStore = defineStore('reports', () => {
     }
   }
 
+  /** Queues an async server-side export job; response is the created Reports Center record (status starts as processing). */
+  const exportReport = async (
+    slug: ReportExportSlug,
+    format: ReportExportFormat,
+    params: Record<string, unknown> = {},
+  ): Promise<ReportsCenterItem | null> => {
+    const endpoint = REPORT_EXPORT_ENDPOINTS[slug]
+    const response = await $api(`${endpoint}/export/${format}`, {
+      method: 'POST',
+      body: params,
+    })
+    const data = extractData(response)
+    return data ? normalizeReportsCenterItem(data) : null
+  }
+
   return {
+    exportReport,
     salesSummaryLoading,
     salesSummaryGenerated,
     salesSummary,

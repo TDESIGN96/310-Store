@@ -1,4 +1,5 @@
 import type { PermissionModule } from '@/config/permissions'
+import { REPORT_VIEW_PERMISSIONS } from '@/config/reportPermissions'
 
 /**
  * Central permission helpers — always use this instead of ad-hoc auth checks.
@@ -37,6 +38,11 @@ export function usePermissions() {
     if (isModuleBlockedForDistributor(module)) return false
     if (module === 'stocktaking') return can('stocktaking.view')
     if (module === 'damage') return can('damage.view')
+    if (module === 'reports') {
+      // Backend grants reports access per-report (e.g. `sales_summary_report.view`)
+      // instead of a single `reports.index`/`reports.show` permission.
+      return can('reports.index') || can('reports.show') || REPORT_VIEW_PERMISSIONS.some(p => can(p))
+    }
     return can(`${module}.index`) || can(`${module}.show`)
   }
 

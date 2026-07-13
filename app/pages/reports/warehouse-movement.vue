@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { ArrowRight, Loader2 } from 'lucide-vue-next'
+import { ArrowRight, FileSpreadsheet, FileText, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DatePickerInput } from '@/components/ui/date-picker'
@@ -34,6 +34,7 @@ import {
   toIsoDateTimeStart,
 } from '@/utils/reportDateFilters'
 import { warehouseMovementReferencePath } from '@/utils/warehouseMovementReferencePath'
+import { reportViewPermission } from '@/config/reportPermissions'
 
 definePageMeta({ layout: 'default' })
 
@@ -52,8 +53,9 @@ const { $api } = useApi()
 const { loadActiveWarehouses } = useInvoiceWarehouses()
 const reportsStore = useReportsStore()
 const { getErrorMessage } = useApiError()
+const { exportingExcel, exportingPdf, exportExcel, exportPdf } = useReportExport('warehouse-movement')
 
-const canViewReports = computed(() => can('reports.index') || can('reports.show'))
+const canViewReports = computed(() => can('reports.index') || can('reports.show') || can(reportViewPermission('warehouse-movement')))
 
 const dateFrom = ref('')
 const dateTo = ref('')
@@ -203,6 +205,25 @@ const goToPage = async (page: number) => {
   await generateReport(page)
 }
 
+const buildExportParams = () => {
+  const params = buildQueryParams(1)
+  if (!params) return null
+  const exportParams: Record<string, unknown> = { ...params }
+  delete exportParams.page
+  delete exportParams.per_page
+  return exportParams
+}
+
+const handleExportExcel = () => {
+  if (!validateFilters()) return
+  exportExcel(buildExportParams())
+}
+
+const handleExportPdf = () => {
+  if (!validateFilters()) return
+  exportPdf(buildExportParams())
+}
+
 const loadProductOptions = async () => {
   const list = await fetchAllProductsPages<ProductOption>($api, { status: 'active' })
   productOptions.value = list.filter(p =>
@@ -344,6 +365,26 @@ onMounted(async () => {
             >
               <Loader2 v-if="loading" class="me-2 size-4 animate-spin" />
               {{ t('reports_warehouse_movement.generate_report') }}
+            </Button>
+            <Button
+              variant="outline"
+              class="gap-2"
+              :disabled="!canGenerate || exportingExcel"
+              @click="handleExportExcel"
+            >
+              <Loader2 v-if="exportingExcel" class="size-4 animate-spin" />
+              <FileSpreadsheet v-else class="size-4" />
+              {{ t('reports_hub.export_excel') }}
+            </Button>
+            <Button
+              variant="outline"
+              class="gap-2"
+              :disabled="!canGenerate || exportingPdf"
+              @click="handleExportPdf"
+            >
+              <Loader2 v-if="exportingPdf" class="size-4 animate-spin" />
+              <FileText v-else class="size-4" />
+              {{ t('reports_hub.export_pdf') }}
             </Button>
           </div>
         </CardContent>

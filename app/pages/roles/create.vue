@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'vue-sonner'
-import { permissionGroups, permissionIdSet, type PermissionGroup } from '@/config/permissions'
+import type { PermissionGroup } from '@/config/permissions'
 import { normalizeLoadedPermissions, type RolePermissionModule } from '@/utils/rolePermissions'
 
 definePageMeta({ layout: 'default' })
@@ -26,6 +26,13 @@ interface CreateRoleResponse {
 }
 
 const { $api } = useApi()
+const {
+  permissionGroups,
+  permissionIdSet,
+  permissionCatalogLoading,
+  permissionCatalogError,
+  loadPermissionCatalog,
+} = usePermissionCatalog()
 
 const nameEn = ref('')
 const nameAr = ref('')
@@ -37,8 +44,6 @@ const cloneSourceNameEn = ref('')
 const cloneSourceNameAr = ref('')
 const errorMessage = ref('')
 const fieldErrors = ref({ name_en: '', name_ar: '' })
-
-const knownPermissionIds = permissionIdSet
 
 interface RoleData {
   id: string | number
@@ -72,7 +77,8 @@ const applyClonePrefill = async () => {
 
     const rawPerm = Array.isArray(role.permissions) ? role.permissions : []
     const normalized = normalizeLoadedPermissions(rawPerm)
-    selectedPermissions.value = normalized.filter(p => knownPermissionIds.has(p))
+    await loadPermissionCatalog()
+    selectedPermissions.value = normalized.filter(p => permissionIdSet.value.has(p))
 
     cloneSourceNameEn.value = role.name_en
     cloneSourceNameAr.value = role.name_ar ?? ''
@@ -88,6 +94,7 @@ const applyClonePrefill = async () => {
 }
 
 onMounted(() => {
+  loadPermissionCatalog()
   applyClonePrefill()
 })
 
@@ -260,6 +267,20 @@ const saveRole = async () => {
       <p class="text-sm text-muted-foreground mt-1">
         {{ t('roles_form.permissions_subtitle') }}
       </p>
+    </div>
+
+    <div
+      v-if="permissionCatalogLoading"
+      class="flex items-center gap-2 text-sm text-muted-foreground"
+    >
+      <Loader2 class="size-4 animate-spin" />
+      {{ t('roles_form.loading_permissions') }}
+    </div>
+    <div
+      v-else-if="permissionCatalogError"
+      class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
+    >
+      {{ t('roles_form.permission_catalog_error') }}
     </div>
 
     <div class="space-y-3">

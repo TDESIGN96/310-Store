@@ -50,6 +50,7 @@ export default {
       main: 'الرئيسية',
       inventory: 'المخزون',
       sales: 'المبيعات',
+      reports: 'التقارير',
       purchasing: 'المشتريات',
       administration: 'الإدارة',
     },
@@ -73,6 +74,7 @@ export default {
       users: 'المستخدمون',
       activity_log: 'سجل النشاط',
       reports: 'التقارير',
+      reports_center: 'مركز التقارير',
     },
     submenu: {
       list: 'القائمة',
@@ -211,6 +213,41 @@ export default {
       store: 'إنشاء تقرير',
       update: 'تعديل التقرير',
       destroy: 'حذف التقرير',
+    },
+    sales_summary_report: {
+      view: 'عرض تقرير ملخص المبيعات',
+      export_pdf: 'تصدير تقرير ملخص المبيعات (PDF)',
+      export_excel: 'تصدير تقرير ملخص المبيعات (Excel)',
+    },
+    purchase_summary_report: {
+      view: 'عرض تقرير ملخص المشتريات',
+      export_pdf: 'تصدير تقرير ملخص المشتريات (PDF)',
+      export_excel: 'تصدير تقرير ملخص المشتريات (Excel)',
+    },
+    sales_returns_report: {
+      view: 'عرض تقرير مرتجعات المبيعات',
+      export_pdf: 'تصدير تقرير مرتجعات المبيعات (PDF)',
+      export_excel: 'تصدير تقرير مرتجعات المبيعات (Excel)',
+    },
+    product_profitability_report: {
+      view: 'عرض تقرير ربحية المنتجات',
+      export_pdf: 'تصدير تقرير ربحية المنتجات (PDF)',
+      export_excel: 'تصدير تقرير ربحية المنتجات (Excel)',
+    },
+    damage_analysis_report: {
+      view: 'عرض تقرير تحليل التالف',
+      export_pdf: 'تصدير تقرير تحليل التالف (PDF)',
+      export_excel: 'تصدير تقرير تحليل التالف (Excel)',
+    },
+    distributor_performance_report: {
+      view: 'عرض تقرير أداء الموزعين',
+      export_pdf: 'تصدير تقرير أداء الموزعين (PDF)',
+      export_excel: 'تصدير تقرير أداء الموزعين (Excel)',
+    },
+    warehouse_movement_report: {
+      view: 'عرض تقرير حركة المستودع',
+      export_pdf: 'تصدير تقرير حركة المستودع (PDF)',
+      export_excel: 'تصدير تقرير حركة المستودع (Excel)',
     },
     warehouses: {
       index: 'عرض قائمة المستودعات',
@@ -479,6 +516,8 @@ export default {
     permissions_subtitle: 'اختر الإجراءات المسموح بها لهذا الدور. يجب اختيار صلاحية واحدة على الأقل.',
     select_all: 'تحديد الكل',
     permission_required: 'يجب اختيار صلاحية واحدة على الأقل',
+    loading_permissions: 'جاري تحميل الصلاحيات…',
+    permission_catalog_error: 'تعذر تحميل أحدث قائمة صلاحيات — يتم عرض آخر قائمة معروفة.',
     name_en_required: 'يرجى إدخال اسم الصلاحية بالإنجليزية',
     name_ar_required: 'يرجى إدخال اسم الصلاحية بالعربية',
     name_min: 'يجب أن يكون طول الاسم على الأقل 3 حرف',
@@ -2732,6 +2771,11 @@ export default {
     coming_soon_title: 'قريباً',
     coming_soon_desc: 'هذا التقرير قيد التطوير وسيكون متاحاً قريباً.',
     back_to_reports: 'العودة إلى التقارير',
+    export_excel: 'تصدير Excel',
+    export_pdf: 'تصدير PDF',
+    export_queued_success: 'تم إضافة التصدير إلى قائمة الانتظار. سيظهر في مركز التقارير عند اكتماله.',
+    export_error: 'فشل إضافة التصدير إلى قائمة الانتظار. حاول مرة أخرى.',
+    view_reports_center: 'عرض مركز التقارير',
     cards: {
       sales_summary: {
         title: 'تقرير ملخص المبيعات',
@@ -2762,6 +2806,26 @@ export default {
         description: 'نظرة عامة على فواتير المشتريات وإنفاق الموردين.',
       },
     },
+  },
+
+  reports_center_page: {
+    title: 'مركز التقارير',
+    subtitle_total: 'مركز التقارير - {count} تقرير',
+    no_permission: 'ليس لديك صلاحية لعرض مركز التقارير.',
+    col_file_name: 'اسم الملف',
+    col_filters_applied: 'الفلاتر المطبقة',
+    col_generated_on: 'تاريخ الإنشاء',
+    col_expires_on: 'تاريخ الانتهاء',
+    col_actions: 'الإجراءات',
+    no_filters: '—',
+    empty: 'لم يتم إنشاء أي تقارير حتى الآن.',
+    processing_hint: 'قيد المعالجة…',
+    download: 'تحميل',
+    download_with_format: 'تحميل {format}',
+    delete_title: 'حذف التقرير',
+    delete_body: 'هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.',
+    delete_success: 'تم حذف التقرير بنجاح.',
+    delete_error: 'فشل حذف التقرير. حاول مرة أخرى.',
   },
 
   reports_sales_summary: {

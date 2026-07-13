@@ -35,11 +35,13 @@ export type DamagePermissionKey =
   | 'damage.disposition'
 
 export interface PermissionItem {
-  id: PermissionKey | StocktakingPermissionKey | DamagePermissionKey
+  /** Widened to `string` so dynamically loaded (API) permission ids are also assignable. */
+  id: string
 }
 
 export interface PermissionGroup {
-  id: PermissionModule
+  /** Widened to `string` — dynamic groups derive their id from the permission's module segment. */
+  id: string
   permissions: PermissionItem[]
 }
 

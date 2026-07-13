@@ -1,3 +1,5 @@
+import { REPORT_VIEW_PERMISSIONS } from './reportPermissions'
+
 /**
  * Maps URL paths to required permission(s) (Laravel-style module.action).
  * `null` = no module gate for this path (still requires login if middleware runs after auth).
@@ -90,10 +92,14 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
   { pattern: /^\/damage-records\/show\/[^/]+\/?$/, permission: 'damage.view' },
   { pattern: /^\/damage-records\/?$/, permission: 'damage.view' },
 
-  // Reports
-  { pattern: /^\/reports\/sales-summary\/?$/, permission: ['reports.index', 'reports.show'] },
-  { pattern: /^\/reports\/[^/]+\/?$/, permission: ['reports.index', 'reports.show'] },
-  { pattern: /^\/reports\/?$/, permission: ['reports.index', 'reports.show'] },
+  // Reports — backend grants access per-report (e.g. `sales_summary_report.view`)
+  // rather than a single `reports.index`/`reports.show`, so any of them unlocks the routes.
+  { pattern: /^\/reports\/sales-summary\/?$/, permission: ['reports.index', 'reports.show', ...REPORT_VIEW_PERMISSIONS] },
+  { pattern: /^\/reports\/[^/]+\/?$/, permission: ['reports.index', 'reports.show', ...REPORT_VIEW_PERMISSIONS] },
+  { pattern: /^\/reports\/?$/, permission: ['reports.index', 'reports.show', ...REPORT_VIEW_PERMISSIONS] },
+
+  // Reports Center
+  { pattern: /^\/reports-center\/?$/, permission: ['reports.index', 'reports.show', ...REPORT_VIEW_PERMISSIONS] },
 ]
 
 /**

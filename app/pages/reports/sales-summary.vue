@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { ArrowRight, Download, Loader2 } from 'lucide-vue-next'
+import { ArrowRight, FileSpreadsheet, FileText, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -17,7 +17,6 @@ import {
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
 import WarehouseMultiSelect from '@/components/reports/WarehouseMultiSelect.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
-import type { SalesSummaryRecord } from '@/stores/reports'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
 import {
@@ -26,16 +25,18 @@ import {
   toIsoDateTimeEnd,
   toIsoDateTimeStart,
 } from '@/utils/reportDateFilters'
+import { reportViewPermission } from '@/config/reportPermissions'
 
 definePageMeta({ layout: 'default' })
 
-const { t, tm, locale } = useI18n()
+const { t, locale } = useI18n()
 const { can } = usePermissions()
 const { loadActiveWarehouses } = useInvoiceWarehouses()
 const reportsStore = useReportsStore()
 const { getErrorMessage } = useApiError()
+const { exportingExcel, exportingPdf, exportExcel, exportPdf } = useReportExport('sales-summary')
 
-const canViewReports = computed(() => can('reports.index') || can('reports.show'))
+const canViewReports = computed(() => can('reports.index') || can('reports.show') || can(reportViewPermission('sales-summary')))
 
 const dateFrom = ref('')
 const dateTo = ref('')
@@ -138,48 +139,23 @@ const goToPage = async (page: number) => {
   await generateReport(page)
 }
 
-const recordRow = (row: SalesSummaryRecord) => [
-  row.reference_number || '—',
-  formatDisplayDate(row.invoice_date) || '—',
-  localizedName(row.warehouse),
-  localizedName(row.distributor),
-  money(row.total),
-  count(row.items_count),
-  money(row.returns_total),
-]
+const buildExportParams = () => {
+  const params = buildQueryParams(1)
+  if (!params) return null
+  const exportParams: Record<string, unknown> = { ...params }
+  delete exportParams.page
+  delete exportParams.per_page
+  return exportParams
+}
 
-const exportCSV = () => {
-  if (!generated.value) return
+const handleExportExcel = () => {
+  if (!validateFilters()) return
+  exportExcel(buildExportParams())
+}
 
-  const summaryRows = [
-    [t('reports_sales_summary.summary_total_invoices'), count(summary.value.total_invoices)],
-    [t('reports_sales_summary.summary_total_sales'), money(summary.value.total_sales)],
-    [t('reports_sales_summary.summary_total_returns'), money(summary.value.total_returns)],
-    [t('reports_sales_summary.summary_net_sales'), money(summary.value.net_sales)],
-    [t('reports_sales_summary.summary_average_order_value'), money(summary.value.average_order_value)],
-    [t('reports_sales_summary.summary_total_items_sold'), count(summary.value.total_items_sold)],
-  ]
-
-  const exportHeaders = tm('reports_sales_summary.export_headers') as unknown as string[]
-  const recordRows = records.value.map(recordRow)
-
-  const csvSections = [
-    [t('reports_sales_summary.export_summary_section')],
-    ...summaryRows.map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')),
-    [],
-    [t('reports_sales_summary.export_records_section')],
-    exportHeaders.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','),
-    ...recordRows.map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')),
-  ]
-
-  const csv = csvSections.map(line => (Array.isArray(line) ? line.join(',') : `"${String(line).replace(/"/g, '""')}"`)).join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `sales-summary-${formatDisplayDate(new Date())}.csv`
-  link.click()
-  URL.revokeObjectURL(link.href)
-  toast.success(t('common.export_success'))
+const handleExportPdf = () => {
+  if (!validateFilters()) return
+  exportPdf(buildExportParams())
 }
 
 onMounted(async () => {
@@ -206,15 +182,6 @@ onMounted(async () => {
         <h1 class="text-2xl font-bold tracking-tight">{{ t('reports_sales_summary.title') }}</h1>
         <p class="mt-1 text-sm text-muted-foreground">{{ t('reports_sales_summary.subtitle') }}</p>
       </div>
-      <Button
-        v-if="generated"
-        variant="outline"
-        class="gap-2 shrink-0"
-        @click="exportCSV"
-      >
-        <Download class="size-4" />
-        {{ t('reports_sales_summary.export_csv') }}
-      </Button>
     </div>
 
     <div
@@ -287,6 +254,26 @@ onMounted(async () => {
             >
               <Loader2 v-if="loading" class="me-2 size-4 animate-spin" />
               {{ t('reports_sales_summary.generate_report') }}
+            </Button>
+            <Button
+              variant="outline"
+              class="gap-2"
+              :disabled="!canGenerate || exportingExcel"
+              @click="handleExportExcel"
+            >
+              <Loader2 v-if="exportingExcel" class="size-4 animate-spin" />
+              <FileSpreadsheet v-else class="size-4" />
+              {{ t('reports_hub.export_excel') }}
+            </Button>
+            <Button
+              variant="outline"
+              class="gap-2"
+              :disabled="!canGenerate || exportingPdf"
+              @click="handleExportPdf"
+            >
+              <Loader2 v-if="exportingPdf" class="size-4 animate-spin" />
+              <FileText v-else class="size-4" />
+              {{ t('reports_hub.export_pdf') }}
             </Button>
           </div>
         </CardContent>

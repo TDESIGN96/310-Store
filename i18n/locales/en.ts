@@ -50,6 +50,7 @@ export default {
       main: 'Home',
       inventory: 'Inventory',
       sales: 'Sales',
+      reports: 'Reports',
       purchasing: 'Purchases',
       administration: 'Administration',
     },
@@ -73,6 +74,7 @@ export default {
       users: 'Users',
       activity_log: 'Activity log',
       reports: 'Reports',
+      reports_center: 'Reports Center',
     },
     submenu: {
       list: 'List',
@@ -211,6 +213,41 @@ export default {
       store: 'Create report',
       update: 'Edit report',
       destroy: 'Delete report',
+    },
+    sales_summary_report: {
+      view: 'View sales summary report',
+      export_pdf: 'Export sales summary report (PDF)',
+      export_excel: 'Export sales summary report (Excel)',
+    },
+    purchase_summary_report: {
+      view: 'View purchase summary report',
+      export_pdf: 'Export purchase summary report (PDF)',
+      export_excel: 'Export purchase summary report (Excel)',
+    },
+    sales_returns_report: {
+      view: 'View sales returns report',
+      export_pdf: 'Export sales returns report (PDF)',
+      export_excel: 'Export sales returns report (Excel)',
+    },
+    product_profitability_report: {
+      view: 'View product profitability report',
+      export_pdf: 'Export product profitability report (PDF)',
+      export_excel: 'Export product profitability report (Excel)',
+    },
+    damage_analysis_report: {
+      view: 'View damage analysis report',
+      export_pdf: 'Export damage analysis report (PDF)',
+      export_excel: 'Export damage analysis report (Excel)',
+    },
+    distributor_performance_report: {
+      view: 'View distributor performance report',
+      export_pdf: 'Export distributor performance report (PDF)',
+      export_excel: 'Export distributor performance report (Excel)',
+    },
+    warehouse_movement_report: {
+      view: 'View warehouse movement report',
+      export_pdf: 'Export warehouse movement report (PDF)',
+      export_excel: 'Export warehouse movement report (Excel)',
     },
     warehouses: {
       index: 'View warehouse list',
@@ -479,6 +516,8 @@ export default {
     permissions_subtitle: 'Choose allowed actions for this role. At least one permission is required.',
     select_all: 'Select all',
     permission_required: 'Select at least one permission',
+    loading_permissions: 'Loading permissions…',
+    permission_catalog_error: 'Could not load the latest permissions list — showing the last known permissions.',
     name_en_required: 'Please enter the English role name',
     name_ar_required: 'Please enter the Arabic role name',
     name_min: 'Role name must be at least 3 characters.',
@@ -2734,6 +2773,11 @@ export default {
     coming_soon_title: 'Coming Soon',
     coming_soon_desc: 'This report is under development and will be available soon.',
     back_to_reports: 'Back to reports',
+    export_excel: 'Export Excel',
+    export_pdf: 'Export PDF',
+    export_queued_success: 'Export queued. It will appear in Reports Center once ready.',
+    export_error: 'Failed to queue the export. Please try again.',
+    view_reports_center: 'View Reports Center',
     cards: {
       sales_summary: {
         title: 'Sales Summary Report',
@@ -2764,6 +2808,26 @@ export default {
         description: 'Overview of purchase bills and supplier spending.',
       },
     },
+  },
+
+  reports_center_page: {
+    title: 'Reports Center',
+    subtitle_total: 'Reports Center - {count} report(s)',
+    no_permission: 'You do not have permission to view the reports center.',
+    col_file_name: 'File Name',
+    col_filters_applied: 'Filters Applied',
+    col_generated_on: 'Generated On',
+    col_expires_on: 'Expires On',
+    col_actions: 'Actions',
+    no_filters: '—',
+    empty: 'No reports have been generated yet.',
+    processing_hint: 'Processing…',
+    download: 'Download',
+    download_with_format: 'Download {format}',
+    delete_title: 'Delete report',
+    delete_body: 'Are you sure you want to delete this report? This action cannot be undone.',
+    delete_success: 'Report deleted successfully.',
+    delete_error: 'Failed to delete the report. Please try again.',
   },
 
   reports_sales_summary: {
