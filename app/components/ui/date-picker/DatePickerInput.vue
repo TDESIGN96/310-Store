@@ -9,6 +9,7 @@ const props = defineProps<{
   modelValue?: string
   placeholder?: string
   class?: string
+  maxDate?: string | Date | 'today'
 }>()
 
 const emit = defineEmits<{
@@ -18,12 +19,19 @@ const emit = defineEmits<{
 const inputEl = ref<HTMLInputElement | null>(null)
 let fp: Instance | null = null
 
+const resolveMaxDate = (value: string | Date | 'today' | undefined): string | Date | undefined => {
+  if (value === undefined || value === null || value === '') return undefined
+  if (value === 'today') return 'today'
+  return value
+}
+
 onMounted(() => {
   if (!inputEl.value) return
   fp = flatpickr(inputEl.value, {
     dateFormat: 'd-m-Y',
     allowInput: true,
     disableMobile: true,
+    maxDate: resolveMaxDate(props.maxDate),
     onChange: (_dates, dateStr) => {
       emit('update:modelValue', dateStr)
     },
@@ -38,6 +46,11 @@ watch(() => props.modelValue, (val) => {
   if (!fp) return
   if (!val) fp.clear()
   else fp.setDate(val, false)
+})
+
+watch(() => props.maxDate, (val) => {
+  if (!fp) return
+  fp.set('maxDate', resolveMaxDate(val))
 })
 
 onBeforeUnmount(() => {

@@ -4,7 +4,6 @@ import { toast } from 'vue-sonner'
 import { ArrowRight, FileSpreadsheet, FileText, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { DatePickerInput } from '@/components/ui/date-picker'
 import {
   Table,
   TableBody,
@@ -17,11 +16,13 @@ import PaginationArrowButtons from '@/components/app/table/PaginationArrowButton
 import WarehouseMultiSelect from '@/components/reports/WarehouseMultiSelect.vue'
 import ReportMultiSelect from '@/components/reports/ReportMultiSelect.vue'
 import ReportFilterField from '@/components/reports/ReportFilterField.vue'
+import ReportDateRangeFilter from '@/components/reports/ReportDateRangeFilter.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 import {
   isFromAfterToPickerDate,
   isFuturePickerDate,
+  todayPickerDate,
   toIsoDateTimeEnd,
   toIsoDateTimeStart,
 } from '@/utils/reportDateFilters'
@@ -46,7 +47,7 @@ const { exportingExcel, exportingPdf, exportExcel, exportPdf } = useReportExport
 const canViewReports = computed(() => can('reports.index') || can('reports.show') || can(reportViewPermission('distributor-performance')))
 
 const dateFrom = ref('')
-const dateTo = ref('')
+const dateTo = ref(todayPickerDate())
 const selectedWarehouseIds = ref<number[]>([])
 const selectedDistributorIds = ref<number[]>([])
 const warehouseOptions = ref<InvoiceWarehouseOption[]>([])
@@ -150,7 +151,7 @@ const generateReport = async (page = 1) => {
 
 const resetFilters = () => {
   dateFrom.value = ''
-  dateTo.value = ''
+  dateTo.value = todayPickerDate()
   selectedWarehouseIds.value = []
   selectedDistributorIds.value = []
   fieldErrors.value = { from_date: '', to_date: '' }
@@ -255,29 +256,16 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('reports_distributors_performance.generate_report') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6">
-          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <ReportFilterField
-              :label="t('reports_distributors_performance.filter_from_date')"
-              required
-              :error="fieldErrors.from_date"
-            >
-              <DatePickerInput
-                v-model="dateFrom"
-                class="w-full"
-                @update:model-value="fieldErrors.from_date = ''"
-              />
-            </ReportFilterField>
-            <ReportFilterField
-              :label="t('reports_distributors_performance.filter_to_date')"
-              required
-              :error="fieldErrors.to_date"
-            >
-              <DatePickerInput
-                v-model="dateTo"
-                class="w-full"
-                @update:model-value="fieldErrors.to_date = ''"
-              />
-            </ReportFilterField>
+          <ReportDateRangeFilter
+            v-model:date-from="dateFrom"
+            v-model:date-to="dateTo"
+            :from-label="t('reports_distributors_performance.filter_from_date')"
+            :to-label="t('reports_distributors_performance.filter_to_date')"
+            :from-error="fieldErrors.from_date"
+            :to-error="fieldErrors.to_date"
+            @clear-errors="fieldErrors = { from_date: '', to_date: '' }"
+          />
+          <div class="grid items-start gap-4 sm:grid-cols-2">
             <ReportFilterField :label="t('reports_distributors_performance.filter_warehouse')">
               <WarehouseMultiSelect
                 v-model="selectedWarehouseIds"

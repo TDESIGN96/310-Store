@@ -4,7 +4,6 @@ import { toast } from 'vue-sonner'
 import { ArrowRight, FileSpreadsheet, FileText, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { DatePickerInput } from '@/components/ui/date-picker'
 import {
   Table,
   TableBody,
@@ -17,6 +16,7 @@ import PaginationArrowButtons from '@/components/app/table/PaginationArrowButton
 import WarehouseMultiSelect from '@/components/reports/WarehouseMultiSelect.vue'
 import ReportStringMultiSelect from '@/components/reports/ReportStringMultiSelect.vue'
 import ReportFilterField from '@/components/reports/ReportFilterField.vue'
+import ReportDateRangeFilter from '@/components/reports/ReportDateRangeFilter.vue'
 import type { ReportStringMultiSelectItem } from '@/components/reports/ReportStringMultiSelect.vue'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import type { DamageAnalysisReason, DamageAnalysisReasonValue } from '@/stores/reports'
@@ -24,6 +24,7 @@ import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 import {
   isFromAfterToPickerDate,
   isFuturePickerDate,
+  todayPickerDate,
   toIsoDateTimeEnd,
   toIsoDateTimeStart,
 } from '@/utils/reportDateFilters'
@@ -54,7 +55,7 @@ const { exportingExcel, exportingPdf, exportExcel, exportPdf } = useReportExport
 const canViewReports = computed(() => can('reports.index') || can('reports.show') || can(reportViewPermission('damage-analysis')))
 
 const dateFrom = ref('')
-const dateTo = ref('')
+const dateTo = ref(todayPickerDate())
 const selectedWarehouseIds = ref<number[]>([])
 const selectedReasons = ref<DamageAnalysisReasonValue[]>([])
 const warehouseOptions = ref<InvoiceWarehouseOption[]>([])
@@ -171,7 +172,7 @@ const generateReport = async (page = 1) => {
 
 const resetFilters = () => {
   dateFrom.value = ''
-  dateTo.value = ''
+  dateTo.value = todayPickerDate()
   selectedWarehouseIds.value = []
   selectedReasons.value = []
   fieldErrors.value = { from_date: '', to_date: '' }
@@ -240,29 +241,16 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('reports_damage_analysis.generate_report') }}</h2>
         </div>
         <CardContent class="space-y-4 px-4 py-5 sm:px-6">
-          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <ReportFilterField
-              :label="t('reports_damage_analysis.filter_from_date')"
-              required
-              :error="fieldErrors.from_date"
-            >
-              <DatePickerInput
-                v-model="dateFrom"
-                class="w-full"
-                @update:model-value="fieldErrors.from_date = ''"
-              />
-            </ReportFilterField>
-            <ReportFilterField
-              :label="t('reports_damage_analysis.filter_to_date')"
-              required
-              :error="fieldErrors.to_date"
-            >
-              <DatePickerInput
-                v-model="dateTo"
-                class="w-full"
-                @update:model-value="fieldErrors.to_date = ''"
-              />
-            </ReportFilterField>
+          <ReportDateRangeFilter
+            v-model:date-from="dateFrom"
+            v-model:date-to="dateTo"
+            :from-label="t('reports_damage_analysis.filter_from_date')"
+            :to-label="t('reports_damage_analysis.filter_to_date')"
+            :from-error="fieldErrors.from_date"
+            :to-error="fieldErrors.to_date"
+            @clear-errors="fieldErrors = { from_date: '', to_date: '' }"
+          />
+          <div class="grid items-start gap-4 sm:grid-cols-2">
             <ReportFilterField :label="t('reports_damage_analysis.filter_warehouse')">
               <WarehouseMultiSelect
                 v-model="selectedWarehouseIds"

@@ -2805,6 +2805,15 @@ export default {
     disposition_update_success: 'تم تحديث الاجراء بنجاح.',
   },
 
+  reports_filters: {
+    preset_today: 'اليوم',
+    preset_yesterday: 'أمس',
+    preset_last_7_days: 'آخر 7 أيام',
+    preset_last_30_days: 'آخر 30 يوماً',
+    preset_this_year: 'هذه السنة',
+    preset_previous_year: 'السنة السابقة',
+  },
+
   reports_hub: {
     title: 'التقارير',
     subtitle: 'اختر تقريراً لعرض التحليلات والملخصات.',

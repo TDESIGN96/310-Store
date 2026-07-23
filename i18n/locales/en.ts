@@ -2807,6 +2807,15 @@ export default {
     disposition_update_success: 'Disposition updated successfully.',
   },
 
+  reports_filters: {
+    preset_today: 'Today',
+    preset_yesterday: 'Yesterday',
+    preset_last_7_days: 'Last 7 Days',
+    preset_last_30_days: 'Last 30 Days',
+    preset_this_year: 'This Year',
+    preset_previous_year: 'Previous Year',
+  },
+
   reports_hub: {
     title: 'Reports',
     subtitle: 'Select a report to view analytics and summaries.',
