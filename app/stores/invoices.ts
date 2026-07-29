@@ -22,6 +22,24 @@ export type InvoiceStatus = 'issued' | 'paid' | 'partially_returned' | 'returned
 export const INVOICE_STATUS_OPTIONS = ['pending', 'printed', 'ready', 'shipped', 'delivered', 'settled', 'returned', 'partially_returned'] as const
 export type InvoiceStatusOption = typeof INVOICE_STATUS_OPTIONS[number]
 
+const INVOICE_STATUS_RANK: Record<string, number> = {
+  pending: 1,
+  printed: 2,
+  ready: 3,
+  shipped: 4,
+  delivered: 5,
+  settled: 6,
+  returned: 7,
+  partially_returned: 7,
+}
+
+export const isBackwardInvoiceStatusChange = (current: string | undefined, next: string) => {
+  const from = current ? INVOICE_STATUS_RANK[current] : undefined
+  const to = INVOICE_STATUS_RANK[next]
+  if (from === undefined || to === undefined) return false
+  return to < from
+}
+
 export interface InvoiceListItem {
   id: number
   reference_number: string
@@ -877,7 +895,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
     delivery_agent_mobile: draft.value.delivery_by === 'shipping_company'
       ? null
       : (draft.value.delivery_agent_mobile.trim() || null),
-    attachment_path: draft.value.attachment_path.trim() || null,
+    attachment_path: draft.value.delivery_by === 'shipping_company'
+      ? null
+      : (draft.value.attachment_path.trim() || null),
     subtotal: summary.value.subtotal,
     total_discount: summary.value.totalDiscount,
     grand_total: summary.value.grandTotal,

@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import type { TransportInvoiceListItem } from '@/stores/transportInvoices'
 import type { InvoiceStatusOption } from '@/stores/invoices'
-import { INVOICE_STATUS_OPTIONS, useInvoicesStore } from '@/stores/invoices'
+import { INVOICE_STATUS_OPTIONS, isBackwardInvoiceStatusChange, useInvoicesStore } from '@/stores/invoices'
 import { useTransportInvoicesStore } from '@/stores/transportInvoices'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
 import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
@@ -164,9 +164,26 @@ const statusLabel = (row: TransportInvoiceListItem) => {
 }
 
 const statusUpdatingIds = ref<Set<number>>(new Set())
+const pendingStatusChange = ref<{ row: TransportInvoiceListItem, value: string } | null>(null)
+const statusConfirmOpen = computed(() => pendingStatusChange.value !== null)
 
-const changeInvoiceStatus = async (row: TransportInvoiceListItem, value: string) => {
-  if (value === row.status) return
+const pendingStatusFromLabel = computed(() => {
+  const pending = pendingStatusChange.value
+  if (!pending) return ''
+  const option = pending.row.status as InvoiceStatusOption
+  if ((INVOICE_STATUS_OPTIONS as readonly string[]).includes(option)) {
+    return statusOptionLabel(option)
+  }
+  return statusLabel(pending.row)
+})
+
+const pendingStatusToLabel = computed(() => {
+  const pending = pendingStatusChange.value
+  if (!pending) return ''
+  return statusOptionLabel(pending.value as InvoiceStatusOption)
+})
+
+const applyStatusChange = async (row: TransportInvoiceListItem, value: string) => {
   statusUpdatingIds.value = new Set(statusUpdatingIds.value).add(row.id)
   try {
     await invoicesStore.updateInvoiceStatus(row.id, value as InvoiceStatusOption)
@@ -182,6 +199,26 @@ const changeInvoiceStatus = async (row: TransportInvoiceListItem, value: string)
     next.delete(row.id)
     statusUpdatingIds.value = next
   }
+}
+
+const changeInvoiceStatus = (row: TransportInvoiceListItem, value: string) => {
+  if (value === row.status) return
+  if (isBackwardInvoiceStatusChange(row.status, value)) {
+    pendingStatusChange.value = { row, value }
+    return
+  }
+  void applyStatusChange(row, value)
+}
+
+const confirmStatusChange = () => {
+  const pending = pendingStatusChange.value
+  pendingStatusChange.value = null
+  if (!pending) return
+  void applyStatusChange(pending.row, pending.value)
+}
+
+const cancelStatusChange = () => {
+  pendingStatusChange.value = null
 }
 
 const loadRows = async (page = currentPage.value) => {
@@ -541,6 +578,20 @@ const goToPage = (page: number) => {
       </div>
     </template>
 
+    <AlertDialog :open="statusConfirmOpen" @update:open="value => { if (!value) cancelStatusChange() }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="rtl:text-start">{{ t('transport_invoices_page.status_backward_title') }}</AlertDialogTitle>
+          <AlertDialogDescription class="rtl:text-start">
+            {{ t('transport_invoices_page.status_backward_body', { from: pendingStatusFromLabel, to: pendingStatusToLabel }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction @click="confirmStatusChange">{{ t('common.confirm') }}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <AlertDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event">
       <AlertDialogContent>
         <AlertDialogHeader>

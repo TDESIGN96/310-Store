@@ -18,6 +18,7 @@ const props = defineProps<{
   attachmentPath: string
   attachmentFile: File | null
   attachmentError: string
+  deliveryAgentNameError?: string
   i18nPrefix: 'invoices_page' | 'transport_invoices_page'
 }>()
 
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   'update:deliveryAgentMobile': [value: string]
   'attachment-change': [event: Event]
   'attachment-remove-existing': []
+  'attachment-remove-selected': []
 }>()
 
 const { t } = useI18n()
@@ -62,8 +64,10 @@ const attachmentUrl = computed(() => (!props.attachmentFile ? props.attachmentPa
       <label class="text-sm font-medium">{{ tp('delivery_agent_name') }}</label>
       <Input
         :model-value="deliveryAgentName"
+        :aria-invalid="Boolean(deliveryAgentNameError)"
         @update:model-value="value => emit('update:deliveryAgentName', String(value))"
       />
+      <p v-if="deliveryAgentNameError" class="text-xs text-destructive">{{ deliveryAgentNameError }}</p>
     </div>
     <div class="space-y-2">
       <label class="text-sm font-medium">{{ tp('delivery_agent_mobile') }}</label>
@@ -90,6 +94,14 @@ const attachmentUrl = computed(() => (!props.attachmentFile ? props.attachmentPa
       <p v-if="attachmentError" class="text-xs text-destructive">{{ attachmentError }}</p>
       <div v-if="attachmentFileName" class="flex items-center gap-1.5 text-xs border rounded px-2 py-1 bg-muted max-w-md">
         <span class="truncate">{{ attachmentFileName }}</span>
+        <button
+          type="button"
+          class="text-muted-foreground hover:text-destructive ms-auto"
+          :aria-label="tp('attachment_remove')"
+          @click="emit('attachment-remove-selected')"
+        >
+          <X class="w-3.5 h-3.5" />
+        </button>
       </div>
       <div v-else-if="attachmentUrl" class="flex items-center gap-2 text-xs max-w-md">
         <a :href="attachmentUrl" target="_blank" rel="noopener noreferrer" class="truncate text-primary underline">

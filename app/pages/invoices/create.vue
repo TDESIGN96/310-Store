@@ -226,6 +226,7 @@ const saveInvoice = async (mode: SaveMode) => {
       description: `${t('invoices_page.system_save_success_body')} ${t('invoices_page.system_save_and_add_hint')}`,
     })
     invoicesStore.resetDraft()
+    removeAttachmentFile()
     formErrors.value = {}
     errorMessage.value = ''
   }
@@ -360,11 +361,13 @@ onMounted(() => {
               :attachment-path="draft.attachment_path"
               :attachment-file="attachmentFile"
               :attachment-error="attachmentError"
+              :delivery-agent-name-error="formErrors.delivery_agent_name"
               i18n-prefix="invoices_page"
               @update:delivery-by="value => draft.delivery_by = (value as InvoiceDeliveryBy)"
               @update:delivery-agent-name="value => draft.delivery_agent_name = value"
               @update:delivery-agent-mobile="value => draft.delivery_agent_mobile = value"
               @attachment-change="onAttachmentFileChange"
+              @attachment-remove-selected="removeAttachmentFile"
               @attachment-remove-existing="() => { removeAttachmentFile(); draft.attachment_path = '' }"
             />
           </div>

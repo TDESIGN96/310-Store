@@ -22,6 +22,10 @@ export function validateInvoiceDraft(
   if (!draft.warehouse_id) errors.warehouse_id = t(`${i18nPrefix}.warehouse_required`)
   if (!selectedRowsCount) errors.items = t(`${i18nPrefix}.product_required`)
 
+  if (draft.delivery_by !== 'shipping_company' && !String(draft.delivery_agent_name ?? '').trim()) {
+    errors.delivery_agent_name = t(`${i18nPrefix}.delivery_agent_name_required`)
+  }
+
   draft.items.forEach((item, idx) => {
     if (!item.product_id) return
     if (item.product?.variations.length && !item.variation_id) {
@@ -46,7 +50,7 @@ export function validateInvoiceDraft(
   return errors
 }
 
-const FORM_KEY_ORDER = ['customer_mobile', 'address', 'invoice_date', 'warehouse_id', 'items'] as const
+const FORM_KEY_ORDER = ['customer_mobile', 'address', 'invoice_date', 'warehouse_id', 'items', 'delivery_agent_name'] as const
 
 /** Pick one message for a validation-error toast (stable priority). */
 export function firstInvoiceValidationToastDescription(errors: Record<string, string>): string {

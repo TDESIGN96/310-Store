@@ -23,8 +23,6 @@ import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
 
-type PricingMethod = 'standard' | 'tiered'
-
 interface LookupWarehouse {
   id: string
   label: string
@@ -52,12 +50,6 @@ interface LookupProduct {
   variations: LookupVariation[]
 }
 
-interface TierDraft {
-  from: number
-  to: number
-  price: number
-}
-
 interface AllocationRowDraft {
   key: string
   product: LookupProduct | null
@@ -68,9 +60,7 @@ interface AllocationRowDraft {
   quantity: number
   unit: string
   available_stock: number
-  pricing_method: PricingMethod
   standard_price: number
-  tiers: TierDraft[]
   threshold_active: boolean
   threshold_min: number | null
   threshold_max: number | null
@@ -82,8 +72,6 @@ interface RowFieldErrors {
   variation_id?: string
   warehouse_id?: string
   quantity?: string
-  standard_price?: string
-  tiers?: string
 }
 
 const route = useRoute()
@@ -106,6 +94,9 @@ const searchQuery = ref('')
 const barcodeQuery = ref('')
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const thresholdOverridePermission = ref(false)
+const productPickerRef = ref<HTMLElement | null>(null)
+const pickerHighlighted = ref(false)
+let pickerHighlightTimer: ReturnType<typeof setTimeout> | null = null
 
 const rows = ref<AllocationRowDraft[]>([])
 const rowErrors = ref<Record<string, RowFieldErrors>>({})
@@ -120,8 +111,6 @@ const toNumber = (value: unknown, fallback = 0): number => {
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object'
 const getString = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
 
-const createEmptyTier = (): TierDraft => ({ from: 1, to: 1, price: 0 })
-
 const createEmptyRow = (): AllocationRowDraft => ({
   key: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   product: null,
@@ -132,14 +121,20 @@ const createEmptyRow = (): AllocationRowDraft => ({
   quantity: 1,
   unit: '',
   available_stock: 0,
-  pricing_method: 'standard',
   standard_price: 0,
-  tiers: [createEmptyTier()],
   threshold_active: false,
   threshold_min: null,
   threshold_max: null,
   can_override_threshold: false,
 })
+
+const focusProductPicker = () => {
+  productPickerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  productPickerRef.value?.querySelector('input')?.focus()
+  pickerHighlighted.value = true
+  if (pickerHighlightTimer) clearTimeout(pickerHighlightTimer)
+  pickerHighlightTimer = setTimeout(() => { pickerHighlighted.value = false }, 2200)
+}
 
 const ensureRows = () => {
   if (!rows.value.length) rows.value = [createEmptyRow()]
@@ -152,8 +147,6 @@ const productDisplayName = (product: LookupProduct | null): string => {
 }
 
 const formatMoney = (value: number): string => formatDisplayNumber(value, { locale: locale.value })
-
-const rowTotal = (row: AllocationRowDraft): number => row.quantity * row.standard_price
 
 const getVariationOptions = (row: AllocationRowDraft): LookupVariation[] => row.product?.variations ?? []
 
@@ -409,7 +402,6 @@ const applyProductToRow = (row: AllocationRowDraft, product: LookupProduct, vari
   row.threshold_max = null
   row.can_override_threshold = false
   row.standard_price = 0
-  row.tiers = [createEmptyTier()]
 
   if (variationId && product.variations.some(v => v.id === variationId)) {
     row.variation_id = variationId
@@ -507,17 +499,6 @@ const removeRow = (index: number) => {
   rows.value.splice(index, 1)
 }
 
-const addTier = (row: AllocationRowDraft) => {
-  const last = row.tiers[row.tiers.length - 1]
-  const start = last ? last.to + 1 : 1
-  row.tiers.push({ from: start, to: start, price: 0 })
-}
-
-const removeTier = (row: AllocationRowDraft, index: number) => {
-  if (row.tiers.length <= 1) return
-  row.tiers.splice(index, 1)
-}
-
 const handleBarcodeSubmit = async () => {
   const code = barcodeQuery.value.trim()
   if (!code) return
@@ -576,27 +557,6 @@ const loadDistributorMeta = async () => {
 
 const getRowError = (row: AllocationRowDraft) => rowErrors.value[row.key] ?? {}
 
-const validateTierRanges = (tiers: TierDraft[]): string | undefined => {
-  if (!tiers.length) return t('distributors_show.allocation_validation_tiers_required')
-
-  for (let i = 0; i < tiers.length; i += 1) {
-    const tier = tiers[i]!
-    if (tier.from <= 0 || tier.to <= 0 || tier.to < tier.from) {
-      return t('distributors_show.allocation_validation_tier_range_invalid')
-    }
-    if (tier.price <= 0) {
-      return t('distributors_show.allocation_validation_tier_price_invalid')
-    }
-    if (i > 0) {
-      const prev = tiers[i - 1]!
-      if (tier.from !== prev.to + 1) {
-        return t('distributors_show.allocation_validation_tier_sequential')
-      }
-    }
-  }
-  return undefined
-}
-
 const validateRows = (): boolean => {
   const nextErrors: Record<string, RowFieldErrors> = {}
   formError.value = ''
@@ -632,16 +592,6 @@ const validateRows = (): boolean => {
           errors.quantity = t('distributors_show.allocation_validation_quantity_above_threshold', { max: row.threshold_max })
         }
       }
-    }
-
-    if (row.pricing_method === 'standard') {
-      if (!(Number(row.standard_price) > 0)) {
-        errors.standard_price = t('distributors_show.allocation_validation_standard_price_required')
-      }
-    }
-    else {
-      const tierError = validateTierRanges(row.tiers)
-      if (tierError) errors.tiers = tierError
     }
 
     if (Object.keys(errors).length > 0) nextErrors[row.key] = errors
@@ -749,9 +699,16 @@ onMounted(async () => {
         {{ distributorError }}
       </div>
 
-      <div class="rounded-xl border bg-card p-4 sm:p-5 space-y-4">
+      <div
+        ref="productPickerRef"
+        class="rounded-xl border bg-card p-4 sm:p-5 space-y-4 transition-shadow"
+        :class="pickerHighlighted ? 'ring-2 ring-primary/70 ring-offset-2 ring-offset-background' : ''"
+      >
         <div class="grid gap-4 md:grid-cols-2">
-          <div class="space-y-2">
+          <div
+            class="space-y-2 rounded-lg transition-shadow"
+            :class="pickerHighlighted ? 'ring-1 ring-primary/50' : ''"
+          >
             <label class="text-sm font-medium">{{ $t('distributors_show.stock_allocation_col_product_name') }}</label>
             <div class="relative">
               <Search class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -786,7 +743,10 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="space-y-2">
+          <div
+            class="space-y-2 rounded-lg transition-shadow"
+            :class="pickerHighlighted ? 'ring-1 ring-primary/50' : ''"
+          >
             <label class="text-sm font-medium">{{ $t('distributors_show.allocation_barcode') }}</label>
             <div class="relative">
               <Barcode class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -852,13 +812,15 @@ onMounted(async () => {
                     {{ $t('distributors_show.stock_allocation_col_product_name') }}
                   </span>
 
-                  <div
+                  <button
                     v-if="!row.product"
-                    class="flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-center"
+                    type="button"
+                    class="flex min-h-[120px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-center cursor-pointer transition-colors hover:border-primary/60 hover:bg-muted/40"
+                    @click="focusProductPicker"
                   >
                     <Boxes class="size-5 text-muted-foreground/60" />
                     <p class="text-xs text-muted-foreground">{{ $t('distributors_show.allocation_choose_product_hint') }}</p>
-                  </div>
+                  </button>
 
                   <div v-else class="flex min-w-0 flex-col gap-3">
                     <!-- Product name header -->
@@ -937,54 +899,6 @@ onMounted(async () => {
                       <span class="font-semibold tabular-nums">{{ row.available_stock }}</span>
                       <span v-if="row.unit" class="text-muted-foreground">{{ row.unit }}</span>
                     </div>
-
-                    <!-- Pricing section -->
-                    <div class="space-y-2 rounded-lg border bg-muted/10 p-3">
-                      <label class="text-xs font-medium text-muted-foreground">
-                        {{ $t('distributors_show.allocation_pricing_method') }}
-                      </label>
-                      <Select
-                        :model-value="row.pricing_method"
-                        @update:model-value="value => row.pricing_method = (String(value ?? 'standard') === 'tiered' ? 'tiered' : 'standard')"
-                      >
-                        <SelectTrigger class="h-9 w-full bg-background">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="standard">{{ $t('distributors_show.allocation_pricing_standard') }}</SelectItem>
-                          <SelectItem value="tiered">{{ $t('distributors_show.allocation_pricing_tiered') }}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div v-if="row.pricing_method === 'tiered'" class="space-y-2 pt-1">
-                        <div
-                          v-for="(tier, tierIdx) in row.tiers"
-                          :key="`${row.key}-tier-${tierIdx}`"
-                          class="grid grid-cols-3 gap-2"
-                        >
-                          <div class="space-y-1">
-                            <span class="text-[11px] text-muted-foreground">{{ $t('distributors_show.allocation_tier_from') }}</span>
-                            <Input :model-value="tier.from" type="number" min="1" class="h-8 text-sm tabular-nums" @update:model-value="v => tier.from = Math.max(1, Number(v) || 1)" />
-                          </div>
-                          <div class="space-y-1">
-                            <span class="text-[11px] text-muted-foreground">{{ $t('distributors_show.allocation_tier_to') }}</span>
-                            <Input :model-value="tier.to" type="number" min="1" class="h-8 text-sm tabular-nums" @update:model-value="v => tier.to = Math.max(1, Number(v) || 1)" />
-                          </div>
-                          <div class="space-y-1">
-                            <span class="text-[11px] text-muted-foreground">{{ $t('distributors_show.allocation_tier_price') }}</span>
-                            <div class="flex items-center gap-1">
-                              <Input :model-value="tier.price" type="number" min="0" step="0.01" class="h-8 text-sm tabular-nums" @update:model-value="v => tier.price = Math.max(0, Number(v) || 0)" />
-                              <Button type="button" variant="ghost" size="icon" class="size-7 shrink-0 text-red-600" @click="removeTier(row, tierIdx)">
-                                <Trash2 class="size-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        <Button type="button" variant="outline" size="sm" class="h-8 text-xs" @click="addTier(row)">
-                          {{ $t('distributors_show.allocation_add_tier') }}
-                        </Button>
-                        <p v-if="getRowError(row).tiers" class="max-w-full whitespace-normal break-words text-xs text-red-600">{{ getRowError(row).tiers }}</p>
-                      </div>
-                    </div>
                   </div>
                 </TableCell>
 
@@ -1012,16 +926,8 @@ onMounted(async () => {
                   <span class="block text-xs font-medium text-muted-foreground mb-1 md:hidden">
                     {{ $t('distributors_show.allocation_unit_price') }}
                   </span>
-                  <div class="flex w-full max-w-full min-w-0 flex-col gap-1">
-                    <Input
-                      :model-value="row.standard_price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      class="h-9 w-full text-start tabular-nums"
-                      @update:model-value="value => row.standard_price = Math.max(0, Number(value) || 0)"
-                    />
-                    <p v-if="getRowError(row).standard_price" class="max-w-full whitespace-normal break-words text-start text-xs leading-snug text-red-600">{{ getRowError(row).standard_price }}</p>
+                  <div class="flex h-9 items-center tabular-nums font-medium">
+                    {{ row.standard_price > 0 ? formatMoney(row.standard_price) : '—' }}
                   </div>
                 </TableCell>
 

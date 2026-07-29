@@ -44,7 +44,7 @@ export function useInvoiceAttachment(i18nPrefix: 'invoices_page' | 'transport_in
 
   const uploadAttachmentIfNeeded = async (token: string | null | undefined, currentPath: string): Promise<string> => {
     if (!attachmentFile.value) return currentPath
-    if (!token) return currentPath
+    if (!token) throw new Error('Authentication token is required to upload the attachment')
 
     const base = String(config.public.apiBase ?? '').replace(/\/$/, '')
     const formData = new FormData()
@@ -61,6 +61,7 @@ export function useInvoiceAttachment(i18nPrefix: 'invoices_page' | 'transport_in
 
     const fileUrl = uploadResult?.data?.file?.url || uploadResult?.data?.file?.path
     if (!fileUrl) throw new Error('File upload response did not include url/path')
+    attachmentFile.value = null
     return fileUrl
   }
 
