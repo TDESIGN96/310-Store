@@ -23,6 +23,7 @@ import { usePurchaseBillsStore } from '@/stores/purchaseBills'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { firstPurchaseBillValidationToastDescription, validatePurchaseBillDraft } from '@/composables/usePurchaseBillDraftValidation'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
@@ -34,7 +35,7 @@ const purchaseBillsStore = usePurchaseBillsStore()
 const { searchProducts, lookupBarcode, getProductById, loadingProducts } = useQuotationProducts()
 const { loadActiveWarehouses, loadingWarehouses } = useInvoiceWarehouses()
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
 const formErrors = ref<Record<string, string>>({})
 const errorMessage = ref('')
@@ -191,6 +192,9 @@ const savePurchaseBill = async (mode: SaveMode) => {
     errorMessage.value = ''
   }
   catch (error: unknown) {
+    if (isValidationError(error)) {
+      formErrors.value = { ...formErrors.value, ...normalizeBackendFieldErrors(getFieldErrors(error)) }
+    }
     const msg = getErrorMessage(error)
     errorMessage.value = msg
     toast.error(t('purchase_bills_page.system_error_title'), { description: msg })
@@ -255,7 +259,11 @@ onMounted(() => {
                 :model-value="draft.warehouse_id ? String(draft.warehouse_id) : ''"
                 @update:model-value="value => draft.warehouse_id = Number(value) || null"
               >
-                <SelectTrigger class="w-full">
+                <SelectTrigger
+                  class="w-full"
+                  :aria-invalid="Boolean(formErrors.warehouse_id)"
+                  :class="{ 'border-destructive': Boolean(formErrors.warehouse_id) }"
+                >
                   <SelectValue :placeholder="t('purchase_bills_page.select_warehouse')" />
                 </SelectTrigger>
                 <SelectContent>
@@ -294,22 +302,22 @@ onMounted(() => {
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('purchase_bills_page.supplier_mobile') }}</label>
-              <Input v-model="draft.supplier_mobile" type="tel" />
+              <Input v-model="draft.supplier_mobile" type="tel" :aria-invalid="Boolean(formErrors.supplier_mobile)" />
               <p v-if="formErrors.supplier_mobile" class="text-xs text-red-600">{{ formErrors.supplier_mobile }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('purchase_bills_page.supplier_email') }}</label>
-              <Input v-model="draft.supplier_email" type="email" />
+              <Input v-model="draft.supplier_email" type="email" :aria-invalid="Boolean(formErrors.supplier_email)" />
               <p v-if="formErrors.supplier_email" class="text-xs text-red-600">{{ formErrors.supplier_email }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('purchase_bills_page.address') }}</label>
-              <Input v-model="draft.address" />
+              <Input v-model="draft.address" :aria-invalid="Boolean(formErrors.address)" />
               <p v-if="formErrors.address" class="text-xs text-red-600">{{ formErrors.address }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('purchase_bills_page.bill_date') }}</label>
-              <Input v-model="draft.bill_date" type="date" />
+              <Input v-model="draft.bill_date" type="date" :aria-invalid="Boolean(formErrors.bill_date)" />
               <p v-if="formErrors.bill_date" class="text-xs text-red-600">{{ formErrors.bill_date }}</p>
             </div>
             <div class="space-y-2">
@@ -436,7 +444,11 @@ onMounted(() => {
                       </span>
                       <div class="w-full space-y-2 md:ms-auto md:max-w-44">
                         <Select :model-value="item.discount_mode" @update:model-value="value => purchaseBillsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))">
-                          <SelectTrigger class="h-9 w-full"><SelectValue /></SelectTrigger>
+                          <SelectTrigger
+                            class="h-9 w-full"
+                            :aria-invalid="Boolean(formErrors[`row_${idx}_discount`])"
+                            :class="{ 'border-destructive': Boolean(formErrors[`row_${idx}_discount`]) }"
+                          ><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="fixed">{{ t('purchase_bills_page.discount_mode_fixed') }}</SelectItem>
                             <SelectItem value="percentage">{{ t('purchase_bills_page.discount_mode_percentage') }}</SelectItem>
@@ -518,7 +530,8 @@ onMounted(() => {
                       :model-value="cost.key"
                       maxlength="100"
                       :placeholder="t('purchase_bills_page.additional_cost_label_placeholder')"
-                      :class="formErrors[`additional_cost_${idx}_key`] ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                      :aria-invalid="Boolean(formErrors[`additional_cost_${idx}_key`])"
+                      :class="formErrors[`additional_cost_${idx}_key`] ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                       @update:model-value="value => purchaseBillsStore.setAdditionalCostKey(idx, String(value ?? ''))"
                     />
                     <p v-if="formErrors[`additional_cost_${idx}_key`]" class="text-xs text-red-500">{{ formErrors[`additional_cost_${idx}_key`] }}</p>
@@ -532,7 +545,8 @@ onMounted(() => {
                       step="0.01"
                       class="tabular-nums"
                       :placeholder="t('purchase_bills_page.additional_cost_amount_placeholder')"
-                      :class="formErrors[`additional_cost_${idx}_amount`] ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                      :aria-invalid="Boolean(formErrors[`additional_cost_${idx}_amount`])"
+                      :class="formErrors[`additional_cost_${idx}_amount`] ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                       @update:model-value="value => purchaseBillsStore.setAdditionalCostAmount(idx, Math.max(0, Number(value) || 0))"
                     />
                     <p v-if="formErrors[`additional_cost_${idx}_amount`]" class="text-xs text-red-500">{{ formErrors[`additional_cost_${idx}_amount`] }}</p>

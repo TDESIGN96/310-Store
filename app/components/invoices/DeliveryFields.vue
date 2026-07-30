@@ -18,7 +18,9 @@ const props = defineProps<{
   attachmentPath: string
   attachmentFile: File | null
   attachmentError: string
+  deliveryByError?: string
   deliveryAgentNameError?: string
+  deliveryAgentMobileError?: string
   i18nPrefix: 'invoices_page' | 'transport_invoices_page'
 }>()
 
@@ -48,7 +50,11 @@ const attachmentUrl = computed(() => (!props.attachmentFile ? props.attachmentPa
       :model-value="deliveryBy"
       @update:model-value="value => emit('update:deliveryBy', value as InvoiceDeliveryBy)"
     >
-      <SelectTrigger class="w-full">
+      <SelectTrigger
+        class="w-full"
+        :aria-invalid="Boolean(deliveryByError)"
+        :class="{ 'border-destructive': Boolean(deliveryByError) }"
+      >
         <SelectValue :placeholder="tp('select_delivery_by')" />
       </SelectTrigger>
       <SelectContent>
@@ -57,6 +63,7 @@ const attachmentUrl = computed(() => (!props.attachmentFile ? props.attachmentPa
         <SelectItem value="other">{{ tp('delivery_by_other') }}</SelectItem>
       </SelectContent>
     </Select>
+    <p v-if="deliveryByError" class="text-xs text-destructive">{{ deliveryByError }}</p>
   </div>
 
   <template v-if="showAgentFields">
@@ -74,8 +81,12 @@ const attachmentUrl = computed(() => (!props.attachmentFile ? props.attachmentPa
       <Input
         :model-value="deliveryAgentMobile"
         type="tel"
-        @update:model-value="value => emit('update:deliveryAgentMobile', String(value))"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        :aria-invalid="Boolean(deliveryAgentMobileError)"
+        @update:model-value="value => emit('update:deliveryAgentMobile', String(value).replace(/\D/g, ''))"
       />
+      <p v-if="deliveryAgentMobileError" class="text-xs text-destructive">{{ deliveryAgentMobileError }}</p>
     </div>
     <div class="space-y-2 sm:col-span-2">
       <label class="text-sm font-medium">{{ tp('attachment') }}</label>

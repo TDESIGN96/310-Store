@@ -4,9 +4,12 @@ import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { Bold, Italic, List, ListOrdered, Undo2, Redo2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const props = defineProps<{
   modelValue: string
+  invalid?: boolean
+  errorMessage?: string
 }>()
 
 const emit = defineEmits<{
@@ -43,7 +46,12 @@ const canRedo = computed(() => editor.value?.can().redo() ?? false)
 
 <template>
   <div class="w-full">
-    <div class="flex flex-wrap items-center gap-1 rounded-t-md border border-input bg-muted/20 p-1.5">
+    <div
+      :class="cn(
+        'flex flex-wrap items-center gap-1 rounded-t-md border border-input bg-muted/20 p-1.5',
+        props.invalid && 'border-destructive',
+      )"
+    >
       <Button
         type="button"
         size="icon"
@@ -106,6 +114,12 @@ const canRedo = computed(() => editor.value?.can().redo() ?? false)
         <Redo2 class="size-4" />
       </Button>
     </div>
-    <EditorContent :editor="editor" />
+    <EditorContent
+      :editor="editor"
+      role="textbox"
+      :aria-invalid="props.invalid ? 'true' : undefined"
+      :class="cn(props.invalid && '[&_.ProseMirror]:border-destructive')"
+    />
+    <p v-if="props.errorMessage" class="mt-1 text-xs text-destructive">{{ props.errorMessage }}</p>
   </div>
 </template>

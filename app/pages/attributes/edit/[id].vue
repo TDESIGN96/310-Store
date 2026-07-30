@@ -20,7 +20,7 @@ definePageMeta({ layout: 'default' })
 
 const { t } = useI18n()
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
 interface AttributeValue {
   id: number
@@ -163,7 +163,13 @@ const saveChanges = async () => {
     await navigateTo('/attributes')
   }
   catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error)
+    if (isValidationError(error)) {
+      const fe = getFieldErrors(error)
+      errorMessage.value = fe.name || fe.values || Object.values(fe)[0] || getErrorMessage(error)
+    }
+    else {
+      errorMessage.value = getErrorMessage(error)
+    }
   }
   finally {
     saving.value = false
@@ -200,7 +206,13 @@ const addValue = async () => {
     await loadAttribute()
   }
   catch (error: unknown) {
-    newValueError.value = getErrorMessage(error)
+    if (isValidationError(error)) {
+      const fe = getFieldErrors(error)
+      newValueError.value = fe.name || fe.values || Object.values(fe)[0] || getErrorMessage(error)
+    }
+    else {
+      newValueError.value = getErrorMessage(error)
+    }
   }
   finally {
     addingValue.value = false

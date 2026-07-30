@@ -63,6 +63,7 @@ interface CategoryShowResponse {
 const route = useRoute()
 const categoryId = route.params.id as string
 const { $api } = useApi()
+const { getErrorMessage } = useApiError()
 
 const { canAccess, canEdit: cEdit, canDelete: cDelete } = usePermissions()
 const canView = computed(() => canAccess('categories'))
@@ -143,13 +144,7 @@ const confirmDeleteCategory = async () => {
     await navigateTo('/categories')
   }
   catch (error: unknown) {
-    const msg = (error as { data?: { message?: string | { ar?: string } } })?.data?.message
-    const text =
-      typeof msg === 'string'
-        ? msg
-        : (msg as { ar?: string } | undefined)?.ar
-        ?? t('categories_page.delete_error')
-    toast.error(text)
+    toast.error(getErrorMessage(error) || t('categories_page.delete_error'))
   }
   finally {
     deleting.value = false

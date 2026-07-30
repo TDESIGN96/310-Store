@@ -301,8 +301,9 @@ onMounted(loadAllocation)
                       :model-value="quantity"
                       type="number"
                       min="1"
+                      :aria-invalid="Boolean(quantityError)"
                       class="h-9 w-full text-start tabular-nums"
-                      :class="quantityError ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                      :class="quantityError ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                       @update:model-value="value => { quantity = Math.max(0, Number(value) || 0); quantityError = '' }"
                     />
                     <p v-if="quantityError" class="max-w-full whitespace-normal break-words text-start text-xs leading-snug text-red-600">{{ quantityError }}</p>

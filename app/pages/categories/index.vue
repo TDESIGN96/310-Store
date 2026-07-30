@@ -102,6 +102,7 @@ type SortField = 'name_ar' | 'name_en' | 'created_at' | 'status'
 // ── State ──────────────────────────────────────────────────────────────────────
 
 const { $api } = useApi()
+const { getErrorMessage } = useApiError()
 const { canCreate: canCreateCat, canEdit: canEditCat, canDelete: canDeleteCat, can: canPerm } = usePermissions()
 const canCreate = computed(() => canCreateCat('categories'))
 const canUpdate = computed(() => canEditCat('categories'))
@@ -374,9 +375,8 @@ const confirmDelete = async () => {
     toast.success(t('categories_page.delete_success', { name: categoryPrimaryName(cat) }))
     await loadCategories(currentPage.value)
   }
-  catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.delete_error')
-    toast.error(msg)
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error) || t('categories_page.delete_error'))
   }
   finally {
     deletingId.value = null
@@ -401,9 +401,8 @@ const confirmDeactivate = async () => {
     toast.success(t('categories_page.deactivate_success', { name: categoryPrimaryName(cat) }))
     await loadCategories(currentPage.value)
   }
-  catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.deactivate_error')
-    toast.error(msg)
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error) || t('categories_page.deactivate_error'))
   }
   finally {
     togglingId.value = null
@@ -423,9 +422,8 @@ const confirmActivate = async () => {
     toast.success(t('categories_page.activate_success', { name: categoryPrimaryName(cat) }))
     await loadCategories(currentPage.value)
   }
-  catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.activate_error')
-    toast.error(msg)
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error) || t('categories_page.activate_error'))
   }
   finally {
     togglingId.value = null
@@ -476,12 +474,11 @@ const confirmBulkAction = async () => {
     selectedIds.value = new Set()
     await loadCategories(currentPage.value)
   }
-  catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      (type === 'activate' ? t('categories_page.bulk_activate_failed') : t('categories_page.bulk_deactivate_failed'))
-    toast.error(msg)
+  catch (error: unknown) {
+    toast.error(
+      getErrorMessage(error)
+      || (type === 'activate' ? t('categories_page.bulk_activate_failed') : t('categories_page.bulk_deactivate_failed')),
+    )
   }
   finally {
     bulkActionLoading.value = false
@@ -499,9 +496,8 @@ const confirmBulkDelete = async () => {
     selectedIds.value = new Set()
     await loadCategories(currentPage.value)
   }
-  catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || t('categories_page.bulk_delete_error')
-    toast.error(msg)
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error) || t('categories_page.bulk_delete_error'))
   }
   finally {
     bulkActionLoading.value = false

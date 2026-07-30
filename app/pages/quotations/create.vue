@@ -49,6 +49,7 @@ import RichTextEditor from '@/components/quotations/RichTextEditor.vue'
 import { useQuotationsStore } from '@/stores/quotations'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import { firstValidationToastDescription, validateQuotationDraft } from '@/composables/useQuotationDraftValidation'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
@@ -59,7 +60,7 @@ const canCreateQuotation = computed(() => canCreate('quotations'))
 const quotationsStore = useQuotationsStore()
 const { searchProducts, lookupBarcode, getProductById, resolvingBarcode, loadingProducts } = useQuotationProducts()
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
 const formErrors = ref<Record<string, string>>({})
 const errorMessage = ref('')
@@ -220,6 +221,9 @@ const saveQuotation = async (mode: SaveMode) => {
     errorMessage.value = ''
   }
   catch (error: unknown) {
+    if (isValidationError(error)) {
+      formErrors.value = { ...formErrors.value, ...normalizeBackendFieldErrors(getFieldErrors(error)) }
+    }
     const msg = getErrorMessage(error)
     errorMessage.value = msg
     toast.error(t('quotations_page.system_error_title'), { description: msg })
@@ -286,12 +290,12 @@ onMounted(() => {
           <div class="grid gap-5 md:grid-cols-3">
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.customer_phone') }}</label>
-              <Input v-model="draft.customer_phone" type="tel" />
+              <Input v-model="draft.customer_phone" type="tel" :aria-invalid="Boolean(formErrors.customer_phone)" />
               <p v-if="formErrors.customer_phone" class="text-xs text-red-600">{{ formErrors.customer_phone }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.customer_email') }} <span class="text-muted-foreground font-normal">({{ t('quotations_page.optional') }})</span></label>
-              <Input v-model="draft.customer_email" type="email" />
+              <Input v-model="draft.customer_email" type="email" :aria-invalid="Boolean(formErrors.customer_email)" />
               <p v-if="formErrors.customer_email" class="text-xs text-red-600">{{ formErrors.customer_email }}</p>
             </div>
             <div class="space-y-2" >
@@ -319,12 +323,12 @@ onMounted(() => {
             <div class="grid gap-5 md:grid-cols-2">
               <div class="space-y-2">
                <label class="text-sm font-medium">{{ t('quotations_page.issue_date') }}</label>
-               <Input v-model="draft.issue_date" type="date" />
+               <Input v-model="draft.issue_date" type="date" :aria-invalid="Boolean(formErrors.issue_date)" />
                <p v-if="formErrors.issue_date" class="text-xs text-red-600">{{ formErrors.issue_date }}</p>
               </div>
              <div class="space-y-2">
                 <label class="text-sm font-medium">{{ t('quotations_page.expiry_date') }}</label>
-                <Input v-model="draft.expiry_date" type="date" />
+                <Input v-model="draft.expiry_date" type="date" :aria-invalid="Boolean(formErrors.expiry_date)" />
                 <p v-if="formErrors.expiry_date" class="text-xs text-red-600">{{ formErrors.expiry_date }}</p>
               </div>
           
@@ -430,7 +434,11 @@ onMounted(() => {
                           :model-value="item.variation_id ? String(item.variation_id) : ''"
                           @update:model-value="value => quotationsStore.setRowVariation(idx, Number(value))"
                         >
-                          <SelectTrigger class="w-full max-w-full"><SelectValue :placeholder="t('quotations_page.select_variation')" /></SelectTrigger>
+                          <SelectTrigger
+                            class="w-full max-w-full"
+                            :aria-invalid="Boolean(formErrors[`row_${idx}_variation`])"
+                            :class="{ 'border-destructive': Boolean(formErrors[`row_${idx}_variation`]) }"
+                          ><SelectValue :placeholder="t('quotations_page.select_variation')" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem
                               v-for="variation in item.product.variations"
@@ -461,6 +469,7 @@ onMounted(() => {
                           :model-value="item.qty"
                           type="number"
                           min="1"
+                          :aria-invalid="Boolean(formErrors[`row_${idx}_qty`])"
                           class="h-9 w-full text-start tabular-nums"
                           @update:model-value="value => quotationsStore.setRowQty(idx, Number(value))"
                         />
@@ -478,6 +487,7 @@ onMounted(() => {
                           :model-value="item.unit_price"
                           type="number"
                           min="0"
+                          :aria-invalid="Boolean(formErrors[`row_${idx}_unit_price`])"
                           class="h-9 w-full text-start tabular-nums"
                           @update:model-value="value => quotationsStore.setRowUnitPrice(idx, Number(value))"
                         />
@@ -504,7 +514,11 @@ onMounted(() => {
                           :model-value="item.discount_mode"
                           @update:model-value="value => quotationsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))"
                         >
-                          <SelectTrigger class="h-9 w-full"><SelectValue /></SelectTrigger>
+                          <SelectTrigger
+                            class="h-9 w-full"
+                            :aria-invalid="Boolean(formErrors[`row_${idx}_discount`])"
+                            :class="{ 'border-destructive': Boolean(formErrors[`row_${idx}_discount`]) }"
+                          ><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="fixed">{{ t('quotations_page.discount_mode_fixed') }}</SelectItem>
                             <SelectItem value="percentage">{{ t('quotations_page.discount_mode_percentage') }}</SelectItem>
@@ -514,6 +528,7 @@ onMounted(() => {
                           :model-value="item.discount_value"
                           type="number"
                           step="0.01"
+                          :aria-invalid="Boolean(formErrors[`row_${idx}_discount`])"
                           class="h-9 w-full text-start tabular-nums"
                           @update:model-value="value => quotationsStore.setRowDiscountValue(idx, Number(value))"
                         />

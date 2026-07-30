@@ -341,7 +341,8 @@ onMounted(loadAllocation)
               type="number"
               min="1"
               :max="detail.remaining_quantity"
-              :class="returnQtyError ? 'border-red-500 focus-visible:ring-red-500' : ''"
+              :aria-invalid="Boolean(returnQtyError)"
+              :class="returnQtyError ? 'border-destructive focus-visible:ring-destructive/30' : ''"
               class="tabular-nums"
               @update:model-value="value => { returnQty = Math.max(0, Number(value) || 0); returnQtyError = '' }"
             />

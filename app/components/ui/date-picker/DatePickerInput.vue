@@ -10,6 +10,7 @@ const props = defineProps<{
   placeholder?: string
   class?: string
   maxDate?: string | Date | 'today'
+  invalid?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -63,9 +64,11 @@ onBeforeUnmount(() => {
     <input
       ref="inputEl"
       :placeholder="placeholder ?? 'DD-MM-YYYY'"
+      :aria-invalid="props.invalid ? 'true' : undefined"
       :class="cn(
         'placeholder:text-muted-foreground border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 pe-9 text-base shadow-xs transition-[color,box-shadow] outline-none dark:bg-input/30 md:text-sm',
         'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+        'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
         props.class,
       )"
     />

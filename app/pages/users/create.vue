@@ -398,7 +398,8 @@ onMounted(async () => {
           <Input
             v-model="name"
             :placeholder="t('users_form.name_placeholder')"
-            :class="fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name)"
+            :class="fieldErrors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name = ''"
           />
           <p v-if="fieldErrors.name" class="text-xs text-red-500">{{ fieldErrors.name }}</p>
@@ -422,7 +423,8 @@ onMounted(async () => {
             v-model="email"
             type="email"
             placeholder="user@example.com"
-            :class="fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.email)"
+            :class="fieldErrors.email ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.email = ''"
           />
           <p v-if="fieldErrors.email" class="text-xs text-red-500">{{ fieldErrors.email }}</p>
@@ -433,7 +435,8 @@ onMounted(async () => {
           <Input
             v-model="phone"
             placeholder="07XXXXXXXXX"
-            :class="fieldErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.phone)"
+            :class="fieldErrors.phone ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.phone = ''"
           />
           <p v-if="fieldErrors.phone" class="text-xs text-red-500">{{ fieldErrors.phone }}</p>
@@ -471,7 +474,8 @@ onMounted(async () => {
             v-model="password"
             type="text"
             :placeholder="t('users_form.password_placeholder')"
-            :class="fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.password)"
+            :class="fieldErrors.password ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.password = ''"
           />
           <p v-if="fieldErrors.password" class="text-xs text-red-500">{{ fieldErrors.password }}</p>
@@ -495,7 +499,8 @@ onMounted(async () => {
             v-model="passwordConfirmation"
             type="text"
             :placeholder="t('users_form.password_confirm_placeholder')"
-            :class="fieldErrors.password_confirmation ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.password_confirmation)"
+            :class="fieldErrors.password_confirmation ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.password_confirmation = ''"
           />
           <p v-if="fieldErrors.password_confirmation" class="text-xs text-red-500">{{ fieldErrors.password_confirmation }}</p>
@@ -521,7 +526,8 @@ onMounted(async () => {
             variant="outline"
             role="combobox"
             class="w-full justify-between font-normal"
-            :class="fieldErrors.role_ids ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.role_ids)"
+            :class="fieldErrors.role_ids ? 'border-destructive focus-visible:ring-destructive/30' : ''"
           >
             <span class="truncate">
               {{ selectedRolesLabel || t('users_form.roles_placeholder') }}

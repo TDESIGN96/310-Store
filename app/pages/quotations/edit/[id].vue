@@ -49,6 +49,7 @@ import RichTextEditor from '@/components/quotations/RichTextEditor.vue'
 import { useQuotationsStore } from '@/stores/quotations'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import { firstValidationToastDescription, validateQuotationDraft } from '@/composables/useQuotationDraftValidation'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
@@ -61,7 +62,7 @@ const canEditQuotation = computed(() => canEdit('quotations'))
 const quotationsStore = useQuotationsStore()
 const { searchProducts, lookupBarcode, resolvingBarcode, loadingProducts } = useQuotationProducts()
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 
 const loading = ref(false)
 const formErrors = ref<Record<string, string>>({})
@@ -228,6 +229,9 @@ const saveQuotation = async (mode: SaveMode) => {
     toast.info(mode === 'print' ? t('quotations_page.print_unavailable') : t('quotations_page.download_unavailable'))
   }
   catch (error: unknown) {
+    if (isValidationError(error)) {
+      formErrors.value = { ...formErrors.value, ...normalizeBackendFieldErrors(getFieldErrors(error)) }
+    }
     const msg = getErrorMessage(error) || t('quotations_page.save_error')
     errorMessage.value = msg
     toast.error(t('quotations_page.system_error_title'), { description: msg })
@@ -324,12 +328,12 @@ onMounted(async () => {
           <div class="grid gap-5 md:grid-cols-3">
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.customer_phone') }}</label>
-              <Input v-model="draft.customer_phone" type="tel" />
+              <Input v-model="draft.customer_phone" type="tel" :aria-invalid="Boolean(formErrors.customer_phone)" />
               <p v-if="formErrors.customer_phone" class="text-xs text-red-600">{{ formErrors.customer_phone }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('quotations_page.customer_email') }} <span class="text-muted-foreground font-normal">({{ t('quotations_page.optional') }})</span></label>
-              <Input v-model="draft.customer_email" type="email" />
+              <Input v-model="draft.customer_email" type="email" :aria-invalid="Boolean(formErrors.customer_email)" />
               <p v-if="formErrors.customer_email" class="text-xs text-red-600">{{ formErrors.customer_email }}</p>
             </div>
             <div class="space-y-2" >
@@ -357,12 +361,12 @@ onMounted(async () => {
             <div class="grid gap-5 md:grid-cols-2">
               <div class="space-y-2">
                <label class="text-sm font-medium">{{ t('quotations_page.issue_date') }}</label>
-               <Input v-model="draft.issue_date" type="date" />
+               <Input v-model="draft.issue_date" type="date" :aria-invalid="Boolean(formErrors.issue_date)" />
                <p v-if="formErrors.issue_date" class="text-xs text-red-600">{{ formErrors.issue_date }}</p>
               </div>
              <div class="space-y-2">
                 <label class="text-sm font-medium">{{ t('quotations_page.expiry_date') }}</label>
-                <Input v-model="draft.expiry_date" type="date" />
+                <Input v-model="draft.expiry_date" type="date" :aria-invalid="Boolean(formErrors.expiry_date)" />
                 <p v-if="formErrors.expiry_date" class="text-xs text-red-600">{{ formErrors.expiry_date }}</p>
               </div>
           
@@ -488,7 +492,11 @@ onMounted(async () => {
                         :model-value="item.discount_mode"
                         @update:model-value="value => quotationsStore.setRowDiscountMode(idx, (value as 'fixed' | 'percentage'))"
                       >
-                        <SelectTrigger class="h-9 w-full">
+                        <SelectTrigger
+                          class="h-9 w-full"
+                          :aria-invalid="Boolean(formErrors[`row_${idx}_discount`])"
+                          :class="{ 'border-destructive': Boolean(formErrors[`row_${idx}_discount`]) }"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -500,6 +508,7 @@ onMounted(async () => {
                         :model-value="item.discount_value"
                         type="number"
                         step="0.01"
+                        :aria-invalid="Boolean(formErrors[`row_${idx}_discount`])"
                         class="mt-2 text-end tabular-nums"
                         @update:model-value="value => quotationsStore.setRowDiscountValue(idx, Number(value))"
                       />

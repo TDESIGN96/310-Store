@@ -59,8 +59,9 @@ export const useApiError = () => {
   }
 
   /**
-   * Top-level or non-field error banner. Uses API `message` as-is when present.
-   * 422: never treated as "network" — use `message` or first `errors[...]` string from the endpoint.
+   * Banner/toast text from API payloads.
+   * Prefer first `errors[...]` field message when present; fall back to top-level `message`.
+   * Never treat 422 as a network error.
    */
   const getErrorMessage = (error: unknown): string => {
     const e = error as {
@@ -81,29 +82,29 @@ export const useApiError = () => {
 
     const is422 = status === 422 || data?.status_code === 422
 
-    const backendMessage =
-      pickLocalizedApiMessage(data?.message) ||
-      (typeof e?.message === 'string' ? e.message.trim() : '')
+    const hasParsedBody =
+      (e?.data && typeof e.data === 'object') ||
+      (data && (data.message !== undefined || data.errors !== undefined || data.status_code !== undefined))
 
-    // 422: endpoint always wins — never show generic "network" for validation responses
+    const fromFields = firstValidationMessage(data.errors)
+    const topLevelMessage = pickLocalizedApiMessage(data?.message)
+    // Only use ofetch's generic `error.message` when there is no parsed API body
+    const fetchFallback =
+      !hasParsedBody && typeof e?.message === 'string' ? e.message.trim() : ''
+    const backendMessage = topLevelMessage || fetchFallback
+
+    // Field errors win over top-level message (422 and any body with `errors`)
+    if (fromFields) return fromFields
+
     if (is422) {
       if (backendMessage) return backendMessage
-      const fromFields = firstValidationMessage(data.errors)
-      if (fromFields) return fromFields
       return t('errors.unknown_error')
     }
 
     if (backendMessage) return backendMessage
 
-    const fromValidationBody = firstValidationMessage(data.errors)
-    if (fromValidationBody) return fromValidationBody
-
     const res = e?.response
     // Real network / offline: no HTTP error object and no parsed body
-    const hasParsedBody =
-      (e?.data && typeof e.data === 'object') ||
-      (data && (data.message !== undefined || data.errors !== undefined || data.status_code !== undefined))
-
     if (!res && !hasParsedBody && e?.statusCode === undefined && e?.status === undefined) {
       return t('errors.network_error')
     }

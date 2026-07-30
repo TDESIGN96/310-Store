@@ -18,6 +18,7 @@ import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import type { InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { firstInvoiceValidationToastDescription, validateInvoiceDraft } from '@/composables/useInvoiceDraftValidation'
 import { useInvoiceAttachment } from '@/composables/useInvoiceAttachment'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
@@ -31,7 +32,7 @@ const invoicesStore = useInvoicesStore()
 const { searchProducts, lookupBarcode, loadingProducts } = useQuotationProducts()
 const { loadActiveWarehouses, loadingWarehouses } = useInvoiceWarehouses()
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 const authStore = useAuthStore()
 const {
   attachmentFile,
@@ -179,6 +180,9 @@ const saveInvoice = async (mode: SaveMode) => {
     toast.success(t('invoices_page.system_success_title'), { description: t('invoices_page.system_save_success_body') })
   }
   catch (error: unknown) {
+    if (isValidationError(error)) {
+      formErrors.value = { ...formErrors.value, ...normalizeBackendFieldErrors(getFieldErrors(error)) }
+    }
     const msg = getErrorMessage(error) || t('invoices_page.save_error')
     errorMessage.value = msg
     toast.error(t('invoices_page.system_error_title'), { description: msg })
@@ -233,7 +237,11 @@ onMounted(async () => {
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.warehouse') }}</label>
               <Select :model-value="draft.warehouse_id ? String(draft.warehouse_id) : ''" @update:model-value="value => draft.warehouse_id = Number(value) || null">
-                <SelectTrigger class="w-full"><SelectValue :placeholder="t('invoices_page.select_warehouse')" /></SelectTrigger>
+                <SelectTrigger
+                  class="w-full"
+                  :aria-invalid="Boolean(formErrors.warehouse_id)"
+                  :class="{ 'border-destructive': Boolean(formErrors.warehouse_id) }"
+                ><SelectValue :placeholder="t('invoices_page.select_warehouse')" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="warehouse in warehouseOptions" :key="warehouse.id" :value="String(warehouse.id)">
                     {{ warehouseDisplayName(warehouse) }}
@@ -258,12 +266,12 @@ onMounted(async () => {
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.customer_mobile') }}</label>
-              <Input v-model="draft.customer_mobile" type="tel" />
+              <Input v-model="draft.customer_mobile" type="tel" :aria-invalid="Boolean(formErrors.customer_mobile)" />
               <p v-if="formErrors.customer_mobile" class="text-xs text-red-600">{{ formErrors.customer_mobile }}</p>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.address') }}</label>
-              <Input v-model="draft.address" />
+              <Input v-model="draft.address" :aria-invalid="Boolean(formErrors.address)" />
               <p v-if="formErrors.address" class="text-xs text-red-600">{{ formErrors.address }}</p>
             </div>
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('invoices_page.invoice_date') }}</label><Input v-model="draft.invoice_date" type="date" /></div>
@@ -275,7 +283,9 @@ onMounted(async () => {
               :attachment-path="draft.attachment_path"
               :attachment-file="attachmentFile"
               :attachment-error="attachmentError"
+              :delivery-by-error="formErrors.delivery_by"
               :delivery-agent-name-error="formErrors.delivery_agent_name"
+              :delivery-agent-mobile-error="formErrors.delivery_agent_mobile"
               i18n-prefix="invoices_page"
               @update:delivery-by="value => draft.delivery_by = (value as InvoiceDeliveryBy)"
               @update:delivery-agent-name="value => draft.delivery_agent_name = value"

@@ -188,7 +188,8 @@ onMounted(loadDistrict)
               <Input
                 v-model="district"
                 :placeholder="t('districts_form.placeholder_district')"
-                :class="fieldErrors.district ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(fieldErrors.district)"
+                :class="fieldErrors.district ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="fieldErrors.district = ''"
               />
               <p v-if="fieldErrors.district" class="text-xs text-red-500">{{ fieldErrors.district }}</p>
@@ -202,7 +203,8 @@ onMounted(loadDistrict)
                 v-model="deliveryFee"
                 inputmode="decimal"
                 :placeholder="t('districts_form.placeholder_delivery_fee')"
-                :class="fieldErrors.delivery_fee ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(fieldErrors.delivery_fee)"
+                :class="fieldErrors.delivery_fee ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="fieldErrors.delivery_fee = ''"
               />
               <p v-if="fieldErrors.delivery_fee" class="text-xs text-red-500">{{ fieldErrors.delivery_fee }}</p>
@@ -216,7 +218,8 @@ onMounted(loadDistrict)
                 v-model="otherFees"
                 inputmode="decimal"
                 :placeholder="t('districts_form.placeholder_other_fees')"
-                :class="fieldErrors.other_fees ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(fieldErrors.other_fees)"
+                :class="fieldErrors.other_fees ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="fieldErrors.other_fees = ''"
               />
               <p v-if="fieldErrors.other_fees" class="text-xs text-red-500">{{ fieldErrors.other_fees }}</p>

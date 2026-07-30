@@ -47,6 +47,7 @@ interface UnitShowResponse {
 const route = useRoute()
 const unitId = route.params.id as string
 const { $api } = useApi()
+const { getErrorMessage } = useApiError()
 
 const { canAccess, canEdit: uEdit, canDelete: uDelete } = usePermissions()
 const canView = computed(() => canAccess('units'))
@@ -115,13 +116,7 @@ const confirmDeleteUnit = async () => {
     await navigateTo('/units')
   }
   catch (error: unknown) {
-    const msg = (error as { data?: { message?: string | { ar?: string } } })?.data?.message
-    const text =
-      typeof msg === 'string'
-        ? msg
-        : (msg as { ar?: string } | undefined)?.ar
-        ?? t('units_page.delete_error')
-    toast.error(text)
+    toast.error(getErrorMessage(error) || t('units_page.delete_error'))
   }
   finally {
     deleting.value = false

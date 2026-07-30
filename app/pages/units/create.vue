@@ -137,7 +137,8 @@ const createUnit = async () => {
             v-model="nameAr"
             dir="rtl"
             :placeholder="t('units_form.placeholder_name_ar')"
-            :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name_ar)"
+            :class="fieldErrors.name_ar ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name_ar = ''"
           />
           <p v-if="fieldErrors.name_ar" class="text-xs text-red-500">
@@ -154,7 +155,8 @@ const createUnit = async () => {
             v-model="nameEn"
             dir="ltr"
             :placeholder="t('units_form.placeholder_name_en')"
-            :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name_en)"
+            :class="fieldErrors.name_en ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name_en = ''"
           />
           <p v-if="fieldErrors.name_en" class="text-xs text-red-500">
@@ -171,7 +173,8 @@ const createUnit = async () => {
             v-model="symbol"
             dir="ltr"
             placeholder="e.g. kg"
-            :class="fieldErrors.symbol ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.symbol)"
+            :class="fieldErrors.symbol ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.symbol = ''"
           />
           <p v-if="fieldErrors.symbol" class="text-xs text-red-500">
@@ -191,7 +194,10 @@ const createUnit = async () => {
             :model-value="status"
             @update:model-value="val => { status = (val as 'active' | 'inactive'); fieldErrors.status = '' }"
           >
-            <SelectTrigger :class="fieldErrors.status ? 'border-red-500 focus-visible:ring-red-500' : ''">
+            <SelectTrigger
+              :aria-invalid="Boolean(fieldErrors.status)"
+              :class="fieldErrors.status ? 'border-destructive focus-visible:ring-destructive/30' : ''"
+            >
               <SelectValue :placeholder="t('units_form.select_status')" />
             </SelectTrigger>
             <SelectContent>

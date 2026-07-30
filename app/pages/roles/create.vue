@@ -240,7 +240,8 @@ const saveRole = async () => {
           <Input
             v-model="nameEn"
             :placeholder="t('roles_form.placeholder_en')"
-            :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name_en)"
+            :class="fieldErrors.name_en ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name_en = ''"
           />
           <p v-if="fieldErrors.name_en" class="text-xs text-red-500">{{ fieldErrors.name_en }}</p>
@@ -251,7 +252,8 @@ const saveRole = async () => {
           <Input
             v-model="nameAr"
             :placeholder="t('roles_form.placeholder_ar')"
-            :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name_ar)"
+            :class="fieldErrors.name_ar ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name_ar = ''"
           />
           <p v-if="fieldErrors.name_ar" class="text-xs text-red-500">{{ fieldErrors.name_ar }}</p>

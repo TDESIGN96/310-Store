@@ -181,7 +181,8 @@ const createAttribute = async () => {
           <Input
             v-model="attributeName"
             :placeholder="t('attributes_form.placeholder_name')"
-            :class="fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name)"
+            :class="fieldErrors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name = ''"
           />
           <p v-if="fieldErrors.name" class="text-xs text-red-500">{{ fieldErrors.name }}</p>
@@ -219,7 +220,8 @@ const createAttribute = async () => {
               <Input
                 v-model="row.name"
                 :placeholder="t('attributes_form.placeholder_value_name')"
-                :class="row.error_name ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(row.error_name)"
+                :class="row.error_name ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="row.error_name = ''"
               />
               <p v-if="row.error_name" class="text-xs text-red-500">{{ row.error_name }}</p>

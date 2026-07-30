@@ -304,7 +304,8 @@ onMounted(() => {
                 v-model="nameAr"
                 dir="rtl"
                 :placeholder="t('warehouses_form.placeholder_name_ar')"
-                :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(fieldErrors.name_ar)"
+                :class="fieldErrors.name_ar ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="clearFieldError('name_ar')"
               />
               <p v-if="fieldErrors.name_ar" class="text-xs text-red-500">{{ fieldErrors.name_ar }}</p>
@@ -318,7 +319,8 @@ onMounted(() => {
                 v-model="nameEn"
                 dir="ltr"
                 :placeholder="t('warehouses_form.placeholder_name_en')"
-                :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(fieldErrors.name_en)"
+                :class="fieldErrors.name_en ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="clearFieldError('name_en')"
               />
               <p v-if="fieldErrors.name_en" class="text-xs text-red-500">{{ fieldErrors.name_en }}</p>
@@ -331,7 +333,8 @@ onMounted(() => {
               <Input
                 v-model="location"
                 :placeholder="t('warehouses_form.placeholder_location')"
-                :class="fieldErrors.location ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(fieldErrors.location)"
+                :class="fieldErrors.location ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="clearFieldError('location')"
               />
               <p v-if="fieldErrors.location" class="text-xs text-red-500">{{ fieldErrors.location }}</p>
@@ -345,7 +348,8 @@ onMounted(() => {
               <Input
                 v-model="address"
                 :placeholder="t('warehouses_form.placeholder_address')"
-                :class="fieldErrors.address ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                :aria-invalid="Boolean(fieldErrors.address)"
+                :class="fieldErrors.address ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @input="clearFieldError('address')"
               />
               <p v-if="fieldErrors.address" class="text-xs text-red-500">{{ fieldErrors.address }}</p>
@@ -366,7 +370,8 @@ onMounted(() => {
                 >
                   <SelectTrigger
                     class="w-full"
-                    :class="fieldErrors.manager_id ? 'border-red-500' : ''"
+                    :aria-invalid="Boolean(fieldErrors.manager_id)"
+                    :class="fieldErrors.manager_id ? 'border-destructive' : ''"
                   >
                     <SelectValue :placeholder="t('warehouses_form.manager_placeholder')" />
                   </SelectTrigger>
@@ -395,7 +400,8 @@ onMounted(() => {
               >
                 <SelectTrigger
                   class="w-full max-w-md"
-                  :class="fieldErrors.status ? 'border-red-500' : ''"
+                  :aria-invalid="Boolean(fieldErrors.status)"
+                  :class="fieldErrors.status ? 'border-destructive' : ''"
                 >
                   <SelectValue :placeholder="t('warehouses_form.select_status')" />
                 </SelectTrigger>

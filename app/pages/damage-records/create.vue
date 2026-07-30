@@ -38,6 +38,7 @@ import type { QuotationProductOption, QuotationProductVariation } from '@/compos
 import { useQuotationProducts } from '@/composables/useQuotationProducts'
 import { useInvoiceWarehouses, type InvoiceWarehouseOption } from '@/composables/useInvoiceWarehouses'
 import { useDamageRecordsStore, type DamageReason } from '@/stores/damageRecords'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 
 definePageMeta({ layout: 'default' })
@@ -45,7 +46,7 @@ definePageMeta({ layout: 'default' })
 const { t, locale } = useI18n()
 const { can } = usePermissions()
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 const config = useRuntimeConfig()
 const authStore = useAuthStore()
 const damageStore = useDamageRecordsStore()
@@ -396,6 +397,9 @@ const submit = async () => {
     await navigateTo('/damage-records')
   }
   catch (err) {
+    if (isValidationError(err)) {
+      formErrors.value = { ...formErrors.value, ...normalizeBackendFieldErrors(getFieldErrors(err)) }
+    }
     errorMessage.value = getErrorMessage(err)
   }
   finally {
@@ -586,7 +590,10 @@ const cancelLeave = () => {
               :model-value="selectedVariationId ? String(selectedVariationId) : ''"
               @update:model-value="(val) => selectVariation(Number(val))"
             >
-              <SelectTrigger :class="{ 'border-destructive': formErrors.variation_id }">
+              <SelectTrigger
+                :aria-invalid="Boolean(formErrors.variation_id)"
+                :class="{ 'border-destructive': formErrors.variation_id }"
+              >
                 <SelectValue :placeholder="t('common.select_placeholder')" />
               </SelectTrigger>
               <SelectContent>
@@ -651,7 +658,10 @@ const cancelLeave = () => {
                 :disabled="warehouseDisabled"
                 @update:model-value="(val) => { selectedWarehouseId = Number(val) }"
               >
-                <SelectTrigger :class="{ 'opacity-50': warehouseDisabled }">
+                <SelectTrigger
+                  :aria-invalid="Boolean(formErrors.warehouse_id)"
+                  :class="{ 'opacity-50': warehouseDisabled, 'border-destructive': formErrors.warehouse_id }"
+                >
                   <SelectValue :placeholder="warehouseDisabled ? t('damage_records_page.warehouse_disabled_hint') : t('damage_records_page.warehouse_placeholder')" />
                 </SelectTrigger>
                 <SelectContent>
@@ -753,7 +763,10 @@ const cancelLeave = () => {
               :model-value="damageReason"
               @update:model-value="(val) => { damageReason = val as DamageReason }"
             >
-              <SelectTrigger :class="{ 'border-destructive': formErrors.damage_reason }">
+              <SelectTrigger
+                :aria-invalid="Boolean(formErrors.damage_reason)"
+                :class="{ 'border-destructive': formErrors.damage_reason }"
+              >
                 <SelectValue :placeholder="t('damage_records_page.damage_reason_placeholder')" />
               </SelectTrigger>
               <SelectContent>

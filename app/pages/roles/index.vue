@@ -57,6 +57,7 @@ interface RolesResponse {
 }
 
 const { $api } = useApi()
+const { getErrorMessage } = useApiError()
 
 const { canCreate: rCreate, canEdit: rEdit, canDelete: rDestroy } = usePermissions()
 const canCreateRole = computed(() => rCreate('roles'))
@@ -173,12 +174,8 @@ const confirmDelete = async () => {
     await $api(`/roles/${role.id}`, { method: 'DELETE' })
     toast.success(t('roles_page.delete_success', { name: rolePrimaryName(role) }))
     await loadRoles(currentPage.value)
-  } catch (error: any) {
-    const msg =
-      error?.data?.message?.ar ||
-      error?.data?.message ||
-      t('roles_page.delete_error')
-    toast.error(msg)
+  } catch (error: unknown) {
+    toast.error(getErrorMessage(error) || t('roles_page.delete_error'))
   } finally {
     deletingId.value = null
   }
@@ -195,9 +192,8 @@ const confirmBulkDelete = async () => {
     selectedIds.value = new Set()
     await loadRoles(currentPage.value)
   }
-  catch (error: any) {
-    const msg = error?.data?.message?.ar || error?.data?.message || t('roles_page.delete_error')
-    toast.error(msg)
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error) || t('roles_page.delete_error'))
   }
   finally {
     bulkDeleteLoading.value = false

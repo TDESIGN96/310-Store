@@ -371,7 +371,8 @@ onMounted(() => {
           <Input
             v-model="username"
             :placeholder="t('users_form.name_placeholder')"
-            :class="fieldErrors.username ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.username)"
+            :class="fieldErrors.username ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.username = ''"
           />
           <p v-if="fieldErrors.username" class="text-xs text-red-500">{{ fieldErrors.username }}</p>
@@ -395,7 +396,8 @@ onMounted(() => {
             v-model="email"
             type="email"
             placeholder="user@example.com"
-            :class="fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.email)"
+            :class="fieldErrors.email ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.email = ''"
           />
           <p v-if="fieldErrors.email" class="text-xs text-red-500">{{ fieldErrors.email }}</p>
@@ -406,7 +408,8 @@ onMounted(() => {
           <Input
             v-model="phone"
             placeholder="07XXXXXXXXX"
-            :class="fieldErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.phone)"
+            :class="fieldErrors.phone ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.phone = ''"
           />
           <p v-if="fieldErrors.phone" class="text-xs text-red-500">{{ fieldErrors.phone }}</p>
@@ -580,7 +583,8 @@ onMounted(() => {
                   v-model="newPassword"
                   type="password"
                   :placeholder="t('users_form.new_password_placeholder')"
-                  :class="fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                  :aria-invalid="Boolean(fieldErrors.password)"
+                  :class="fieldErrors.password ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                   @input="fieldErrors.password = ''"
                 />
                 <p v-if="fieldErrors.password" class="text-xs text-red-500">{{ fieldErrors.password }}</p>
@@ -603,7 +607,8 @@ onMounted(() => {
                   v-model="newPasswordConfirmation"
                   type="password"
                   :placeholder="t('users_form.new_password_confirm_placeholder')"
-                  :class="fieldErrors.password_confirmation ? 'border-red-500 focus-visible:ring-red-500' : ''"
+                  :aria-invalid="Boolean(fieldErrors.password_confirmation)"
+                  :class="fieldErrors.password_confirmation ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                   @input="fieldErrors.password_confirmation = ''"
                 />
                 <p v-if="fieldErrors.password_confirmation" class="text-xs text-red-500">{{ fieldErrors.password_confirmation }}</p>

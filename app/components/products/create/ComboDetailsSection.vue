@@ -311,6 +311,7 @@ onMounted(() => {
         <Input
           id="combo-name-ar"
           v-model="productNameAr"
+          :aria-invalid="Boolean(fieldErrors.name_ar)"
           class="h-10 rtl:text-right"
           dir="auto"
           :placeholder="t('products_form.placeholder_name_ar')"
@@ -324,6 +325,7 @@ onMounted(() => {
         <Input
           id="combo-name-en"
           v-model="productNameEn"
+          :aria-invalid="Boolean(fieldErrors.name_en)"
           class="h-10 rtl:text-right"
           dir="ltr"
           :placeholder="t('products_form.placeholder_name_en')"
@@ -337,6 +339,7 @@ onMounted(() => {
         <Input
           id="combo-sku"
           v-model="sku"
+          :aria-invalid="Boolean(fieldErrors.sku)"
           class="h-10 font-mono"
           dir="ltr"
           autocomplete="off"
@@ -354,7 +357,11 @@ onMounted(() => {
           :disabled="loadingCategories"
           @update:model-value="(v) => { categoryId = v != null ? String(v) : ''; clearField('category_id') }"
         >
-          <SelectTrigger class="h-10 w-full">
+          <SelectTrigger
+            class="h-10 w-full"
+            :aria-invalid="Boolean(fieldErrors.category_id)"
+            :class="{ 'border-destructive': Boolean(fieldErrors.category_id) }"
+          >
             <SelectValue :placeholder="loadingCategories ? t('common.loading') + '…' : t('products_combo.select_category')" />
           </SelectTrigger>
           <SelectContent>
@@ -377,7 +384,11 @@ onMounted(() => {
           :disabled="loadingUnits"
           @update:model-value="(v) => { unitId = v != null ? String(v) : ''; clearField('unit_id') }"
         >
-          <SelectTrigger class="h-10 w-full">
+          <SelectTrigger
+            class="h-10 w-full"
+            :aria-invalid="Boolean(fieldErrors.unit_id)"
+            :class="{ 'border-destructive': Boolean(fieldErrors.unit_id) }"
+          >
             <SelectValue :placeholder="loadingUnits ? t('common.loading') + '…' : t('products_form.select_unit')" />
           </SelectTrigger>
           <SelectContent>
@@ -399,6 +410,8 @@ onMounted(() => {
           id="combo-description"
           v-model="description"
           rows="4"
+          :aria-invalid="Boolean(fieldErrors.description)"
+          :class="{ 'border-destructive focus-visible:ring-destructive/30': Boolean(fieldErrors.description) }"
           class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
           :placeholder="t('products_form.placeholder_description')"
           dir="auto"

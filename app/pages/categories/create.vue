@@ -272,7 +272,8 @@ onMounted(loadParentCategories)
             v-model="nameAr"
             dir="rtl"
             :placeholder="t('categories_form.placeholder_name_ar')"
-            :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name_ar)"
+            :class="fieldErrors.name_ar ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name_ar = ''"
           />
           <p v-if="fieldErrors.name_ar" class="text-xs text-red-500">
@@ -290,7 +291,8 @@ onMounted(loadParentCategories)
             v-model="nameEn"
             dir="ltr"
             :placeholder="t('categories_form.placeholder_name_en')"
-            :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.name_en)"
+            :class="fieldErrors.name_en ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.name_en = ''"
           />
           <p v-if="fieldErrors.name_en" class="text-xs text-red-500">
@@ -307,8 +309,9 @@ onMounted(loadParentCategories)
               <Button
                 variant="outline"
                 role="combobox"
+                :aria-invalid="Boolean(fieldErrors.parent_id)"
                 class="w-full justify-between font-normal h-9"
-                :class="fieldErrors.parent_id ? 'border-red-500' : ''"
+                :class="fieldErrors.parent_id ? 'border-destructive' : ''"
               >
                 <span class="truncate text-sm">
                   <span v-if="loadingParents" class="text-muted-foreground">{{ t('categories_form.parent_loading') }}</span>
@@ -384,7 +387,10 @@ onMounted(loadParentCategories)
             :model-value="status"
             @update:model-value="val => { status = (val as 'active' | 'inactive'); fieldErrors.status = '' }"
           >
-            <SelectTrigger :class="fieldErrors.status ? 'border-red-500 focus-visible:ring-red-500' : ''">
+            <SelectTrigger
+              :aria-invalid="Boolean(fieldErrors.status)"
+              :class="fieldErrors.status ? 'border-destructive focus-visible:ring-destructive/30' : ''"
+            >
               <SelectValue :placeholder="t('units_form.select_status')" />
             </SelectTrigger>
             <SelectContent>
@@ -414,7 +420,8 @@ onMounted(loadParentCategories)
             rows="4"
             :placeholder="t('categories_form.description_placeholder')"
             class="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none resize-none placeholder:text-muted-foreground dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-            :class="fieldErrors.description ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.description)"
+            :class="fieldErrors.description ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.description = ''"
           />
           <p v-if="fieldErrors.description" class="text-xs text-red-500">

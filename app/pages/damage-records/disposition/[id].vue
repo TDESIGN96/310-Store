@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useDamageRecordsStore, type DispositionAction } from '@/stores/damageRecords'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 
 definePageMeta({ layout: 'default' })
 
@@ -21,7 +22,7 @@ const id = computed(() => String(route.params.id))
 
 const { t } = useI18n()
 const { can } = usePermissions()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 const damageStore = useDamageRecordsStore()
 
 const canDisposition = computed(() => can('damage.disposition'))
@@ -105,6 +106,9 @@ const submit = async () => {
     await navigateTo('/damage-records')
   }
   catch (err) {
+    if (isValidationError(err)) {
+      formErrors.value = { ...formErrors.value, ...normalizeBackendFieldErrors(getFieldErrors(err)) }
+    }
     errorMessage.value = getErrorMessage(err)
   }
   finally {
@@ -276,7 +280,10 @@ onMounted(async () => {
                 :model-value="actionTaken"
                 @update:model-value="(val) => { actionTaken = val as DispositionAction; formErrors.action_taken = '' }"
               >
-                <SelectTrigger :class="{ 'border-destructive': formErrors.action_taken }">
+                <SelectTrigger
+                  :aria-invalid="Boolean(formErrors.action_taken)"
+                  :class="{ 'border-destructive': formErrors.action_taken }"
+                >
                   <SelectValue :placeholder="t('common.select_placeholder')" />
                 </SelectTrigger>
                 <SelectContent>

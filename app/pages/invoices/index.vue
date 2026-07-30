@@ -162,7 +162,7 @@ const statusLabel = (row: InvoiceListItem) => {
 
 const statusUpdatingIds = ref<Set<number>>(new Set())
 const pendingStatusChange = ref<{ row: InvoiceListItem, value: string } | null>(null)
-const statusConfirmOpen = computed(() => pendingStatusChange.value !== null)
+const statusConfirmOpen = ref(false)
 
 const pendingStatusFromLabel = computed(() => {
   const pending = pendingStatusChange.value
@@ -202,6 +202,7 @@ const changeInvoiceStatus = (row: InvoiceListItem, value: string) => {
   if (value === row.status) return
   if (isBackwardInvoiceStatusChange(row.status, value)) {
     pendingStatusChange.value = { row, value }
+    statusConfirmOpen.value = true
     return
   }
   void applyStatusChange(row, value)
@@ -209,12 +210,18 @@ const changeInvoiceStatus = (row: InvoiceListItem, value: string) => {
 
 const confirmStatusChange = () => {
   const pending = pendingStatusChange.value
+  statusConfirmOpen.value = false
   pendingStatusChange.value = null
   if (!pending) return
   void applyStatusChange(pending.row, pending.value)
 }
 
+const onStatusConfirmOpenChange = (value: boolean) => {
+  statusConfirmOpen.value = value
+}
+
 const cancelStatusChange = () => {
+  statusConfirmOpen.value = false
   pendingStatusChange.value = null
 }
 
@@ -543,7 +550,7 @@ const goToPage = (page: number) => {
       </div>
     </template>
 
-    <AlertDialog :open="statusConfirmOpen" @update:open="value => { if (!value) cancelStatusChange() }">
+    <AlertDialog :open="statusConfirmOpen" @update:open="onStatusConfirmOpenChange">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle class="rtl:text-start">{{ t('invoices_page.status_backward_title') }}</AlertDialogTitle>
@@ -552,8 +559,8 @@ const goToPage = (page: number) => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
-          <AlertDialogAction @click="confirmStatusChange">{{ t('common.confirm') }}</AlertDialogAction>
+          <AlertDialogCancel @click="cancelStatusChange">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button @click="confirmStatusChange">{{ t('common.confirm') }}</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

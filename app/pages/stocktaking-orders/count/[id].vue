@@ -535,7 +535,8 @@ onUnmounted(() => {
           <Input
             v-model="barcodeInput"
             class="ps-9"
-            :class="scanNotFound ? 'border-red-500 bg-white text-red-600 placeholder:text-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/30' : ''"
+            :aria-invalid="Boolean(scanNotFound)"
+            :class="scanNotFound ? 'border-destructive bg-white text-red-600 placeholder:text-red-400 focus-visible:border-destructive focus-visible:ring-destructive/30' : ''"
             :placeholder="scanNotFound ? t('stocktaking_count_page.scan_not_found_placeholder') : t('stocktaking_count_page.barcode_placeholder')"
             :disabled="scanning"
             @keydown.enter.prevent="onBarcodeEnter"

@@ -256,23 +256,23 @@ onMounted(async () => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.name_en') }} <span class="text-red-500">*</span></label>
-          <Input v-model="nameEn" :class="fieldErrors.name_en ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.name_en = ''" />
+          <Input v-model="nameEn" :aria-invalid="Boolean(fieldErrors.name_en)" :class="fieldErrors.name_en ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.name_en = ''" />
           <p v-if="fieldErrors.name_en" class="text-xs text-red-500">{{ fieldErrors.name_en }}</p>
         </div>
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.name_ar') }} <span class="text-red-500">*</span></label>
-          <Input v-model="nameAr" :class="fieldErrors.name_ar ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.name_ar = ''" />
+          <Input v-model="nameAr" :aria-invalid="Boolean(fieldErrors.name_ar)" :class="fieldErrors.name_ar ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.name_ar = ''" />
           <p v-if="fieldErrors.name_ar" class="text-xs text-red-500">{{ fieldErrors.name_ar }}</p>
         </div>
 
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.mobile_number') }} <span class="text-red-500">*</span></label>
-          <Input v-model="mobileNumber" :class="fieldErrors.mobile_number ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.mobile_number = ''" />
+          <Input v-model="mobileNumber" :aria-invalid="Boolean(fieldErrors.mobile_number)" :class="fieldErrors.mobile_number ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.mobile_number = ''" />
           <p v-if="fieldErrors.mobile_number" class="text-xs text-red-500">{{ fieldErrors.mobile_number }}</p>
         </div>
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.email') }}</label>
-          <Input v-model="email" type="email" :class="fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.email = ''" />
+          <Input v-model="email" type="email" :aria-invalid="Boolean(fieldErrors.email)" :class="fieldErrors.email ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.email = ''" />
           <p v-if="fieldErrors.email" class="text-xs text-red-500">{{ fieldErrors.email }}</p>
         </div>
 
@@ -281,7 +281,8 @@ onMounted(async () => {
           <Input
             v-model="location"
             :placeholder="t('distributors_form.location_placeholder')"
-            :class="fieldErrors.location ? 'border-red-500 focus-visible:ring-red-500' : ''"
+            :aria-invalid="Boolean(fieldErrors.location)"
+            :class="fieldErrors.location ? 'border-destructive focus-visible:ring-destructive/30' : ''"
             @input="fieldErrors.location = ''"
           />
           <p v-if="fieldErrors.location" class="text-xs text-red-500">{{ fieldErrors.location }}</p>
@@ -289,7 +290,10 @@ onMounted(async () => {
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('common.status') }} <span class="text-red-500">*</span></label>
           <Select :model-value="status" @update:model-value="onStatusChange">
-            <SelectTrigger :class="fieldErrors.status ? 'border-red-500 focus-visible:ring-red-500' : ''">
+            <SelectTrigger
+              :aria-invalid="Boolean(fieldErrors.status)"
+              :class="fieldErrors.status ? 'border-destructive focus-visible:ring-destructive/30' : ''"
+            >
               <SelectValue :placeholder="t('common.select_placeholder')" />
             </SelectTrigger>
             <SelectContent>
@@ -301,13 +305,13 @@ onMounted(async () => {
         </div>
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.address') }}</label>
-          <Input v-model="address" :class="fieldErrors.address ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.address = ''" />
+          <Input v-model="address" :aria-invalid="Boolean(fieldErrors.address)" :class="fieldErrors.address ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.address = ''" />
           <p v-if="fieldErrors.address" class="text-xs text-red-500">{{ fieldErrors.address }}</p>
         </div>
 
         <div class="space-y-2 md:col-span-2">
           <label class="text-sm font-medium">{{ t('distributors_form.description') }}</label>
-          <Input v-model="description" :class="fieldErrors.description ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.description = ''" />
+          <Input v-model="description" :aria-invalid="Boolean(fieldErrors.description)" :class="fieldErrors.description ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.description = ''" />
           <p v-if="fieldErrors.description" class="text-xs text-red-500">{{ fieldErrors.description }}</p>
         </div>
       </div>
@@ -317,17 +321,17 @@ onMounted(async () => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.admin_name') }} <span class="text-red-500">*</span></label>
-          <Input v-model="adminName" :class="fieldErrors.admin_name ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.admin_name = ''" />
+          <Input v-model="adminName" :aria-invalid="Boolean(fieldErrors.admin_name)" :class="fieldErrors.admin_name ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.admin_name = ''" />
           <p v-if="fieldErrors.admin_name" class="text-xs text-red-500">{{ fieldErrors.admin_name }}</p>
         </div>
         <div class="space-y-2">
           <label class="text-sm font-medium">{{ t('distributors_form.admin_mobile_number') }}</label>
-          <Input v-model="adminMobileNumber" :class="fieldErrors.admin_mobile_number ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.admin_mobile_number = ''" />
+          <Input v-model="adminMobileNumber" :aria-invalid="Boolean(fieldErrors.admin_mobile_number)" :class="fieldErrors.admin_mobile_number ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.admin_mobile_number = ''" />
           <p v-if="fieldErrors.admin_mobile_number" class="text-xs text-red-500">{{ fieldErrors.admin_mobile_number }}</p>
         </div>
         <div class="space-y-2 md:col-span-2">
           <label class="text-sm font-medium">{{ t('distributors_form.password') }} <span class="text-red-500">*</span></label>
-          <Input v-model="password" type="password" :class="fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''" @input="fieldErrors.password = ''" />
+          <Input v-model="password" type="password" :aria-invalid="Boolean(fieldErrors.password)" :class="fieldErrors.password ? 'border-destructive focus-visible:ring-destructive/30' : ''" @input="fieldErrors.password = ''" />
           <p v-if="fieldErrors.password" class="text-xs text-red-500">{{ fieldErrors.password }}</p>
           <p class="text-xs" :class="passwordHintClass">{{ t('distributors_form.password_hint') }}</p>
         </div>

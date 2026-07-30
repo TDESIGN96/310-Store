@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'vue-sonner'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 
 definePageMeta({ layout: 'default' })
 
@@ -20,7 +21,7 @@ const route = useRoute()
 const id = computed(() => String(route.params.id))
 const { t } = useI18n()
 const { $api } = useApi()
-const { getErrorMessage } = useApiError()
+const { getErrorMessage, getFieldErrors, isValidationError } = useApiError()
 const config = useRuntimeConfig()
 const { can: canPerm } = usePermissions()
 const canShowProduct = computed(() => canPerm('products.show'))
@@ -151,7 +152,10 @@ const saveProduct = async () => {
     await navigateTo('/products')
   }
   catch (error: unknown) {
-      errorMessage.value = getErrorMessage(error)
+    if (isValidationError(error)) {
+      formErrors.value = { ...formErrors.value, ...normalizeBackendFieldErrors(getFieldErrors(error)) }
+    }
+    errorMessage.value = getErrorMessage(error)
   }
   finally {
     submitting.value = false
@@ -240,20 +244,20 @@ onMounted(async () => {
               <div class="space-y-2">
                 <label class="text-sm font-medium leading-none">{{ t('products_form.name_ar') }}</label>
                 <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_name_ar') }}</p>
-                <Input v-model="draft.name_ar" class="mt-0.5" />
+                <Input v-model="draft.name_ar" class="mt-0.5" :aria-invalid="Boolean(formErrors.name_ar)" />
                 <p v-if="formErrors.name_ar" class="text-xs text-red-600">{{ formErrors.name_ar }}</p>
               </div>
               <div class="space-y-2">
                 <label class="text-sm font-medium leading-none">{{ t('products_form.name_en') }}</label>
                 <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_name_en') }}</p>
-                <Input v-model="draft.name_en" class="mt-0.5" />
+                <Input v-model="draft.name_en" class="mt-0.5" :aria-invalid="Boolean(formErrors.name_en)" />
                 <p v-if="formErrors.name_en" class="text-xs text-red-600">{{ formErrors.name_en }}</p>
               </div>
               <div class="space-y-2">
                 <label class="text-sm font-medium leading-none">{{ t('products_form.category') }}</label>
                 <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_category') }}</p>
                 <Select :model-value="draft.category_id ? String(draft.category_id) : ''" @update:model-value="v => draft.category_id = Number(v)">
-                  <SelectTrigger class="mt-0.5"><SelectValue :placeholder="t('products_form.select_category')" /></SelectTrigger>
+                  <SelectTrigger class="mt-0.5" :aria-invalid="Boolean(formErrors.category_id)" :class="{ 'border-destructive': Boolean(formErrors.category_id) }"><SelectValue :placeholder="t('products_form.select_category')" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
                       {{ c.name_en || c.name_ar || `#${c.id}` }}
@@ -266,7 +270,7 @@ onMounted(async () => {
                 <label class="text-sm font-medium leading-none">{{ t('products_form.unit') }}</label>
                 <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_unit') }}</p>
                 <Select :model-value="draft.unit_id ? String(draft.unit_id) : ''" @update:model-value="v => draft.unit_id = Number(v)">
-                  <SelectTrigger class="mt-0.5"><SelectValue :placeholder="t('products_form.select_unit')" /></SelectTrigger>
+                  <SelectTrigger class="mt-0.5" :aria-invalid="Boolean(formErrors.unit_id)" :class="{ 'border-destructive': Boolean(formErrors.unit_id) }"><SelectValue :placeholder="t('products_form.select_unit')" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem v-for="u in units" :key="u.id" :value="String(u.id)">
                       {{ u.name_en || u.name_ar || `#${u.id}` }}
@@ -281,6 +285,8 @@ onMounted(async () => {
                 <textarea
                   v-model="draft.description"
                   rows="4"
+                  :aria-invalid="Boolean(formErrors.description)"
+                  :class="{ 'border-destructive focus-visible:ring-destructive/30': Boolean(formErrors.description) }"
                   class="mt-0.5 w-full min-h-[100px] resize-y rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 <p v-if="formErrors.description" class="text-xs text-red-600">{{ formErrors.description }}</p>
@@ -296,7 +302,7 @@ onMounted(async () => {
                 <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
                   <label class="text-sm font-medium">{{ t('products_form.main_image') }}</label>
                   <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_main_image') }}</p>
-                  <Input type="file" accept="image/*" class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onMainImageChange" />
+                  <Input type="file" accept="image/*" :aria-invalid="Boolean(formErrors.main_image)" class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onMainImageChange" />
                   <p v-if="draft.main_image" class="break-all text-xs text-muted-foreground">{{ draft.main_image }}</p>
                   <p v-if="mainImageFile" class="text-xs text-muted-foreground">{{ mainImageFile.name }}</p>
                   <p v-if="formErrors.main_image" class="text-xs text-red-600">{{ formErrors.main_image }}</p>
@@ -304,7 +310,7 @@ onMounted(async () => {
                 <div class="space-y-2 rounded-lg border bg-muted/10 p-4">
                   <label class="text-sm font-medium">{{ t('products_form.add_additional_images') }}</label>
                   <p class="text-xs text-muted-foreground">{{ t('products_variations.hint_additional_images') }}</p>
-                  <Input type="file" accept="image/*" multiple class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onAdditionalImagesChange" />
+                  <Input type="file" accept="image/*" multiple :aria-invalid="Boolean(formErrors.images || formErrors.additional_images)" class="cursor-pointer bg-background file:me-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm" @change="onAdditionalImagesChange" />
                   <div
                     v-for="(img, imgIndex) in draft.images"
                     :key="`existing-${imgIndex}`"
@@ -346,6 +352,7 @@ onMounted(async () => {
                 >
                   <Checkbox
                     :model-value="draft.attribute_ids.includes(a.id)"
+                    :aria-invalid="Boolean(formErrors.attribute_ids)"
                     @update:model-value="checked => toggleAttribute(a.id, Boolean(checked))"
                   />
                   <span class="leading-snug">{{ a.name }}</span>

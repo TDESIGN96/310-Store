@@ -30,6 +30,7 @@ import {
   firstStocktakingValidationToastDescription,
   validateStocktakingDraft,
 } from '@/composables/useStocktakingDraftValidation'
+import { normalizeBackendFieldErrors } from '@/composables/useBackendFieldErrors'
 import { fetchAllCategoriesPages, type CategoriesApi } from '@/utils/categoryList'
 import type { QuotationProductOption } from '@/composables/useQuotationProducts'
 import { useQuotationProducts } from '@/composables/useQuotationProducts'
@@ -500,9 +501,10 @@ const submitCreate = async () => {
   }
   catch (error: unknown) {
     if (isValidationError(error)) {
-      const fieldErrors = getFieldErrors(error)
+      const fieldErrors = normalizeBackendFieldErrors(getFieldErrors(error))
       formErrors.value = {
         ...formErrors.value,
+        ...fieldErrors,
         warehouse_id: fieldErrors.warehouse_id ?? formErrors.value.warehouse_id ?? '',
         stocktaking_date: fieldErrors.stocktaking_date ?? formErrors.value.stocktaking_date ?? '',
         counter_ids: fieldErrors.counter_ids ?? formErrors.value.counter_ids ?? '',
@@ -572,7 +574,10 @@ onMounted(async () => {
                 :disabled="loadingWarehouses"
                 @update:model-value="onWarehouseChange"
               >
-                <SelectTrigger :class="formErrors.warehouse_id ? 'border-red-500' : ''">
+                <SelectTrigger
+                  :aria-invalid="Boolean(formErrors.warehouse_id)"
+                  :class="formErrors.warehouse_id ? 'border-destructive' : ''"
+                >
                   <SelectValue :placeholder="t('stocktaking_orders_page.select_warehouse')" />
                 </SelectTrigger>
                 <SelectContent>
@@ -596,7 +601,10 @@ onMounted(async () => {
               <Select
                 v-model="draft.type"
               >
-                <SelectTrigger :class="formErrors.type ? 'border-red-500' : ''">
+                <SelectTrigger
+                  :aria-invalid="Boolean(formErrors.type)"
+                  :class="formErrors.type ? 'border-destructive' : ''"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -614,7 +622,8 @@ onMounted(async () => {
               </label>
               <DatePickerInput
                 v-model="draft.stocktaking_date"
-                :class="`w-full ${formErrors.stocktaking_date ? 'border-red-500' : ''}`"
+                :invalid="Boolean(formErrors.stocktaking_date)"
+                :class="`w-full ${formErrors.stocktaking_date ? 'border-destructive' : ''}`"
               />
               <p v-if="formErrors.stocktaking_date" class="text-xs text-red-500">{{ formErrors.stocktaking_date }}</p>
             </fieldset>
@@ -695,9 +704,10 @@ onMounted(async () => {
                 <Button
                   variant="outline"
                   role="combobox"
+                  :aria-invalid="Boolean(formErrors.counter_ids)"
                   class="w-full justify-between font-normal"
                   :disabled="!formEnabled || loadingCounters"
-                  :class="formErrors.counter_ids ? 'border-red-500' : ''"
+                  :class="formErrors.counter_ids ? 'border-destructive' : ''"
                 >
                   <span class="truncate">
                     {{ selectedCountersLabel || t('stocktaking_orders_page.select_counters') }}
