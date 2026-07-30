@@ -308,7 +308,14 @@ onMounted(async () => {
               @attachment-remove-existing="() => { removeAttachmentFile(); draft.attachment_path = '' }"
             />
           </div>
-          <div class="space-y-2"><label class="text-sm font-medium">{{ t('transport_invoices_page.invoice_description') }}</label><RichTextEditor v-model="draft.description" /></div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ t('transport_invoices_page.invoice_description') }}</label>
+            <RichTextEditor
+              v-model="draft.description"
+              :invalid="Boolean(formErrors.description)"
+              :error-message="formErrors.description"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -423,8 +430,8 @@ onMounted(async () => {
         </CardContent>
       </Card>
 
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.terms" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('transport_invoices_page.terms_placeholder')" /></CardContent></Card>
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.notes" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('transport_invoices_page.notes_placeholder')" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><RichTextEditor v-model="draft.terms" :placeholder="t('transport_invoices_page.terms_placeholder')" :invalid="Boolean(formErrors.terms)" :error-message="formErrors.terms" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><RichTextEditor v-model="draft.notes" :placeholder="t('transport_invoices_page.notes_placeholder')" :invalid="Boolean(formErrors.notes)" :error-message="formErrors.notes" /></CardContent></Card>
 
       <div class="flex flex-col-reverse gap-3 rounded-xl border bg-card/80 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-end sm:px-5">
         <Button variant="outline" class="w-full sm:w-auto" :disabled="invoicesStore.submitting" as-child><NuxtLink to="/transport-invoices">{{ t('common.cancel') }}</NuxtLink></Button>

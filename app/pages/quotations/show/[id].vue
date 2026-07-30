@@ -227,7 +227,7 @@ onMounted(async () => {
           </div>
           <div class="sm:col-span-2">
             <p class="text-xs text-muted-foreground">{{ t('quotations_page.quotation_description') }}</p>
-            <div class="prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="quotation.description || '—'" />
+            <div class="rich-text-content prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="quotation.description || '—'" />
           </div>
         </CardContent>
       </Card>
@@ -311,7 +311,7 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('quotations_page.terms_section') }}</h2>
         </div>
         <CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6">
-          <p>{{ quotation.terms || '—' }}</p>
+          <div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="quotation.terms || '—'" />
         </CardContent>
       </Card>
 
@@ -320,7 +320,7 @@ onMounted(async () => {
           <h2 class="text-base font-semibold">{{ t('quotations_page.notes_section') }}</h2>
         </div>
         <CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6">
-          <p>{{ quotation.notes || '—' }}</p>
+          <div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="quotation.notes || '—'" />
         </CardContent>
       </Card>
 

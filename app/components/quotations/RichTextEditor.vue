@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import StarterKit from '@tiptap/starter-kit'
+import Placeholder from '@tiptap/extension-placeholder'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { Bold, Italic, List, ListOrdered, Undo2, Redo2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { cn } from '@/lib/utils'
 
 const props = defineProps<{
   modelValue: string
+  placeholder?: string
   invalid?: boolean
   errorMessage?: string
 }>()
@@ -16,18 +18,27 @@ const emit = defineEmits<{
   'update:modelValue': [string]
 }>()
 
+function normalizeEditorHtml(html: string, isEmpty: boolean): string {
+  if (isEmpty) return ''
+  return html
+}
+
 const editor = useEditor({
   content: props.modelValue || '',
   extensions: [
     StarterKit,
+    Placeholder.configure({
+      placeholder: () => props.placeholder || '',
+    }),
   ],
   editorProps: {
     attributes: {
-      class: 'min-h-[130px] w-full rounded-b-md border border-t-0 border-input bg-background px-3 py-2 text-sm outline-none',
+      class: 'rich-text-content min-h-[130px] w-full rounded-b-md border border-t-0 border-input bg-background px-3 py-2 text-sm outline-none',
     },
   },
   onUpdate({ editor: ed }) {
-    emit('update:modelValue', ed.getHTML())
+    const html = normalizeEditorHtml(ed.getHTML(), ed.isEmpty)
+    emit('update:modelValue', html)
   },
 })
 
@@ -35,8 +46,17 @@ watch(
   () => props.modelValue,
   (value) => {
     if (!editor.value) return
-    if (value === editor.value.getHTML()) return
-    editor.value.commands.setContent(value || '', { emitUpdate: false })
+    const next = value || ''
+    const current = normalizeEditorHtml(editor.value.getHTML(), editor.value.isEmpty)
+    if (next === current) return
+    editor.value.commands.setContent(next, { emitUpdate: false })
+  },
+)
+
+watch(
+  () => props.placeholder,
+  () => {
+    editor.value?.view.dispatch(editor.value.view.state.tr)
   },
 )
 
@@ -118,7 +138,10 @@ const canRedo = computed(() => editor.value?.can().redo() ?? false)
       :editor="editor"
       role="textbox"
       :aria-invalid="props.invalid ? 'true' : undefined"
-      :class="cn(props.invalid && '[&_.ProseMirror]:border-destructive')"
+      :class="cn(
+        '[&_.is-editor-empty]:before:pointer-events-none [&_.is-editor-empty]:before:float-start [&_.is-editor-empty]:before:h-0 [&_.is-editor-empty]:before:text-muted-foreground [&_.is-editor-empty]:before:content-[attr(data-placeholder)]',
+        props.invalid && '[&_.ProseMirror]:border-destructive',
+      )"
     />
     <p v-if="props.errorMessage" class="mt-1 text-xs text-destructive">{{ props.errorMessage }}</p>
   </div>

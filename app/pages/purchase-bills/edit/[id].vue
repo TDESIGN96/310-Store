@@ -259,7 +259,14 @@ onMounted(async () => {
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('purchase_bills_page.bill_date') }}</label><Input v-model="draft.bill_date" type="date" :aria-invalid="Boolean(formErrors.bill_date)" /></div>
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('purchase_bills_page.supply_date') }}</label><Input v-model="draft.supply_date" type="date" /></div>
           </div>
-          <div class="space-y-2"><label class="text-sm font-medium">{{ t('purchase_bills_page.bill_description') }}</label><RichTextEditor v-model="draft.description" /></div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">{{ t('purchase_bills_page.bill_description') }}</label>
+            <RichTextEditor
+              v-model="draft.description"
+              :invalid="Boolean(formErrors.description)"
+              :error-message="formErrors.description"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -401,8 +408,8 @@ onMounted(async () => {
         </CardContent>
       </Card>
 
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.terms" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('purchase_bills_page.terms_placeholder')" /></CardContent></Card>
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><textarea v-model="draft.notes" rows="4" class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('purchase_bills_page.notes_placeholder')" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><RichTextEditor v-model="draft.terms" :placeholder="t('purchase_bills_page.terms_placeholder')" :invalid="Boolean(formErrors.terms)" :error-message="formErrors.terms" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 sm:px-6 sm:py-6"><RichTextEditor v-model="draft.notes" :placeholder="t('purchase_bills_page.notes_placeholder')" :invalid="Boolean(formErrors.notes)" :error-message="formErrors.notes" /></CardContent></Card>
 
       <div class="flex flex-col-reverse gap-3 rounded-xl border bg-card/80 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-end sm:px-5">
         <Button variant="outline" class="w-full sm:w-auto" :disabled="purchaseBillsStore.submitting" as-child><NuxtLink to="/purchase-bills">{{ t('common.cancel') }}</NuxtLink></Button>

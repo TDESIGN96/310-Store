@@ -373,7 +373,11 @@ onMounted(async () => {
             </div>
           <div class="space-y-2">
             <label class="text-sm font-medium">{{ t('quotations_page.quotation_description') }}</label>
-            <RichTextEditor v-model="draft.description" />
+            <RichTextEditor
+              v-model="draft.description"
+              :invalid="Boolean(formErrors.description)"
+              :error-message="formErrors.description"
+            />
           </div>
         </CardContent>
       </Card>
@@ -575,7 +579,14 @@ onMounted(async () => {
         <CardContent class="px-4 py-5 sm:px-6 sm:py-6">
           <details class="rounded-lg border px-4 py-3">
             <summary class="cursor-pointer text-sm font-medium">{{ t('quotations_page.terms_section') }}</summary>
-            <textarea v-model="draft.terms" rows="4" class="mt-3 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('quotations_page.terms_placeholder')" />
+            <div class="mt-3">
+              <RichTextEditor
+                v-model="draft.terms"
+                :placeholder="t('quotations_page.terms_placeholder')"
+                :invalid="Boolean(formErrors.terms)"
+                :error-message="formErrors.terms"
+              />
+            </div>
           </details>
         </CardContent>
       </Card>
@@ -587,7 +598,14 @@ onMounted(async () => {
         <CardContent class="px-4 py-5 sm:px-6 sm:py-6">
           <details class="rounded-lg border px-4 py-3">
             <summary class="cursor-pointer text-sm font-medium">{{ t('quotations_page.notes_section') }}</summary>
-            <textarea v-model="draft.notes" rows="4" class="mt-3 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" :placeholder="t('quotations_page.notes_placeholder')" />
+            <div class="mt-3">
+              <RichTextEditor
+                v-model="draft.notes"
+                :placeholder="t('quotations_page.notes_placeholder')"
+                :invalid="Boolean(formErrors.notes)"
+                :error-message="formErrors.notes"
+              />
+            </div>
           </details>
         </CardContent>
       </Card>

@@ -185,7 +185,7 @@ onMounted(async () => {
               </p>
             </div>
           </template>
-          <div class="sm:col-span-2"><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.invoice_description') }}</p><div class="prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="invoice.description || '—'" /></div>
+          <div class="sm:col-span-2"><p class="text-xs text-muted-foreground">{{ t('transport_invoices_page.invoice_description') }}</p><div class="rich-text-content prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="invoice.description || '—'" /></div>
         </CardContent>
       </Card>
 
@@ -228,8 +228,8 @@ onMounted(async () => {
         </CardContent>
       </Card>
 
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><p>{{ invoice.terms || '—' }}</p></CardContent></Card>
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><p>{{ invoice.notes || '—' }}</p></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="invoice.terms || '—'" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('transport_invoices_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="invoice.notes || '—'" /></CardContent></Card>
       <div class="flex justify-end"><Button variant="outline" as-child><NuxtLink to="/transport-invoices">{{ t('common.close') }}</NuxtLink></Button></div>
     </template>
   </div>

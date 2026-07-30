@@ -157,7 +157,7 @@ onMounted(async () => {
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.address') }}</p><p class="text-sm">{{ purchaseBill.address || '—' }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.bill_date') }}</p><p class="text-sm">{{ fmtDate(purchaseBill.bill_date) }}</p></div>
           <div><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.supply_date') }}</p><p class="text-sm">{{ fmtDate(purchaseBill.supply_date) }}</p></div>
-          <div class="sm:col-span-2"><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.bill_description') }}</p><div class="prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="purchaseBill.description || '—'" /></div>
+          <div class="sm:col-span-2"><p class="text-xs text-muted-foreground">{{ t('purchase_bills_page.bill_description') }}</p><div class="rich-text-content prose prose-sm mt-1 max-w-none text-sm dark:prose-invert" v-html="purchaseBill.description || '—'" /></div>
         </CardContent>
       </Card>
 
@@ -215,8 +215,8 @@ onMounted(async () => {
         </CardContent>
       </Card>
 
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><p>{{ purchaseBill.terms || '—' }}</p></CardContent></Card>
-      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><p>{{ purchaseBill.notes || '—' }}</p></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="purchaseBill.terms || '—'" /></CardContent></Card>
+      <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('purchase_bills_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="purchaseBill.notes || '—'" /></CardContent></Card>
       <div class="flex justify-end"><Button variant="outline" as-child><NuxtLink to="/purchase-bills">{{ t('common.close') }}</NuxtLink></Button></div>
     </template>
   </div>
