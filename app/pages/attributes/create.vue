@@ -45,6 +45,7 @@ interface ValueRow {
   name: string
   sort_order: number
   error_name: string
+  error_sort_order: string
 }
 
 const attributeName = ref('')
@@ -57,7 +58,7 @@ const fieldErrors = ref({
 })
 
 const values = ref<ValueRow[]>([
-  { key: 1, name: '', sort_order: 1, error_name: '' },
+  { key: 1, name: '', sort_order: 1, error_name: '', error_sort_order: '' },
 ])
 const nextRowKey = ref(2)
 
@@ -69,6 +70,7 @@ const addValueRow = () => {
     name: '',
     sort_order: values.value.length + 1,
     error_name: '',
+    error_sort_order: '',
   })
 }
 
@@ -80,11 +82,15 @@ const removeValueRow = (key: number) => {
 const normalizeSortOrder = (row: ValueRow) => {
   const n = Number(row.sort_order)
   row.sort_order = Number.isFinite(n) && n > 0 ? Math.floor(n) : 1
+  row.error_sort_order = ''
 }
 
 const validateForm = (): boolean => {
   fieldErrors.value = { name: '', values: '' }
-  for (const row of values.value) row.error_name = ''
+  for (const row of values.value) {
+    row.error_name = ''
+    row.error_sort_order = ''
+  }
 
   if (!attributeName.value.trim()) {
     fieldErrors.value.name = t('attributes_form.validation_name_required')
@@ -94,27 +100,35 @@ const validateForm = (): boolean => {
     fieldErrors.value.values = t('attributes_form.validation_values_required')
   }
 
-  const seen = new Set<string>()
+  const seenNames = new Set<string>()
+  const sortCounts = new Map<number, number>()
+
   for (const row of values.value) {
+    normalizeSortOrder(row)
+    sortCounts.set(row.sort_order, (sortCounts.get(row.sort_order) ?? 0) + 1)
+
     const trimmed = row.name.trim()
     if (!trimmed) {
       row.error_name = t('attributes_form.validation_value_name_required')
       continue
     }
     const token = trimmed.toLowerCase()
-    if (seen.has(token)) {
+    if (seenNames.has(token)) {
       row.error_name = t('attributes_form.validation_value_name_duplicate')
       continue
     }
-    seen.add(token)
-    if (!Number.isFinite(row.sort_order) || row.sort_order < 1) {
-      row.sort_order = 1
+    seenNames.add(token)
+  }
+
+  for (const row of values.value) {
+    if ((sortCounts.get(row.sort_order) ?? 0) > 1) {
+      row.error_sort_order = t('attributes_form.validation_sort_order_duplicate')
     }
   }
 
   return !fieldErrors.value.name
     && !fieldErrors.value.values
-    && values.value.every(v => !v.error_name)
+    && values.value.every(v => !v.error_name && !v.error_sort_order)
 }
 
 const buildPayload = () => ({
@@ -143,8 +157,15 @@ const createAttribute = async () => {
       const fe = getFieldErrors(error)
       fieldErrors.value.name = fe.name ?? ''
       fieldErrors.value.values = fe.values ?? ''
-      if (Array.isArray(fe['values.0.name'])) {
-        // no-op: keep compatibility with unknown backend shape
+      for (const [key, message] of Object.entries(fe)) {
+        const match = key.match(/^values\.(\d+)\.(name|sort_order)$/)
+        if (!match) continue
+        const index = Number(match[1])
+        const field = match[2]
+        const row = values.value[index]
+        if (!row) continue
+        if (field === 'name') row.error_name = message
+        if (field === 'sort_order') row.error_sort_order = message
       }
       return
     }
@@ -226,14 +247,18 @@ const createAttribute = async () => {
               />
               <p v-if="row.error_name" class="text-xs text-red-500">{{ row.error_name }}</p>
             </div>
-            <div class="col-span-4 md:col-span-3">
+            <div class="col-span-4 md:col-span-3 space-y-1">
               <Input
                 v-model.number="row.sort_order"
                 type="number"
                 min="1"
                 :placeholder="t('attributes_form.sort_order')"
+                :aria-invalid="Boolean(row.error_sort_order)"
+                :class="row.error_sort_order ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                 @blur="normalizeSortOrder(row)"
+                @input="row.error_sort_order = ''"
               />
+              <p v-if="row.error_sort_order" class="text-xs text-red-500">{{ row.error_sort_order }}</p>
             </div>
             <div class="col-span-1 flex justify-end pt-1">
               <Button

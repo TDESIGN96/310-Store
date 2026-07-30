@@ -2373,6 +2373,7 @@ export default {
     stock_allocation_create_stub_body: 'Allocate products form will be added here in a follow-up story.',
     allocation_product_search_placeholder: 'Search product by name…',
     allocation_choose_product_hint: 'Choose products first.',
+    allocation_product_only_variation: 'Whole product (no variation)',
     allocation_show_all_products: 'Show all products',
     allocation_variations_count: 'variations',
     allocation_barcode: 'Barcode',
@@ -2589,6 +2590,7 @@ export default {
     validation_values_required: 'Please add at least one value',
     validation_value_name_required: 'Value name is required',
     validation_value_name_duplicate: 'Value names must be unique',
+    validation_sort_order_duplicate: 'Sort order must be unique',
     create_success: 'Attribute created successfully',
   },
 
@@ -2657,6 +2659,7 @@ export default {
     validation_name_required: 'Please enter the attribute name',
     validation_value_name_required: 'Value name is required',
     validation_sort_order_required: 'Sort order must be at least 1',
+    validation_sort_order_duplicate: 'Sort order must be unique',
     save_success: 'Attribute updated successfully',
     add_value_success: 'Value added successfully',
     delete_value_title: 'Delete value',

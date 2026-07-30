@@ -203,6 +203,12 @@ onMounted(async () => {
     warehouseOptions.value = await loadActiveWarehouses()
     await loadDistrictOptions()
     const invoice = await invoicesStore.loadDraftById(id.value)
+    if (invoice) {
+      const resolvedAttachment = [invoice.attachment_url, invoice.attachment_path, invoice.attachment]
+        .map(value => String(value ?? '').trim())
+        .find(Boolean) || ''
+      if (resolvedAttachment) draft.value.attachment_path = resolvedAttachment
+    }
     if (!invoice) errorMessage.value = t('invoices_page.not_found')
   }
   catch {

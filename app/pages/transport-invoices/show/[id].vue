@@ -71,7 +71,7 @@ const deliveryByLabel = computed(() => {
 const showDeliveryAgentFields = computed(() => deliveryBy.value === 'delivery_agent' || deliveryBy.value === 'other')
 const deliveryAgentName = computed(() => String(invoice.value?.delivery_agent_name ?? '').trim())
 const deliveryAgentMobile = computed(() => String(invoice.value?.delivery_agent_mobile ?? '').trim())
-const attachmentUrl = computed(() => String(invoice.value?.attachment_path ?? '').trim())
+const attachmentUrl = computed(() => String(invoice.value?.attachment_url ?? invoice.value?.attachment_path ?? '').trim())
 const items = computed(() => {
   const raw = invoice.value?.items
   return Array.isArray(raw) ? raw as Array<Record<string, unknown>> : []

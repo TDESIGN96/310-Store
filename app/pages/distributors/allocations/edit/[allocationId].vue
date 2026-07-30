@@ -19,6 +19,7 @@ definePageMeta({ layout: 'default' })
 interface AllocationDetail {
   id: string
   distributor_id: number
+  product_id: number
   variation_id: number
   warehouse_id: number
   allocated_quantity: number
@@ -114,6 +115,7 @@ const loadAllocation = async () => {
     const parsed: AllocationDetail = {
       id: String(raw.id ?? allocationId.value),
       distributor_id: toNumber(raw.distributor_id, Number(distributorId.value) || 0),
+      product_id: toNumber(raw.product_id ?? productObj?.id, 0),
       variation_id: toNumber(raw.variation_id ?? variationObj?.id, 0),
       warehouse_id: toNumber(raw.warehouse_id ?? warehouseObj?.id, 0),
       allocated_quantity: toNumber(raw.allocated_quantity ?? raw.quantity, 0),
@@ -127,13 +129,14 @@ const loadAllocation = async () => {
       unit_price: toNumber(raw.unit_price ?? variationObj?.price ?? raw.price ?? raw.standard_price, 0),
     }
 
-    if (!parsed.variation_id || !parsed.warehouse_id) {
+    // `warehouse_id` and `warehouse` are nullable in the allocations API response.
+    if (!parsed.variation_id && !parsed.product_id) {
       notFound.value = true
       return
     }
 
     detail.value = parsed
-    quantity.value = parsed.allocated_quantity > 0 ? parsed.allocated_quantity : 1
+    quantity.value = parsed.allocated_quantity > 0 ? parsed.allocated_quantity : 0
   }
   catch (error: unknown) {
     const err = error as { response?: { status?: number }; statusCode?: number; status?: number }
@@ -157,12 +160,12 @@ const validate = (): boolean => {
     formError.value = t('distributors_show.allocation_not_found')
     return false
   }
-  const qty = Number(quantity.value)
-  if (!Number.isFinite(qty) || qty <= 0) {
-    quantityError.value = t('distributors_show.allocation_validation_quantity_invalid')
+  if (!current.variation_id && !current.product_id) {
+    formError.value = t('distributors_show.allocation_not_found')
     return false
   }
-  if (current.consumed_quantity > 0 && qty < current.consumed_quantity) {
+  const qty = Number(quantity.value)
+  if (Number.isFinite(qty) && qty > 0 && current.consumed_quantity > 0 && qty < current.consumed_quantity) {
     quantityError.value = t('distributors_show.allocation_validation_quantity_below_consumed', { consumed: current.consumed_quantity })
     return false
   }
@@ -180,14 +183,23 @@ const submitAllocation = async () => {
   submitting.value = true
   formError.value = ''
   try {
+    const qty = Number(quantity.value)
+    const quantityPayload = Number.isFinite(qty) && qty > 0 ? qty : undefined
+    const body: Record<string, number | undefined> = {
+      distributor_id: detail.value.distributor_id || Number(distributorId.value),
+      ...(detail.value.warehouse_id ? { warehouse_id: detail.value.warehouse_id } : {}),
+      ...(quantityPayload !== undefined ? { quantity: quantityPayload } : {}),
+    }
+    if (detail.value.variation_id) {
+      body.variation_id = detail.value.variation_id
+    }
+    else {
+      body.product_id = detail.value.product_id
+    }
+
     await $api(`/distributors/allocations/${allocationId.value}`, {
       method: 'PUT',
-      body: {
-        distributor_id: detail.value.distributor_id || Number(distributorId.value),
-        variation_id: detail.value.variation_id,
-        warehouse_id: detail.value.warehouse_id,
-        quantity: Number(quantity.value),
-      },
+      body,
     })
 
     toast.success(t('distributors_show.allocation_update_success'))
@@ -298,9 +310,9 @@ onMounted(loadAllocation)
                   </span>
                   <div class="flex w-full max-w-full min-w-0 flex-col gap-1">
                     <Input
-                      :model-value="quantity"
+                      :model-value="quantity || ''"
                       type="number"
-                      min="1"
+                      min="0"
                       :aria-invalid="Boolean(quantityError)"
                       class="h-9 w-full text-start tabular-nums"
                       :class="quantityError ? 'border-destructive focus-visible:ring-destructive/30' : ''"

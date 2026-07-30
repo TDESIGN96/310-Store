@@ -2371,6 +2371,7 @@ export default {
     stock_allocation_create_stub_body: 'سيتم إضافة نموذج تخصيص المنتجات هنا في قصة لاحقة.',
     allocation_product_search_placeholder: 'ابحث عن المنتج بالاسم…',
     allocation_choose_product_hint: 'اختر المنتجات أولا .',
+    allocation_product_only_variation: 'المنتج كاملاً (بدون متغير)',
     allocation_show_all_products: 'عرض كل المنتجات',
     allocation_variations_count: 'متغير',
     allocation_barcode: 'الباركود',
@@ -2587,6 +2588,7 @@ export default {
     validation_values_required: 'يرجى إضافة قيمة واحدة على الأقل',
     validation_value_name_required: 'اسم القيمة مطلوب',
     validation_value_name_duplicate: 'يجب أن تكون أسماء القيم غير مكررة',
+    validation_sort_order_duplicate: 'يجب أن يكون ترتيب العرض غير مكرر',
     create_success: 'تم إنشاء السمة بنجاح',
   },
 
@@ -2655,6 +2657,7 @@ export default {
     validation_name_required: 'يرجى إدخال اسم السمة',
     validation_value_name_required: 'اسم القيمة مطلوب',
     validation_sort_order_required: 'ترتيب العرض يجب أن يكون 1 على الأقل',
+    validation_sort_order_duplicate: 'يجب أن يكون ترتيب العرض غير مكرر',
     save_success: 'تم تحديث السمة بنجاح',
     add_value_success: 'تمت إضافة القيمة بنجاح',
     delete_value_title: 'حذف القيمة',

@@ -653,9 +653,13 @@ export const useInvoicesStore = defineStore('invoices', () => {
       delivery_by: normalizeDeliveryBy(invoice.delivery_by),
       delivery_agent_name: String(invoice.delivery_agent_name ?? ''),
       delivery_agent_mobile: String(invoice.delivery_agent_mobile ?? ''),
-      attachment_path: String(invoice.attachment_path ?? ''),
+      attachment_path: '',
       items: items.length ? items : [createEmptyItem()],
     }
+    const resolvedAttachment = [invoice.attachment_url, invoice.attachment_path, invoice.attachment]
+      .map(value => String(value ?? '').trim())
+      .find(Boolean) || ''
+    draft.value.attachment_path = resolvedAttachment
   }
 
   const hydrateDraftFromQuotationForConvert = async (quotation: Record<string, unknown>) => {
@@ -895,7 +899,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     delivery_agent_mobile: draft.value.delivery_by === 'shipping_company'
       ? null
       : (draft.value.delivery_agent_mobile.trim() || null),
-    attachment_path: draft.value.delivery_by === 'shipping_company'
+    attachment_url: draft.value.delivery_by === 'shipping_company'
       ? null
       : (draft.value.attachment_path.trim() || null),
     subtotal: summary.value.subtotal,

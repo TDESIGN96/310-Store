@@ -434,12 +434,12 @@ span.flatpickr-weekday {
 /* ── Module pills ── */
 .kamu-pill {
   padding: 5px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 100px;
   font-size: 11px;
-  color: color-mix(in srgb, var(--color-Green-Light) 90%, transparent);
-  font-weight: 400;
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
   transition: all 0.2s;
   backdrop-filter: blur(4px);
   position: relative;
@@ -447,9 +447,9 @@ span.flatpickr-weekday {
 }
 
 .kamu-pill:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: color-mix(in srgb, var(--color-Green-Light) 40%, transparent);
-  color: var(--color-Green-Light);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.48);
+  color: #ffffff;
 }
 
 .kamu-pill::before {

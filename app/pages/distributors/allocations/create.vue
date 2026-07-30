@@ -118,7 +118,7 @@ const createEmptyRow = (): AllocationRowDraft => ({
   variation_id: '',
   warehouse_id: '',
   description: '',
-  quantity: 1,
+  quantity: 0,
   unit: '',
   available_stock: 0,
   standard_price: 0,
@@ -156,8 +156,35 @@ const selectedVariationLabel = (row: AllocationRowDraft): string => {
 }
 
 const getWarehouseOptions = (row: AllocationRowDraft): LookupWarehouse[] => {
-  const variation = getVariationOptions(row).find(v => v.id === row.variation_id)
-  return variation?.warehouses ?? []
+  if (row.variation_id) {
+    const variation = getVariationOptions(row).find(v => v.id === row.variation_id)
+    return variation?.warehouses ?? []
+  }
+  if (!row.product?.variations.length) return []
+
+  const byId = new Map<string, LookupWarehouse>()
+  row.product.variations.forEach((variation) => {
+    variation.warehouses.forEach((warehouse) => {
+      const existing = byId.get(warehouse.id)
+      if (!existing) {
+        byId.set(warehouse.id, { ...warehouse })
+        return
+      }
+      byId.set(warehouse.id, {
+        ...existing,
+        availableStock: existing.availableStock + warehouse.availableStock,
+        thresholdActive: existing.thresholdActive || warehouse.thresholdActive,
+        canOverrideThreshold: existing.canOverrideThreshold || warehouse.canOverrideThreshold,
+        minQty: existing.minQty != null && warehouse.minQty != null
+          ? Math.min(existing.minQty, warehouse.minQty)
+          : (existing.minQty ?? warehouse.minQty),
+        maxQty: existing.maxQty != null && warehouse.maxQty != null
+          ? Math.max(existing.maxQty, warehouse.maxQty)
+          : (existing.maxQty ?? warehouse.maxQty),
+      })
+    })
+  })
+  return [...byId.values()]
 }
 
 const normalizeWarehouse = (raw: unknown): LookupWarehouse | null => {
@@ -406,12 +433,6 @@ const applyProductToRow = (row: AllocationRowDraft, product: LookupProduct, vari
   if (variationId && product.variations.some(v => v.id === variationId)) {
     row.variation_id = variationId
     onVariationChange(row)
-    return
-  }
-
-  if (product.variations.length === 1) {
-    row.variation_id = product.variations[0]!.id
-    onVariationChange(row)
   }
 }
 
@@ -571,16 +592,18 @@ const validateRows = (): boolean => {
 
   rows.value.forEach((row) => {
     const errors: RowFieldErrors = {}
+    const hasVariation = Boolean(row.variation_id)
+    const hasProduct = Boolean(row.product_id)
 
-    if (!row.product_id) errors.product_id = t('distributors_show.allocation_validation_product_required')
-    if (!row.variation_id) errors.variation_id = t('distributors_show.allocation_validation_variation_required')
-    if (!row.warehouse_id) errors.warehouse_id = t('distributors_show.allocation_validation_warehouse_required')
+    if (!hasVariation && !hasProduct) {
+      errors.product_id = t('distributors_show.allocation_validation_product_required')
+    }
+    if (!row.warehouse_id) {
+      errors.warehouse_id = t('distributors_show.allocation_validation_warehouse_required')
+    }
 
     const quantity = Number(row.quantity)
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      errors.quantity = t('distributors_show.allocation_validation_quantity_invalid')
-    }
-    else {
+    if (Number.isFinite(quantity) && quantity > 0) {
       if (quantity > row.available_stock) {
         errors.quantity = t('distributors_show.allocation_validation_quantity_exceeds_stock')
       }
@@ -595,7 +618,7 @@ const validateRows = (): boolean => {
     }
 
     if (Object.keys(errors).length > 0) nextErrors[row.key] = errors
-    else if (row.product_id && row.variation_id && row.warehouse_id) validRows += 1
+    else if ((hasVariation || hasProduct) && row.warehouse_id) validRows += 1
   })
 
   if (validRows === 0) {
@@ -606,12 +629,29 @@ const validateRows = (): boolean => {
   return Object.keys(nextErrors).length === 0 && validRows > 0
 }
 
-const buildRowPayload = (row: AllocationRowDraft) => ({
-  variation_id: Number(row.variation_id),
-  warehouse_id: Number(row.warehouse_id),
-  quantity: Number(row.quantity),
-  description: row.description || undefined,
-})
+const buildAllocationItem = (row: AllocationRowDraft) => {
+  if (!row.warehouse_id) return null
+  const qty = Number(row.quantity)
+  const quantity = Number.isFinite(qty) && qty > 0 ? qty : undefined
+  const base: {
+    warehouse_id: number
+    description?: string
+    quantity?: number
+    variation_id?: number
+    product_id?: number
+  } = {
+    warehouse_id: Number(row.warehouse_id),
+    description: row.description || undefined,
+    ...(quantity !== undefined ? { quantity } : {}),
+  }
+  if (row.variation_id) {
+    return { ...base, variation_id: Number(row.variation_id) }
+  }
+  if (row.product_id) {
+    return { ...base, product_id: Number(row.product_id) }
+  }
+  return null
+}
 
 const submitAllocation = async () => {
   if (!canAllocate.value) return
@@ -632,17 +672,18 @@ const submitAllocation = async () => {
   formError.value = ''
   try {
     const items = rows.value
-      .filter(row => row.product_id && row.variation_id && row.warehouse_id)
-      .map(row => buildRowPayload(row))
+      .map(row => buildAllocationItem(row))
+      .filter((item): item is NonNullable<typeof item> => !!item)
 
     await $api('/distributors/allocations', {
       method: 'POST',
       body: {
         allocations: items.map(item => ({
           distributor_id: Number(distributorId.value),
-          variation_id: item.variation_id,
           warehouse_id: item.warehouse_id,
-          quantity: item.quantity,
+          ...(item.variation_id != null ? { variation_id: item.variation_id } : {}),
+          ...(item.product_id != null ? { product_id: item.product_id } : {}),
+          ...(item.quantity != null ? { quantity: item.quantity } : {}),
         })),
       },
     })
@@ -838,15 +879,22 @@ onMounted(async () => {
                           {{ $t('distributors_show.stock_allocation_col_variation') }}
                         </label>
                         <Select
-                          :model-value="row.variation_id"
-                          @update:model-value="value => { row.variation_id = String(value ?? ''); onVariationChange(row) }"
+                          :model-value="row.variation_id || '__product_only__'"
+                          @update:model-value="value => {
+                            const next = String(value ?? '')
+                            row.variation_id = next === '__product_only__' ? '' : next
+                            onVariationChange(row)
+                          }"
                         >
                           <SelectTrigger class="h-9 w-full">
                             <SelectValue :placeholder="$t('distributors_show.stock_allocation_col_variation')">
-                              {{ selectedVariationLabel(row) }}
+                              {{ row.variation_id ? selectedVariationLabel(row) : $t('distributors_show.allocation_product_only_variation') }}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="__product_only__" :text-value="$t('distributors_show.allocation_product_only_variation')">
+                              {{ $t('distributors_show.allocation_product_only_variation') }}
+                            </SelectItem>
                             <SelectItem
                               v-for="variation in getVariationOptions(row)"
                               :key="variation.id"
@@ -869,7 +917,7 @@ onMounted(async () => {
                         </label>
                         <Select
                           :model-value="row.warehouse_id"
-                          :disabled="!row.variation_id"
+                          :disabled="!row.product_id"
                           @update:model-value="value => { row.warehouse_id = String(value ?? ''); onWarehouseChange(row) }"
                         >
                           <SelectTrigger class="h-9 w-full">
@@ -911,9 +959,9 @@ onMounted(async () => {
                   </span>
                   <div class="flex w-full max-w-full min-w-0 flex-col gap-1">
                     <Input
-                      :model-value="row.quantity"
+                      :model-value="row.quantity || ''"
                       type="number"
-                      min="1"
+                      min="0"
                       class="h-9 w-full text-start tabular-nums"
                       @update:model-value="value => row.quantity = Math.max(0, Number(value) || 0)"
                     />

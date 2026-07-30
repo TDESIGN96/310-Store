@@ -53,6 +53,7 @@ interface EditableValue {
   id: number
   name: string
   sort_order: number
+  error_sort_order: string
 }
 
 const route = useRoute()
@@ -69,6 +70,7 @@ const values = ref<EditableValue[]>([])
 const newValueName = ref('')
 const newValueSortOrder = ref<number>(1)
 const newValueError = ref('')
+const newValueSortOrderError = ref('')
 
 const deletingValueId = ref<number | null>(null)
 const valueToDelete = ref<EditableValue | null>(null)
@@ -97,6 +99,7 @@ const loadAttribute = async () => {
       id: v.id,
       name: v.name ?? '',
       sort_order: Number(v.sort_order ?? 1) || 1,
+      error_sort_order: '',
     }))
   }
   catch (error: unknown) {
@@ -110,10 +113,33 @@ const loadAttribute = async () => {
 const normalizeSortOrder = (row: EditableValue) => {
   const n = Number(row.sort_order)
   row.sort_order = Number.isFinite(n) && n > 0 ? Math.floor(n) : 1
+  row.error_sort_order = ''
+}
+
+const markDuplicateSortOrders = (): boolean => {
+  const sortCounts = new Map<number, number>()
+  for (const row of values.value) {
+    normalizeSortOrder(row)
+    sortCounts.set(row.sort_order, (sortCounts.get(row.sort_order) ?? 0) + 1)
+  }
+
+  let hasDuplicates = false
+  for (const row of values.value) {
+    if ((sortCounts.get(row.sort_order) ?? 0) > 1) {
+      row.error_sort_order = t('attributes_edit.validation_sort_order_duplicate')
+      hasDuplicates = true
+    }
+    else {
+      row.error_sort_order = ''
+    }
+  }
+  return hasDuplicates
 }
 
 const validate = () => {
   errorMessage.value = ''
+  for (const row of values.value) row.error_sort_order = ''
+
   if (!attributeName.value.trim()) {
     errorMessage.value = t('attributes_edit.validation_name_required')
     return false
@@ -128,6 +154,11 @@ const validate = () => {
       return false
     }
   }
+
+  if (markDuplicateSortOrders()) {
+    return false
+  }
+
   return true
 }
 
@@ -165,7 +196,37 @@ const saveChanges = async () => {
   catch (error: unknown) {
     if (isValidationError(error)) {
       const fe = getFieldErrors(error)
-      errorMessage.value = fe.name || fe.values || Object.values(fe)[0] || getErrorMessage(error)
+      let mappedSortError = false
+      for (const [key, message] of Object.entries(fe)) {
+        if (key === 'sort_order') {
+          const conflicting = values.value.filter((row, index, arr) =>
+            arr.some((other, otherIndex) => otherIndex !== index && other.sort_order === row.sort_order),
+          )
+          if (conflicting.length) {
+            for (const row of conflicting) row.error_sort_order = message
+            mappedSortError = true
+          }
+          else if (values.value.length === 1) {
+            values.value[0]!.error_sort_order = message
+            mappedSortError = true
+          }
+          continue
+        }
+        const match = key.match(/^(?:values\.)?(\d+)\.sort_order$/)
+        if (match) {
+          const row = values.value[Number(match[1])]
+          if (row) {
+            row.error_sort_order = message
+            mappedSortError = true
+          }
+        }
+      }
+      if (!mappedSortError || fe.name || fe.values) {
+        errorMessage.value = fe.name || fe.values || Object.values(fe)[0] || getErrorMessage(error)
+      }
+      else {
+        errorMessage.value = ''
+      }
     }
     else {
       errorMessage.value = getErrorMessage(error)
@@ -180,6 +241,7 @@ const addValue = async () => {
   if (!attribute.value) return
 
   newValueError.value = ''
+  newValueSortOrderError.value = ''
   if (!newValueName.value.trim()) {
     newValueError.value = t('attributes_edit.validation_value_name_required')
     return
@@ -187,7 +249,14 @@ const addValue = async () => {
 
   const sortOrder = Number(newValueSortOrder.value)
   if (!Number.isFinite(sortOrder) || sortOrder < 1) {
-    newValueError.value = t('attributes_edit.validation_sort_order_required')
+    newValueSortOrderError.value = t('attributes_edit.validation_sort_order_required')
+    return
+  }
+
+  const normalizedSort = Math.floor(sortOrder)
+  newValueSortOrder.value = normalizedSort
+  if (values.value.some(row => Number(row.sort_order) === normalizedSort)) {
+    newValueSortOrderError.value = t('attributes_edit.validation_sort_order_duplicate')
     return
   }
 
@@ -197,18 +266,27 @@ const addValue = async () => {
       method: 'POST',
       body: {
         name: newValueName.value.trim(),
-        sort_order: Math.floor(sortOrder),
+        sort_order: normalizedSort,
       },
     })
     newValueName.value = ''
     newValueSortOrder.value = 1
+    newValueSortOrderError.value = ''
     toast.success(t('attributes_edit.add_value_success'))
     await loadAttribute()
   }
   catch (error: unknown) {
     if (isValidationError(error)) {
       const fe = getFieldErrors(error)
-      newValueError.value = fe.name || fe.values || Object.values(fe)[0] || getErrorMessage(error)
+      if (fe.sort_order) {
+        newValueSortOrderError.value = fe.sort_order
+      }
+      else if (fe.name) {
+        newValueError.value = fe.name
+      }
+      else {
+        newValueError.value = fe.values || Object.values(fe)[0] || getErrorMessage(error)
+      }
     }
     else {
       newValueError.value = getErrorMessage(error)
@@ -318,7 +396,7 @@ onMounted(() => {
                 :placeholder="t('attributes_edit.placeholder_value_name')"
               />
             </div>
-            <div class="col-span-4 md:col-span-3">
+            <div class="col-span-4 md:col-span-3 space-y-1">
               <label class="text-xs font-medium">
                 {{ t('attributes_edit.col_sort_order') }}
               </label>
@@ -327,7 +405,11 @@ onMounted(() => {
                 type="number"
                 min="1"
                 :placeholder="t('attributes_edit.sort_order')"
+                :aria-invalid="Boolean(newValueSortOrderError)"
+                :class="newValueSortOrderError ? 'border-destructive focus-visible:ring-destructive/30' : ''"
+                @input="newValueSortOrderError = ''"
               />
+              <p v-if="newValueSortOrderError" class="text-xs text-red-500">{{ newValueSortOrderError }}</p>
             </div>
             <div class="col-span-1 flex justify-end pt-1">
               <Button
@@ -372,15 +454,19 @@ onMounted(() => {
                   class="h-9"
                 />
               </div>
-              <div class="col-span-4 md:col-span-3">
+              <div class="col-span-4 md:col-span-3 space-y-1">
                 <Input
                   v-model.number="row.sort_order"
                   type="number"
                   min="1"
                   :placeholder="t('attributes_edit.sort_order')"
                   class="h-9"
+                  :aria-invalid="Boolean(row.error_sort_order)"
+                  :class="row.error_sort_order ? 'border-destructive focus-visible:ring-destructive/30' : ''"
                   @blur="normalizeSortOrder(row)"
+                  @input="row.error_sort_order = ''"
                 />
+                <p v-if="row.error_sort_order" class="text-xs text-red-500">{{ row.error_sort_order }}</p>
               </div>
               <div class="col-span-1 flex justify-end pt-1">
                 <Button

@@ -93,6 +93,8 @@ const loading = ref(false)
 const { loadError, clearLoadError, setLoadErrorFromException, setLoadErrorNotFound } = useResourceListLoadError('distributors_show', 'error')
 
 const distributorToDelete = ref<DistributorDetail | null>(null)
+const allocationToReturn = ref<AllocationRow | null>(null)
+const returningAllocation = ref(false)
 const distributorToDeactivate = ref<DistributorDetail | null>(null)
 const distributorToActivate = ref<DistributorDetail | null>(null)
 const deleting = ref(false)
@@ -350,10 +352,27 @@ const goToAllocationPage = (page: number) => {
 }
 
 const goToAllocateProducts = () => navigateTo({ path: '/distributors/allocations/create', query: { distributor_id: distributorId.value } })
-const goToEditAllocation = (row: AllocationRow) =>
-  navigateTo({ path: `/distributors/allocations/edit/${row.id}`, query: { distributor_id: distributorId.value } })
-const goToReturnAllocation = (row: AllocationRow) =>
-  navigateTo({ path: `/distributors/allocations/return/${row.id}`, query: { distributor_id: distributorId.value } })
+const goToEditAllocation = (row: AllocationRow) => {
+  return navigateTo({ path: `/distributors/allocations/edit/${row.id}`, query: { distributor_id: distributorId.value } })
+}
+
+const returnAllocation = async () => {
+  const target = allocationToReturn.value
+  if (!target) return
+  returningAllocation.value = true
+  try {
+    await $api(`/distributors/allocations/${target.id}`, { method: 'DELETE' })
+    toast.success(t('distributors_show.allocation_return_success'))
+    allocationToReturn.value = null
+    await loadAllocations(allocationsPage.value)
+  }
+  catch (error: unknown) {
+    toast.error(getErrorMessage(error))
+  }
+  finally {
+    returningAllocation.value = false
+  }
+}
 
 const formatQty = (value: number) => formatDisplayNumber(value, { locale: locale.value })
 const formatMoney = (value: number | null) => (value == null ? '—' : formatDisplayNumber(value, { locale: locale.value }))
@@ -854,7 +873,7 @@ onMounted(async () => {
                         variant="outline"
                         size="sm"
                         class="w-full sm:w-auto h-8"
-                        @click="goToReturnAllocation(row)"
+                        @click="allocationToReturn = row"
                       >
                         {{ t('distributors_show.stock_allocation_action_return') }}
                       </Button>
@@ -907,6 +926,27 @@ onMounted(async () => {
         <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button class="bg-red-600 hover:bg-red-700 text-white" :disabled="deleting" @click="deleteDistributor">
           {{ t('common.delete') }}
+        </Button>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog :open="!!allocationToReturn" @update:open="v => { if (!v) allocationToReturn = null }">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('distributors_show.allocation_return_confirm_title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('distributors_show.allocation_return_confirm_body', {
+            qty: allocationToReturn?.remaining_quantity ?? 0,
+            product: allocationToReturn?.product_name || '—',
+            warehouse: allocationToReturn?.source_warehouse || '—',
+          }) }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+        <Button :disabled="returningAllocation" @click="returnAllocation">
+          {{ t('distributors_show.stock_allocation_action_return') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
