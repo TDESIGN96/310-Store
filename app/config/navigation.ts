@@ -56,6 +56,23 @@ export const navItems: NavGroup[] = [
     ],
   },
   {
+    groupKey: 'nav.groups.reports',
+    items: [
+      {
+        labelKey: 'nav.items.reports',
+        icon: BarChart3,
+        path: '/reports',
+        module: 'reports',
+      },
+      {
+        labelKey: 'nav.items.reports_center',
+        icon: Archive,
+        path: '/reports-center',
+        module: 'reports',
+      },
+    ],
+  },
+  {
     groupKey: 'nav.groups.inventory',
     items: [
       {
@@ -148,23 +165,6 @@ export const navItems: NavGroup[] = [
         icon: FileText,
         path: '/invoice-returns',
         module: 'invoice_returns',
-      },
-    ],
-  },
-  {
-    groupKey: 'nav.groups.reports',
-    items: [
-      {
-        labelKey: 'nav.items.reports',
-        icon: BarChart3,
-        path: '/reports',
-        module: 'reports',
-      },
-      {
-        labelKey: 'nav.items.reports_center',
-        icon: Archive,
-        path: '/reports-center',
-        module: 'reports',
       },
     ],
   },

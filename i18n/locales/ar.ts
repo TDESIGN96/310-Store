@@ -348,6 +348,7 @@ export default {
     retry: 'إعادة المحاولة',
     cancel: 'إلغاء',
     close: 'إغلاق',
+    print: 'طباعة',
     previous: 'السابق',
     next: 'التالي',
     reset: 'إعادة ضبط',

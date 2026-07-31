@@ -348,6 +348,7 @@ export default {
     retry: 'Retry',
     cancel: 'Cancel',
     close: 'Close',
+    print: 'Print',
     previous: 'Previous',
     next: 'Next',
     reset: 'Reset',
