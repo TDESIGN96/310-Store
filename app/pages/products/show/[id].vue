@@ -428,7 +428,7 @@ onMounted(() => {
             </div>
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader class="hidden md:table-header-group">
                   <TableRow class="border-0 hover:bg-muted/40 bg-muted/40">
                     <TableHead class="rtl:text-right font-medium">
                       {{ t('products_page.show_variation_label') }}
@@ -454,7 +454,7 @@ onMounted(() => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-if="!product.variations?.length">
+                  <TableRow v-if="!product.variations?.length" class="md:table-row">
                     <TableCell :colspan="7" class="py-12 text-center text-sm text-muted-foreground">
                       {{ t('products_variations.no_variations') }}
                     </TableCell>
@@ -462,27 +462,34 @@ onMounted(() => {
                   <TableRow
                     v-for="variation in product.variations || []"
                     :key="`pricing-${variation.id}`"
-                    class="transition-colors hover:bg-muted/25"
+                    class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm transition-colors hover:bg-muted/25 md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none"
                   >
-                    <TableCell class="align-middle font-medium">
-                      {{ variationName(variation) }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle font-medium md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.show_variation_label') }}</span>
+                      <span>{{ variationName(variation) }}</span>
                     </TableCell>
-                    <TableCell class="align-middle font-mono text-sm">
-                      {{ variation.sku || '—' }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle font-mono text-sm md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_sku') }}</span>
+                      <span>{{ variation.sku || '—' }}</span>
                     </TableCell>
-                    <TableCell class="align-middle font-mono text-sm">
-                      {{ variation.barcode || '—' }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle font-mono text-sm md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_barcode') }}</span>
+                      <span>{{ variation.barcode || '—' }}</span>
                     </TableCell>
-                    <TableCell class="align-middle text-end tabular-nums text-sm">
-                      {{ money(variation.buying_price) }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle tabular-nums text-sm md:table-cell md:py-4 md:text-end">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.buying_price') }}</span>
+                      <span>{{ money(variation.buying_price) }}</span>
                     </TableCell>
-                    <TableCell class="align-middle text-end tabular-nums text-sm">
-                      {{ money(variation.price) }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle tabular-nums text-sm md:table-cell md:py-4 md:text-end">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_price') }}</span>
+                      <span>{{ money(variation.price) }}</span>
                     </TableCell>
-                    <TableCell class="align-middle text-end tabular-nums text-sm">
-                      {{ variation.stock_quantity ?? 0 }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle tabular-nums text-sm md:table-cell md:py-4 md:text-end">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_variations.variation_qty') }}</span>
+                      <span>{{ variation.stock_quantity ?? 0 }}</span>
                     </TableCell>
-                    <TableCell class="align-middle text-end">
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle md:table-cell md:py-4 md:text-end">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.col_status') }}</span>
                       <Badge
                         v-if="variationActive(variation)"
                         class="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100"
@@ -506,7 +513,7 @@ onMounted(() => {
             </div>
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader class="hidden md:table-header-group">
                   <TableRow class="border-0 hover:bg-muted/40 bg-muted/40">
                     <TableHead class="w-[160px] rtl:text-right font-medium whitespace-nowrap">
                       {{ t('products_page.show_variation_label') }}
@@ -523,7 +530,7 @@ onMounted(() => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-if="!product.variations?.length">
+                  <TableRow v-if="!product.variations?.length" class="md:table-row">
                     <TableCell :colspan="4" class="py-12 text-center text-sm text-muted-foreground">
                       {{ t('products_variations.no_variations') }}
                     </TableCell>
@@ -531,27 +538,33 @@ onMounted(() => {
                   <TableRow
                     v-for="variation in product.variations || []"
                     :key="`config-${variation.id}`"
-                    class="transition-colors hover:bg-muted/25"
+                    class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm transition-colors hover:bg-muted/25 md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none"
                   >
-                    <TableCell class="align-middle font-medium whitespace-nowrap">
-                      {{ variationName(variation) }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle font-medium whitespace-nowrap md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.show_variation_label') }}</span>
+                      <span>{{ variationName(variation) }}</span>
                     </TableCell>
-                    <TableCell class="align-middle text-sm leading-relaxed whitespace-normal">
-                      {{ variationAttributesSummary(variation) }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle text-sm leading-relaxed whitespace-normal md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.show_variation_attributes') }}</span>
+                      <span>{{ variationAttributesSummary(variation) }}</span>
                     </TableCell>
-                    <TableCell class="align-middle">
-                      <div
-                        v-if="variation.tiered_prices?.length"
-                        class="space-y-1.5 rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-xs tabular-nums"
-                      >
-                        <p v-for="(tier, tierIdx) in variation.tiered_prices" :key="tierIdx" class="leading-snug">
-                          {{ tier.quantity_from ?? 0 }} – {{ tier.quantity_to ?? 0 }} · {{ money(tier.price) }}
-                        </p>
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.show_variation_tiered_prices') }}</span>
+                      <div class="min-w-0">
+                        <div
+                          v-if="variation.tiered_prices?.length"
+                          class="space-y-1.5 rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-xs tabular-nums"
+                        >
+                          <p v-for="(tier, tierIdx) in variation.tiered_prices" :key="tierIdx" class="leading-snug">
+                            {{ tier.quantity_from ?? 0 }} – {{ tier.quantity_to ?? 0 }} · {{ money(tier.price) }}
+                          </p>
+                        </div>
+                        <span v-else class="text-sm text-muted-foreground">—</span>
                       </div>
-                      <span v-else class="text-sm text-muted-foreground">—</span>
                     </TableCell>
-                    <TableCell class="align-middle text-sm leading-relaxed whitespace-normal">
-                      {{ variationInventorySummary(variation) }}
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 align-middle text-sm leading-relaxed whitespace-normal md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('products_page.show_variation_inventory') }}</span>
+                      <span>{{ variationInventorySummary(variation) }}</span>
                     </TableCell>
                   </TableRow>
                 </TableBody>

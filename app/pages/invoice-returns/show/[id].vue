@@ -114,7 +114,7 @@ onMounted(async () => {
           <div class="overflow-hidden rounded-xl border">
             <div class="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader class="hidden md:table-header-group">
                   <TableRow class="bg-muted/40 hover:bg-muted/40">
                     <TableHead class="text-start">{{ t('invoices_page.col_product') }}</TableHead>
                     <TableHead class="text-start">{{ t('invoices_page.variation') }}</TableHead>
@@ -123,11 +123,27 @@ onMounted(async () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow v-for="item in invoiceReturn.items" :key="item.id">
-                    <TableCell>{{ productLabel(item) }}</TableCell>
-                    <TableCell>{{ variationLabel(item) }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ item.qty }}</TableCell>
-                    <TableCell class="text-end tabular-nums">{{ asNumber((item.invoice_item as any)?.qty) }}</TableCell>
+                  <TableRow
+                    v-for="item in invoiceReturn.items"
+                    :key="item.id"
+                    class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none"
+                  >
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.col_product') }}</span>
+                      <span>{{ productLabel(item) }}</span>
+                    </TableCell>
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.variation') }}</span>
+                      <span>{{ variationLabel(item) }}</span>
+                    </TableCell>
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoices_page.qty') }}</span>
+                      <span class="tabular-nums">{{ item.qty }}</span>
+                    </TableCell>
+                    <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+                      <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('invoice_returns_page.original_qty') }}</span>
+                      <span class="tabular-nums">{{ asNumber((item.invoice_item as any)?.qty) }}</span>
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
