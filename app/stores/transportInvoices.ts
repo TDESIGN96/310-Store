@@ -905,6 +905,30 @@ export const useTransportInvoicesStore = defineStore('transport-invoices', () =>
     return await $api(`${INVOICES_ENDPOINT}/${id}`, { method: 'DELETE' })
   }
 
+  const syncInvoiceStatusInList = (
+    invoiceId: string | number,
+    status: string,
+    statusLabel?: string,
+  ) => {
+    const id = Number(invoiceId)
+    if (!Number.isFinite(id) || id <= 0) return
+
+    const label = statusLabel?.trim() || status
+    const row = list.value.find(item => item.id === id)
+    if (row) {
+      row.status = status
+      row.status_label = label
+    }
+
+    if (currentInvoice.value && toNumber(currentInvoice.value.id, 0) === id) {
+      currentInvoice.value = {
+        ...currentInvoice.value,
+        status,
+        status_label: label,
+      }
+    }
+  }
+
   const createInvoiceReturn = async (invoiceId: string | number, payload: TransportInvoiceReturnCreatePayload) => {
     return await $api(`${INVOICES_ENDPOINT}/${invoiceId}/returns`, {
       method: 'POST',
@@ -987,5 +1011,6 @@ export const useTransportInvoicesStore = defineStore('transport-invoices', () =>
     loadInvoiceReturnsForInvoice,
     updateInvoice,
     deleteInvoice,
+    syncInvoiceStatusInList,
   }
 })

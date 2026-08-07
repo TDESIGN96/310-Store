@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import type { InvoiceListItem, InvoiceStatusOption } from '@/stores/invoices'
-import { INVOICE_STATUS_OPTIONS, isBackwardInvoiceStatusChange, useInvoicesStore } from '@/stores/invoices'
+import { INVOICE_STATUS_OPTIONS, isBackwardInvoiceStatusChange, isInvoiceStatusOptionDisabled, useInvoicesStore } from '@/stores/invoices'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
 import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisplayNumber'
 
@@ -201,6 +201,7 @@ const applyStatusChange = async (row: InvoiceListItem, value: string) => {
 
 const changeInvoiceStatus = (row: InvoiceListItem, value: string) => {
   if (value === row.status) return
+  if (isInvoiceStatusOptionDisabled(row.status, value)) return
   if (isBackwardInvoiceStatusChange(row.status, value)) {
     pendingStatusChange.value = { row, value }
     statusConfirmOpen.value = true
@@ -513,7 +514,12 @@ const goToPage = (page: number) => {
                 >
                   <SelectTrigger class="h-8 w-full md:w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem v-for="option in INVOICE_STATUS_OPTIONS" :key="option" :value="option">
+                    <SelectItem
+                      v-for="option in INVOICE_STATUS_OPTIONS"
+                      :key="option"
+                      :value="option"
+                      :disabled="isInvoiceStatusOptionDisabled(row.status, option)"
+                    >
                       {{ statusOptionLabel(option) }}
                     </SelectItem>
                   </SelectContent>

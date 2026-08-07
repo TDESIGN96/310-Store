@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useInvoicesStore, type InvoiceReturnFormItem } from '@/stores/invoices'
+import { useInvoicesStore, resolveInvoiceStatusAfterReturn, type InvoiceReturnFormItem } from '@/stores/invoices'
+import { useTransportInvoicesStore } from '@/stores/transportInvoices'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
 
 definePageMeta({ layout: 'default' })
@@ -24,6 +25,7 @@ const { can } = usePermissions()
 const canCreateInvoiceReturn = computed(() => can('invoice_returns.store'))
 const { getErrorMessage } = useApiError()
 const invoicesStore = useInvoicesStore()
+const transportInvoicesStore = useTransportInvoicesStore()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -100,6 +102,31 @@ const submitReturn = async () => {
         qty: row.qty,
       })),
     })
+
+    const nextStatus = resolveInvoiceStatusAfterReturn(
+      rows.value.map(row => ({
+        invoice_item_id: row.invoice_item_id,
+        original_qty: row.original_qty,
+      })),
+      selectedRows.value.map(row => ({
+        invoice_item_id: row.invoice_item_id,
+        qty: row.qty,
+      })),
+    )
+    const nextStatusLabel = nextStatus === 'returned'
+      ? t('invoices_page.status_returned')
+      : t('invoices_page.status_partially_returned')
+
+    try {
+      await invoicesStore.syncStatusAfterReturn(invoiceId.value, nextStatus, nextStatusLabel)
+      transportInvoicesStore.syncInvoiceStatusInList(invoiceId.value, nextStatus, nextStatusLabel)
+    }
+    catch {
+      // Return was created; keep local list in sync even if status PATCH fails.
+      invoicesStore.syncInvoiceStatusInList(invoiceId.value, nextStatus, nextStatusLabel)
+      transportInvoicesStore.syncInvoiceStatusInList(invoiceId.value, nextStatus, nextStatusLabel)
+    }
+
     toast.success(t('invoices_page.return_create_success'))
     const createdId = extractCreatedReturnId(created)
     if (createdId) {

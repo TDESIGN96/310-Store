@@ -22,6 +22,9 @@ export type InvoiceStatus = 'issued' | 'paid' | 'partially_returned' | 'returned
 export const INVOICE_STATUS_OPTIONS = ['pending', 'printed', 'ready', 'shipped', 'delivered', 'settled', 'returned', 'partially_returned'] as const
 export type InvoiceStatusOption = typeof INVOICE_STATUS_OPTIONS[number]
 
+/** Statuses that cannot be selected again once an invoice is returned or partially returned. */
+export const RETURNED_LOCKED_STATUS_OPTIONS = ['pending', 'printed', 'ready', 'shipped', 'delivered', 'settled'] as const
+
 const INVOICE_STATUS_RANK: Record<string, number> = {
   pending: 1,
   printed: 2,
@@ -38,6 +41,39 @@ export const isBackwardInvoiceStatusChange = (current: string | undefined, next:
   const to = INVOICE_STATUS_RANK[next]
   if (from === undefined || to === undefined) return false
   return to < from
+}
+
+export const isInvoiceStatusOptionDisabled = (
+  currentStatus: string | undefined,
+  option: string,
+): boolean => {
+  if (currentStatus !== 'returned' && currentStatus !== 'partially_returned') return false
+  return (RETURNED_LOCKED_STATUS_OPTIONS as readonly string[]).includes(option)
+}
+
+export type InvoiceReturnStatus = 'returned' | 'partially_returned'
+
+/** Full return when every available line is returned at its full remaining qty. */
+export const resolveInvoiceStatusAfterReturn = (
+  availableItems: Array<{ invoice_item_id: number; original_qty: number }>,
+  returnedItems: Array<{ invoice_item_id: number; qty: number }>,
+): InvoiceReturnStatus => {
+  if (!availableItems.length || !returnedItems.length) return 'partially_returned'
+
+  const returnedById = new Map<number, number>()
+  for (const item of returnedItems) {
+    const id = Number(item.invoice_item_id)
+    const qty = Number(item.qty)
+    if (!Number.isFinite(id) || id <= 0 || !Number.isFinite(qty) || qty <= 0) continue
+    returnedById.set(id, (returnedById.get(id) ?? 0) + qty)
+  }
+
+  const isFullReturn = availableItems.every((item) => {
+    const returnedQty = returnedById.get(Number(item.invoice_item_id)) ?? 0
+    return returnedQty >= Number(item.original_qty)
+  })
+
+  return isFullReturn ? 'returned' : 'partially_returned'
 }
 
 export interface InvoiceListItem {
@@ -972,6 +1008,39 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return await $api(`${INVOICES_ENDPOINT}/${id}/status`, { method: 'PATCH', body: { status } })
   }
 
+  const syncInvoiceStatusInList = (
+    invoiceId: string | number,
+    status: InvoiceStatusOption,
+    statusLabel?: string,
+  ) => {
+    const id = Number(invoiceId)
+    if (!Number.isFinite(id) || id <= 0) return
+
+    const label = statusLabel?.trim() || status
+    const row = list.value.find(item => item.id === id)
+    if (row) {
+      row.status = status
+      row.status_label = label
+    }
+
+    if (currentInvoice.value && toNumber(currentInvoice.value.id, 0) === id) {
+      currentInvoice.value = {
+        ...currentInvoice.value,
+        status,
+        status_label: label,
+      }
+    }
+  }
+
+  const syncStatusAfterReturn = async (
+    invoiceId: string | number,
+    status: InvoiceReturnStatus,
+    statusLabel?: string,
+  ) => {
+    await updateInvoiceStatus(invoiceId, status)
+    syncInvoiceStatusInList(invoiceId, status, statusLabel)
+  }
+
   const createInvoiceReturn = async (invoiceId: string | number, payload: InvoiceReturnCreatePayload) => {
     return await $api(`${INVOICES_ENDPOINT}/${invoiceId}/returns`, {
       method: 'POST',
@@ -1055,5 +1124,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     updateInvoice,
     deleteInvoice,
     updateInvoiceStatus,
+    syncInvoiceStatusInList,
+    syncStatusAfterReturn,
   }
 })
