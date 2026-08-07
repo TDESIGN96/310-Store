@@ -22,7 +22,7 @@ export function validateInvoiceDraft(
   if (!draft.warehouse_id) errors.warehouse_id = t(`${i18nPrefix}.warehouse_required`)
   if (!selectedRowsCount) errors.items = t(`${i18nPrefix}.product_required`)
 
-  if (draft.delivery_by !== 'shipping_company' && !String(draft.delivery_agent_name ?? '').trim()) {
+  if (draft.delivery_by === 'delivery_agent' && !String(draft.delivery_agent_name ?? '').trim()) {
     errors.delivery_agent_name = t(`${i18nPrefix}.delivery_agent_name_required`)
   }
 

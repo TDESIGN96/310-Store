@@ -70,7 +70,7 @@ const deliveryByLabel = computed(() => {
   if (value === 'shipping_company') return t('invoices_page.delivery_by_shipping_company')
   return '—'
 })
-const showDeliveryAgentFields = computed(() => deliveryBy.value === 'delivery_agent' || deliveryBy.value === 'other')
+const showDeliveryAgentFields = computed(() => deliveryBy.value === 'delivery_agent')
 const deliveryAgentName = computed(() => String(invoice.value?.delivery_agent_name ?? '').trim())
 const deliveryAgentMobile = computed(() => String(invoice.value?.delivery_agent_mobile ?? '').trim())
 const attachmentUrl = computed(() => String(invoice.value?.attachment_url ?? invoice.value?.attachment_path ?? '').trim())

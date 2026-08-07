@@ -37,10 +37,18 @@ const { t } = useI18n()
 
 const tp = (key: string) => t(`${props.i18nPrefix}.${key}`)
 
-const showAgentFields = computed(() => props.deliveryBy !== 'shipping_company')
+const showAgentFields = computed(() => props.deliveryBy === 'delivery_agent')
 
 const attachmentFileName = computed(() => props.attachmentFile?.name ?? '')
 const attachmentUrl = computed(() => (!props.attachmentFile ? props.attachmentPath : ''))
+const onDeliveryByChange = (value: InvoiceDeliveryBy) => {
+  emit('update:deliveryBy', value)
+  if (value === 'delivery_agent') return
+  emit('update:deliveryAgentName', '')
+  emit('update:deliveryAgentMobile', '')
+  emit('attachment-remove-selected')
+  emit('attachment-remove-existing')
+}
 </script>
 
 <template>
@@ -48,7 +56,7 @@ const attachmentUrl = computed(() => (!props.attachmentFile ? props.attachmentPa
     <label class="text-sm font-medium">{{ tp('delivery_by') }}</label>
     <Select
       :model-value="deliveryBy"
-      @update:model-value="value => emit('update:deliveryBy', value as InvoiceDeliveryBy)"
+      @update:model-value="value => onDeliveryByChange(value as InvoiceDeliveryBy)"
     >
       <SelectTrigger
         class="w-full"

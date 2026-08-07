@@ -208,7 +208,14 @@ const saveInvoice = async (mode: SaveMode) => {
   invoicesStore.submitting = true
   errorMessage.value = ''
   try {
-    draft.value.attachment_path = await uploadAttachmentIfNeeded(authStore.token, draft.value.attachment_path)
+    draft.value.attachment_path = draft.value.delivery_by === 'delivery_agent'
+      ? await uploadAttachmentIfNeeded(authStore.token, draft.value.attachment_path)
+      : ''
+    if (draft.value.delivery_by !== 'delivery_agent') {
+      removeAttachmentFile()
+      draft.value.delivery_agent_name = ''
+      draft.value.delivery_agent_mobile = ''
+    }
     const res = await invoicesStore.createInvoice()
     const root = res as Record<string, unknown>
     const nested = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : null

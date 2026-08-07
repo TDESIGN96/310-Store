@@ -929,15 +929,15 @@ export const useInvoicesStore = defineStore('invoices', () => {
     delivery_fees: draft.value.delivery_fees || 0,
     other_fees: draft.value.other_fees || 0,
     delivery_by: draft.value.delivery_by,
-    delivery_agent_name: draft.value.delivery_by === 'shipping_company'
-      ? null
-      : (draft.value.delivery_agent_name.trim() || null),
-    delivery_agent_mobile: draft.value.delivery_by === 'shipping_company'
-      ? null
-      : (draft.value.delivery_agent_mobile.trim() || null),
-    attachment_path: draft.value.delivery_by === 'shipping_company'
-      ? null
-      : (draft.value.attachment_path.trim() || null),
+    delivery_agent_name: draft.value.delivery_by === 'delivery_agent'
+      ? (draft.value.delivery_agent_name.trim() || null)
+      : null,
+    delivery_agent_mobile: draft.value.delivery_by === 'delivery_agent'
+      ? (draft.value.delivery_agent_mobile.trim() || null)
+      : null,
+    attachment_path: draft.value.delivery_by === 'delivery_agent'
+      ? (draft.value.attachment_path.trim() || null)
+      : null,
     subtotal: summary.value.subtotal,
     total_discount: summary.value.totalDiscount,
     grand_total: summary.value.grandTotal,
