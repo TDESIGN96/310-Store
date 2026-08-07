@@ -65,6 +65,7 @@ interface DistrictsResponse {
 }
 
 const { t } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { $api } = useApi()
 const { canCreate: cCreate, canEdit: cEdit, canDelete: cDelete, can } = usePermissions()
 
@@ -236,7 +237,8 @@ onMounted(() => {
             :key="row.id"
             class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
                    md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
-                   hover:bg-muted/30 transition-colors align-middle"
+                   hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
+            @click="navigateRow(`/districts/show/${row.id}`)"
           >
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('districts_page.col_district') }}</span>
@@ -268,7 +270,7 @@ onMounted(() => {
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.created_at') }}</span>
               <span class="text-sm text-muted-foreground tabular-nums">{{ formatDate(row.created_at) }}</span>
             </TableCell>
-            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
               <TableRowActions
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditDistrict, onClick: () => navigateTo(`/districts/edit/${row.id}`) },

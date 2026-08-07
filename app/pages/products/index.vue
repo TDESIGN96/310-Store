@@ -54,6 +54,7 @@ import { normalizeApiLocale } from '@/utils/apiLocale'
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 const config = useRuntimeConfig()
@@ -726,10 +727,11 @@ onMounted(async () => {
             <TableRow
               v-for="row in rows"
               :key="row.id"
-              class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle"
+              class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
               :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
+              @click="navigateRow(row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`)"
             >
-            <TableCell v-if="canSelectProductsForDelete" class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+            <TableCell v-if="canSelectProductsForDelete" class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox
                 :model-value="selectedIds.has(row.id)"
@@ -785,7 +787,7 @@ onMounted(async () => {
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.added_by') }}</span>
               <span class="text-sm text-muted-foreground">{{ createdByDisplay(row.createdBy) }}</span>
             </TableCell>
-            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
               <TableRowActions
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'link', to: row.productType === 'combo' ? `/products/edit-combo/${row.id}` : `/products/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditProduct },

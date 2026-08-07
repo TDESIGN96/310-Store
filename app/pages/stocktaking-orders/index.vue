@@ -31,6 +31,7 @@ definePageMeta({ layout: 'default' })
 
 const router = useRouter()
 const { t, locale } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { can, canCreate } = usePermissions()
 const { getErrorMessage } = useApiError()
 const authStore = useAuthStore()
@@ -422,7 +423,8 @@ const goToPage = (page: number) => {
               :key="row.id"
               class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
                      md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
-                     hover:bg-muted/30 transition-colors align-middle"
+                     hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
+              @click="navigateRow(`/stocktaking-orders/show/${row.id}`)"
             >
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('stocktaking_orders_page.col_ref_id') }}</span>
@@ -451,7 +453,7 @@ const goToPage = (page: number) => {
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('stocktaking_orders_page.col_status') }}</span>
                 <Badge variant="outline" :class="statusBadgeClass(row)">{{ statusLabel(row) }}</Badge>
               </TableCell>
-              <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+              <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
                 <TableRowActions
                   :actions="[
                     {

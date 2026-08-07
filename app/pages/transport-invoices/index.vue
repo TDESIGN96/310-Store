@@ -32,6 +32,7 @@ import { formatDisplayNumber, formatDisplayGrandTotal } from '@/utils/formatDisp
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { canAccess, canCreate, canEdit, canDelete, can } = usePermissions()
 const invoicesStore = useInvoicesStore()
 const transportInvoicesStore = useTransportInvoicesStore()
@@ -485,8 +486,8 @@ const goToPage = (page: number) => {
           <TableBody>
             <TableRow v-if="loading" class="md:table-row"><TableCell :colspan="12" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
             <TableRow v-else-if="!sortedList.length" class="md:table-row"><TableCell :colspan="12" class="py-14 text-center text-sm text-muted-foreground">{{ t('transport_invoices_page.empty') }}</TableCell></TableRow>
-            <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle" :class="{ 'bg-muted/20': selectedIds.has(row.id) }">
-              <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+            <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default" :class="{ 'bg-muted/20': selectedIds.has(row.id) }" @click="navigateRow(`/transport-invoices/show/${row.id}`)">
+              <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.select') }}</span>
                 <Checkbox :model-value="selectedIds.has(row.id)" class="md:mt-0.5 md:mx-4" @update:model-value="toggleSelect(row.id)" />
               </TableCell>
@@ -525,7 +526,7 @@ const goToPage = (page: number) => {
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_shipment_status') }}</span>
                 <span class="text-sm text-muted-foreground rtl:text-start">{{ row.shipment_status_label || '—' }}</span>
               </TableCell>
-              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4" @click.stop>
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_status') }}</span>
                 <Select
                   v-if="canEditInvoice"
@@ -554,7 +555,7 @@ const goToPage = (page: number) => {
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_return_id') }}</span>
                 <span class="text-sm rtl:text-start">{{ row.return_reference || row.return_reference_number || '—' }}</span>
               </TableCell>
-              <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+              <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
                 <TableRowActions
                   :actions="[
                     { key: `edit-${row.id}`, label: t('transport_invoices_page.action_edit'), type: 'link', to: `/transport-invoices/edit/${row.id}`, icon: Pencil, tone: 'default', visible: canEditInvoice && row.can_be_edited },

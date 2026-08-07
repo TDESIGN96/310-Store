@@ -39,6 +39,7 @@ import { formatDisplayDate } from '@/utils/formatDisplayDate'
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { getErrorMessage } = useApiError()
 
 interface WarehouseManager {
@@ -591,10 +592,11 @@ onMounted(() => loadWarehouses())
             v-for="wh in warehouses"
             v-else
             :key="wh.id"
-            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle"
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
             :class="{ 'bg-muted/20': selectedIds.has(wh.id) }"
+            @click="navigateRow(`/warehouses/show/${wh.id}`)"
           >
-            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox :model-value="selectedIds.has(wh.id)" class="md:mt-0.5 md:mx-4" @update:model-value="toggleSelect(wh.id)" />
             </TableCell>
@@ -638,7 +640,7 @@ onMounted(() => loadWarehouses())
               <span class="text-sm text-muted-foreground tabular-nums">{{ formatDate(wh.created_at) }}</span>
             </TableCell>
             
-            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
               <TableRowActions
                 :actions="[
                   { key: `edit-${wh.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditWarehouse, disabled: deletingId === wh.id, onClick: () => handleEdit(wh) },

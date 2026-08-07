@@ -65,6 +65,7 @@ interface DistributorListResponse {
 }
 
 const { t, locale } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { $api } = useApi()
 const { getErrorMessage } = useApiError()
 const { canCreate, canEdit, canDelete, canAccess, can } = usePermissions()
@@ -412,7 +413,7 @@ onMounted(() => {
             </TableCell>
           </TableRow>
 
-          <TableRow v-for="row in rows" v-else :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle">
+          <TableRow v-for="row in rows" v-else :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default" @click="navigateRow(`/distributors/show/${row.id}`)">
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_page.col_name') }}</span>
               <div class="font-medium">
@@ -444,7 +445,7 @@ onMounted(() => {
                 {{ statusConfig(row.status).label }}
               </span>
             </TableCell>
-            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
               <TableRowActions
                 :actions="[
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditDistributor, onClick: () => navigateTo(`/distributors/edit/${row.id}`) },

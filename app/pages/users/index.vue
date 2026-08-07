@@ -36,6 +36,7 @@ import { formatDisplayDate } from '@/utils/formatDisplayDate'
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { getErrorMessage } = useApiError()
 
 interface UserRole {
@@ -615,10 +616,11 @@ onMounted(() => {
             v-for="user in users"
             v-else
             :key="user.id"
-            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle"
+            class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
             :class="{ 'bg-muted/20': selectedIds.has(user.id) }"
+            @click="navigateRow(`/users/show/${user.id}`)"
           >
-            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0">
+            <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
               <Checkbox
                 :model-value="selectedIds.has(user.id)"
@@ -668,7 +670,7 @@ onMounted(() => {
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_created') }}</span>
               <span class="text-sm text-muted-foreground tabular-nums">{{ formatDate(user.created_at) }}</span>
             </TableCell>
-            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
+            <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
               <TableRowActions
                 :actions="[
                   { key: `deactivate-${user.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditUser && user.is_active && !cannotToggleUserActivation(user), disabled: togglingActiveId === user.id || deletingId === user.id, loading: togglingActiveId === user.id, onClick: () => openDeactivateConfirm(user) },

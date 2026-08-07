@@ -61,9 +61,9 @@ import { formatDisplayNumber } from '@/utils/formatDisplayNumber'
 definePageMeta({ layout: 'default' })
 
 const { t, locale } = useI18n()
+const { navigateRow } = useMobileRowNavigate()
 const { can, canCreate } = usePermissions()
 const { getErrorMessage } = useApiError()
-const router = useRouter()
 const damageStore = useDamageRecordsStore()
 const { loadActiveWarehouses } = useInvoiceWarehouses()
 
@@ -633,8 +633,8 @@ onMounted(async () => {
               :key="row.id"
               class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm
                      md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
-                     hover:bg-muted/30 transition-colors cursor-pointer align-middle"
-              @click="router.push(`/damage-records/show/${row.id}`)"
+                     hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
+              @click="navigateRow(`/damage-records/show/${row.id}`)"
             >
               <!-- Record ID -->
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
