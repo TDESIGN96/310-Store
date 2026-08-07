@@ -278,10 +278,7 @@ const warehouseOptions = computed(() => {
   return [...unique.entries()].map(([id, label]) => ({ id, label }))
 })
 
-const formatWarehouseLine = (warehouse: AllocationWarehouse) => {
-  const qty = formatDisplayNumber(warehouse.quantity, { locale: locale.value })
-  return warehouse.quantity > 0 ? `${warehouse.name} (${qty})` : warehouse.name
-}
+const formatWarehouseLine = (warehouse: AllocationWarehouse) => warehouse.name || '—'
 
 const hasAllocationFilters = computed(() =>
   allocationsSearch.value.trim().length > 0
@@ -948,7 +945,6 @@ onMounted(async () => {
         <AlertDialogTitle>{{ t('distributors_show.allocation_delete_confirm_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
           {{ t('distributors_show.allocation_delete_confirm_body', {
-            qty: allocationToReturn?.allocated_quantity ?? 0,
             product: allocationToReturn?.product_name || '—',
           }) }}
         </AlertDialogDescription>
