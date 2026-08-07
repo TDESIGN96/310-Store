@@ -899,7 +899,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     delivery_agent_mobile: draft.value.delivery_by === 'shipping_company'
       ? null
       : (draft.value.delivery_agent_mobile.trim() || null),
-    attachment_url: draft.value.delivery_by === 'shipping_company'
+    attachment_path: draft.value.delivery_by === 'shipping_company'
       ? null
       : (draft.value.attachment_path.trim() || null),
     subtotal: summary.value.subtotal,
