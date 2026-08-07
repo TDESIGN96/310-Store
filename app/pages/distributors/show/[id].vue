@@ -60,6 +60,12 @@ interface AllocationPagination {
   total: number
 }
 
+interface AllocationWarehouse {
+  id: string
+  name: string
+  quantity: number
+}
+
 interface AllocationRow {
   id: string
   variation_id: string
@@ -71,7 +77,7 @@ interface AllocationRow {
   allocated_quantity: number
   sold_quantity: number
   remaining_quantity: number
-  source_warehouse: string
+  warehouses: AllocationWarehouse[]
   allocation_date: string
   status: 'active' | 'returned' | 'partially_returned' | string
   status_label: string
@@ -187,7 +193,27 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
     : (isRecord(variationObj?.product) ? variationObj.product : null)
   const status = normalizeAllocationStatus(raw.status ?? raw.allocation_status)
 
-  const sourceWarehouse = typeof raw.warehouse === 'string'
+  const warehouseLabel = (item: Record<string, unknown>) => locale.value === 'ar'
+    ? getString(item.name_ar || item.name_en || item.name || item.label)
+    : getString(item.name_en || item.name_ar || item.name || item.label)
+
+  const warehousesFromArray = Array.isArray(raw.warehouses)
+    ? raw.warehouses
+      .filter(isRecord)
+      .map((item) => {
+        const id = String(item.id ?? item.warehouse_id ?? '').trim()
+        if (!id) return null
+        return {
+          id,
+          name: warehouseLabel(item) || id,
+          quantity: toNumber(item.quantity ?? item.allocated_quantity, 0),
+        } satisfies AllocationWarehouse
+      })
+      .filter((item): item is AllocationWarehouse => Boolean(item))
+    : []
+
+  const fallbackWarehouseId = String(raw.warehouse_id ?? warehouseObj?.id ?? '').trim()
+  const fallbackWarehouseName = typeof raw.warehouse === 'string'
     ? raw.warehouse
     : getString(
       warehouseObj?.name_ar
@@ -196,6 +222,15 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
       || raw.source_warehouse
       || raw.warehouse_name,
     )
+  const warehouses = warehousesFromArray.length
+    ? warehousesFromArray
+    : (fallbackWarehouseId || fallbackWarehouseName
+      ? [{
+          id: fallbackWarehouseId || 'unknown',
+          name: fallbackWarehouseName || fallbackWarehouseId || '—',
+          quantity: toNumber(raw.allocated_quantity, 0),
+        }]
+      : [])
 
   const id = String(raw.id ?? '').trim()
   if (!id) return null
@@ -209,7 +244,7 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
   return {
     id,
     variation_id: String(raw.variation_id ?? variationObj?.id ?? '').trim(),
-    warehouse_id: String(raw.warehouse_id ?? warehouseObj?.id ?? '').trim(),
+    warehouse_id: warehouses[0]?.id || fallbackWarehouseId,
     product_name,
     variation: getString(
       raw.variation_label
@@ -225,7 +260,7 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
     allocated_quantity: toNumber(raw.allocated_quantity, 0),
     sold_quantity: toNumber(raw.consumed_quantity ?? raw.sold_quantity, 0),
     remaining_quantity: toNumber(raw.remaining_quantity, 0),
-    source_warehouse: sourceWarehouse,
+    warehouses,
     allocation_date: getString(raw.allocation_date || raw.created_at).slice(0, 10),
     status,
     status_label: getString(raw.status_label || raw.status_text || raw.status),
@@ -235,11 +270,18 @@ const normalizeAllocation = (raw: unknown): AllocationRow | null => {
 const warehouseOptions = computed(() => {
   const unique = new Map<string, string>()
   allocations.value.forEach((row) => {
-    if (!row.warehouse_id) return
-    if (!unique.has(row.warehouse_id)) unique.set(row.warehouse_id, row.source_warehouse || row.warehouse_id)
+    row.warehouses.forEach((warehouse) => {
+      if (!warehouse.id || warehouse.id === 'unknown') return
+      if (!unique.has(warehouse.id)) unique.set(warehouse.id, warehouse.name || warehouse.id)
+    })
   })
   return [...unique.entries()].map(([id, label]) => ({ id, label }))
 })
+
+const formatWarehouseLine = (warehouse: AllocationWarehouse) => {
+  const qty = formatDisplayNumber(warehouse.quantity, { locale: locale.value })
+  return warehouse.quantity > 0 ? `${warehouse.name} (${qty})` : warehouse.name
+}
 
 const hasAllocationFilters = computed(() =>
   allocationsSearch.value.trim().length > 0
@@ -343,8 +385,7 @@ const statusBadgeClass = (row: AllocationRow) => {
   return 'bg-muted text-muted-foreground border-border'
 }
 
-const canEditAllocation = (row: AllocationRow) => row.status === 'active' || row.status === 'partially_returned'
-const canReturnAllocation = (row: AllocationRow) => row.remaining_quantity > 0
+const canDeleteAllocation = (row: AllocationRow) => row.remaining_quantity > 0
 
 const goToAllocationPage = (page: number) => {
   if (page < 1 || page > allocationsPagination.value.last_page) return
@@ -352,9 +393,6 @@ const goToAllocationPage = (page: number) => {
 }
 
 const goToAllocateProducts = () => navigateTo({ path: '/distributors/allocations/create', query: { distributor_id: distributorId.value } })
-const goToEditAllocation = (row: AllocationRow) => {
-  return navigateTo({ path: `/distributors/allocations/edit/${row.id}`, query: { distributor_id: distributorId.value } })
-}
 
 const returnAllocation = async () => {
   const target = allocationToReturn.value
@@ -362,7 +400,7 @@ const returnAllocation = async () => {
   returningAllocation.value = true
   try {
     await $api(`/distributors/allocations/${target.id}`, { method: 'DELETE' })
-    toast.success(t('distributors_show.allocation_return_success'))
+    toast.success(t('distributors_show.allocation_delete_success'))
     allocationToReturn.value = null
     await loadAllocations(allocationsPage.value)
   }
@@ -374,7 +412,6 @@ const returnAllocation = async () => {
   }
 }
 
-const formatQty = (value: number) => formatDisplayNumber(value, { locale: locale.value })
 const formatMoney = (value: number | null) => (value == null ? '—' : formatDisplayNumber(value, { locale: locale.value }))
 
 const distributorName = computed(() => distributor.value?.name_en || distributor.value?.name_ar || `#${distributor.value?.id ?? ''}`)
@@ -747,10 +784,7 @@ onMounted(async () => {
               <TableHeader class="hidden md:table-header-group">
                 <TableRow class="bg-muted/40 hover:bg-muted/40">
                   <TableHead class="min-w-[220px] rtl:text-right">{{ t('distributors_show.stock_allocation_col_product_name') }}</TableHead>
-                  <TableHead class="w-24 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.allocation_quantity') }}</TableHead>
                   <TableHead class="w-28 text-end rtl:text-right ltr:text-left">{{ t('distributors_show.allocation_unit_price') }}</TableHead>
-                  <TableHead class="text-end w-24 rtl:text-right">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</TableHead>
-                  <TableHead class="text-end w-24 rtl:text-right ltr:text-left">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</TableHead>
                   <TableHead class="rtl:text-right">{{ t('distributors_show.stock_allocation_col_allocation_date') }}</TableHead>
                   <TableHead class="rtl:text-right">{{ t('distributors_show.stock_allocation_col_status') }}</TableHead>
                   <TableHead class="text-end">{{ t('distributors_show.stock_allocation_col_actions') }}</TableHead>
@@ -758,7 +792,7 @@ onMounted(async () => {
               </TableHeader>
               <TableBody>
                 <TableRow v-if="allocationsLoading" class="md:table-row">
-                  <TableCell :colspan="10" class="py-14 text-center">
+                  <TableCell :colspan="5" class="py-14 text-center">
                     <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 class="size-4 animate-spin" />
                       {{ t('distributors_show.stock_allocation_loading') }}
@@ -766,7 +800,7 @@ onMounted(async () => {
                   </TableCell>
                 </TableRow>
                 <TableRow v-else-if="allocationsError" class="md:table-row">
-                  <TableCell :colspan="10" class="py-14 text-center">
+                  <TableCell :colspan="5" class="py-14 text-center">
                     <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                       <ShieldAlert class="size-6" />
                       <p class="font-medium">{{ t('distributors_show.stock_allocation_error_title') }}</p>
@@ -780,7 +814,7 @@ onMounted(async () => {
                   </TableCell>
                 </TableRow>
                 <TableRow v-else-if="allocations.length === 0" class="md:table-row">
-                  <TableCell :colspan="10" class="py-14 text-center text-sm text-muted-foreground">
+                  <TableCell :colspan="5" class="py-14 text-center text-sm text-muted-foreground">
                     <div class="flex flex-col items-center gap-2">
                       <Boxes class="size-6 text-muted-foreground" />
                       <p class="font-medium">{{ t('distributors_show.stock_allocation_empty_title') }}</p>
@@ -806,37 +840,23 @@ onMounted(async () => {
                     <div class="flex min-w-0 flex-col gap-1">
                       <span class="font-medium">{{ row.product_name || '—' }}</span>
                       <span class="text-xs text-muted-foreground">{{ row.variation || '—' }}</span>
-                      <span class="text-xs text-muted-foreground">{{ row.source_warehouse || '—' }}</span>
+                      <template v-if="row.warehouses.length">
+                        <span
+                          v-for="warehouse in row.warehouses"
+                          :key="`${row.id}-${warehouse.id}`"
+                          class="text-xs text-muted-foreground"
+                        >
+                          {{ formatWarehouseLine(warehouse) }}
+                        </span>
+                      </template>
+                      <span v-else class="text-xs text-muted-foreground">—</span>
                     </div>
-                  </TableCell>
-
-                 
-                  
-
-                  <!-- Qty (allocated) -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
-                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_quantity') }}</span>
-                    <span class="tabular-nums">{{ formatQty(row.allocated_quantity) }}</span>
                   </TableCell>
 
                   <!-- Unit Price -->
                   <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
                     <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.allocation_unit_price') }}</span>
                     <span class="tabular-nums">{{ formatMoney(row.unit_price) }}</span>
-                  </TableCell>
-
-                 
-
-                  <!-- Sold Qty -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
-                    <span class="text-xs font-medium text-muted-foreground md:hidden ">{{ t('distributors_show.stock_allocation_col_sold_quantity') }}</span>
-                    <span class="tabular-nums">{{ formatQty(row.sold_quantity) }}</span>
-                  </TableCell>
-
-                  <!-- Remaining Qty -->
-                  <TableCell class="flex justify-between items-center gap-2 py-1.5 md:table-cell md:py-4 md:text-end rtl:text-right ltr:text-left">
-                    <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_show.stock_allocation_col_remaining_quantity') }}</span>
-                    <span class="tabular-nums">{{ formatQty(row.remaining_quantity) }}</span>
                   </TableCell>
 
                   <!-- Date -->
@@ -860,22 +880,13 @@ onMounted(async () => {
                   <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end">
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto md:inline-flex">
                       <Button
-                        v-if="canEditAllocation(row)"
-                        variant="outline"
-                        size="sm"
-                        class="w-full sm:w-auto h-8"
-                        @click="goToEditAllocation(row)"
-                      >
-                        {{ t('distributors_show.stock_allocation_action_edit') }}
-                      </Button>
-                      <Button
-                        v-if="canReturnAllocation(row)"
+                        v-if="canDeleteAllocation(row)"
                         variant="outline"
                         size="sm"
                         class="w-full sm:w-auto h-8"
                         @click="allocationToReturn = row"
                       >
-                        {{ t('distributors_show.stock_allocation_action_return') }}
+                        {{ t('distributors_show.stock_allocation_action_delete') }}
                       </Button>
                     </div>
                   </TableCell>
@@ -934,19 +945,18 @@ onMounted(async () => {
   <AlertDialog :open="!!allocationToReturn" @update:open="v => { if (!v) allocationToReturn = null }">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ t('distributors_show.allocation_return_confirm_title') }}</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('distributors_show.allocation_delete_confirm_title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('distributors_show.allocation_return_confirm_body', {
-            qty: allocationToReturn?.remaining_quantity ?? 0,
+          {{ t('distributors_show.allocation_delete_confirm_body', {
+            qty: allocationToReturn?.allocated_quantity ?? 0,
             product: allocationToReturn?.product_name || '—',
-            warehouse: allocationToReturn?.source_warehouse || '—',
           }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
         <Button :disabled="returningAllocation" @click="returnAllocation">
-          {{ t('distributors_show.stock_allocation_action_return') }}
+          {{ t('distributors_show.stock_allocation_action_delete') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
