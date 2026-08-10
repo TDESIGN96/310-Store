@@ -149,6 +149,8 @@ const toggleSelect = (id: number) => {
   selectedIds.value = s
 }
 
+const { bindRow } = useLongPressSelect()
+
 // ── API Loading ────────────────────────────────────────────────────────────────
 
 const loadUnits = async (page = currentPage.value, query = search.value.trim()) => {
@@ -726,7 +728,7 @@ onMounted(() => loadUnits())
                    md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
                    hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
             :class="{ 'bg-muted/20': selectedIds.has(unit.id) }"
-            @click="navigateRow(`/units/show/${unit.id}`)"
+            v-bind="bindRow({ onLongPress: () => toggleSelect(unit.id), onTap: () => (selectedCount > 0 ? toggleSelect(unit.id) : navigateRow(`/units/show/${unit.id}`)) })"
           >
             <!-- Checkbox -->
             <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:border-0 md:py-4" @click.stop>

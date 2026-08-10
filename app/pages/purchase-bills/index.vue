@@ -74,6 +74,8 @@ const toggleSelect = (id: number) => {
   selectedIds.value = next
 }
 
+const { bindRow } = useLongPressSelect()
+
 const list = computed(() => purchaseBillsStore.list)
 const sortedList = computed(() => {
   return [...list.value].sort((a, b) => {
@@ -304,7 +306,7 @@ const goToPage = (page: number) => {
           <TableBody>
             <TableRow v-if="loading" class="md:table-row"><TableCell :colspan="9" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
             <TableRow v-else-if="!sortedList.length" class="md:table-row"><TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">{{ t('purchase_bills_page.empty') }}</TableCell></TableRow>
-            <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default" :class="{ 'bg-muted/20': selectedIds.has(row.id) }" @click="navigateRow(`/purchase-bills/show/${row.id}`)">
+            <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default" :class="{ 'bg-muted/20': selectedIds.has(row.id) }" v-bind="bindRow({ onLongPress: () => toggleSelect(row.id), onTap: () => (selectedCount > 0 ? toggleSelect(row.id) : navigateRow(`/purchase-bills/show/${row.id}`)) })">
               <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
                 <Checkbox :model-value="selectedIds.has(row.id)" class="md:mt-0.5 md:mx-4" @update:model-value="toggleSelect(row.id)" />

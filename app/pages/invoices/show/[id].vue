@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, FileText, Loader2, Package, Printer } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -189,6 +190,26 @@ const asPrintHtml = (value: unknown) => {
   return trimmed ? trimmed : undefined
 }
 
+const markingPrinted = ref(false)
+const onPrintClick = async () => {
+  print()
+  const current = invoice.value
+  if (!current || String(current.status) !== 'pending') return
+  markingPrinted.value = true
+  try {
+    await invoicesStore.updateInvoiceStatus(current.id as string | number, 'printed')
+    current.status = 'printed'
+    current.status_label = t('invoices_page.status_printed')
+    toast.success(t('invoices_page.print_marked_status_success'))
+  }
+  catch {
+    toast.error(t('invoices_page.status_update_error'))
+  }
+  finally {
+    markingPrinted.value = false
+  }
+}
+
 onMounted(async () => {
   if (!canViewInvoices.value) return
   loading.value = true
@@ -214,10 +235,13 @@ onMounted(async () => {
         <h1 class="text-2xl font-bold tracking-tight">{{ t('invoices_page.view_title') }}</h1>
         <p class="text-sm text-muted-foreground">{{ t('invoices_page.view_subtitle', { id }) }}</p>
       </div>
-      <Button v-if="invoice" variant="outline" class="gap-2 shrink-0" @click="print">
-        <Printer class="size-4" />
-        {{ t('common.print') }}
-      </Button>
+      <div v-if="invoice" class="flex items-center gap-2 shrink-0">
+        <Button variant="outline" class="gap-2" :disabled="markingPrinted" @click="onPrintClick">
+          <Printer class="size-4" />
+          {{ t('common.print') }}
+        </Button>
+        <Button variant="outline" as-child><NuxtLink to="/invoices">{{ t('common.close') }}</NuxtLink></Button>
+      </div>
     </div>
     <div v-if="!canViewInvoices" class="no-print rounded-xl border border-amber-200 bg-amber-50 px-4 py-10 text-center text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400">{{ t('invoices_page.no_permission') }}</div>
     <div v-else-if="loading" class="no-print rounded-xl border bg-card px-4 py-10 text-center text-sm text-muted-foreground"><Loader2 class="mx-auto mb-2 size-6 animate-spin" />{{ t('common.loading') }}</div>
@@ -327,13 +351,6 @@ onMounted(async () => {
 
         <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-terms border-section-terms text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('invoices_page.terms_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="invoice.terms || '—'" /></CardContent></Card>
         <Card class="gap-0 overflow-hidden py-0 shadow-sm"><div class="border-b bg-section-notes border-section-notes text-Black px-4 py-3.5 sm:px-6"><h2 class="text-base font-semibold">{{ t('invoices_page.notes_section') }}</h2></div><CardContent class="px-4 py-5 text-sm sm:px-6 sm:py-6"><div class="rich-text-content prose prose-sm max-w-none dark:prose-invert" v-html="invoice.notes || '—'" /></CardContent></Card>
-        <div class="flex justify-end gap-2">
-          <Button variant="outline" class="gap-2" @click="print">
-            <Printer class="size-4" />
-            {{ t('common.print') }}
-          </Button>
-          <Button variant="outline" as-child><NuxtLink to="/invoices">{{ t('common.close') }}</NuxtLink></Button>
-        </div>
       </div>
 
       <SalesDocumentPrint

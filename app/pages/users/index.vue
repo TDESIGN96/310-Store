@@ -239,6 +239,8 @@ const toggleSelect = (id: number) => {
   selectedIds.value = next
 }
 
+const { bindRow } = useLongPressSelect()
+
 const rolePrimaryName = (role: { name_ar?: string; name_en?: string; name?: string }) =>
   locale.value === 'ar'
     ? (role.name_ar || role.name_en || role.name || '—')
@@ -618,7 +620,7 @@ onMounted(() => {
             :key="user.id"
             class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
             :class="{ 'bg-muted/20': selectedIds.has(user.id) }"
-            @click="navigateRow(`/users/show/${user.id}`)"
+            v-bind="bindRow({ onLongPress: () => toggleSelect(user.id), onTap: () => (selectedCount > 0 ? toggleSelect(user.id) : navigateRow(`/users/show/${user.id}`)) })"
           >
             <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>

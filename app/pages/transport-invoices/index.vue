@@ -69,6 +69,7 @@ const isIndeterminate = computed(
   () => sortedList.value.some(row => selectedIds.value.has(row.id)) && !isAllSelected.value,
 )
 const selectedCount = computed(() => selectedIds.value.size)
+const selectedRows = computed(() => sortedList.value.filter(row => selectedIds.value.has(row.id)))
 
 const toggleSelectAll = () => {
   const next = new Set(selectedIds.value)
@@ -83,6 +84,8 @@ const toggleSelect = (id: number) => {
   else next.add(id)
   selectedIds.value = next
 }
+
+const { bindRow } = useLongPressSelect()
 
 const list = computed(() => transportInvoicesStore.list)
 const sortedList = computed(() => {
@@ -228,6 +231,51 @@ const onStatusConfirmOpenChange = (value: boolean) => {
 const cancelStatusChange = () => {
   statusConfirmOpen.value = false
   pendingStatusChange.value = null
+}
+
+const bulkStatusTarget = ref<InvoiceStatusOption | null>(null)
+const bulkStatusConfirmOpen = ref(false)
+const bulkStatusLoading = ref(false)
+
+const isBulkStatusOptionDisabled = (option: InvoiceStatusOption) =>
+  selectedRows.value.some(row => isInvoiceStatusOptionDisabled(row.status, option))
+
+const applyBulkStatus = async (target: InvoiceStatusOption) => {
+  bulkStatusLoading.value = true
+  try {
+    const rows = selectedRows.value.filter(row => !isInvoiceStatusOptionDisabled(row.status, target))
+    await Promise.all(rows.map(row => invoicesStore.updateInvoiceStatus(row.id, target)))
+    rows.forEach((row) => {
+      row.status = target
+      row.status_label = statusOptionLabel(target)
+    })
+    toast.success(t('transport_invoices_page.bulk_status_update_success', { count: rows.length }))
+    selectedIds.value = new Set()
+  }
+  catch {
+    toast.error(t('transport_invoices_page.bulk_status_update_error'))
+  }
+  finally {
+    bulkStatusLoading.value = false
+    bulkStatusConfirmOpen.value = false
+    bulkStatusTarget.value = null
+  }
+}
+
+const onBulkStatusSelect = (value: string) => {
+  const target = value as InvoiceStatusOption
+  const anyBackward = selectedRows.value.some(row => isBackwardInvoiceStatusChange(row.status, target))
+  if (anyBackward) {
+    bulkStatusTarget.value = target
+    bulkStatusConfirmOpen.value = true
+    return
+  }
+  void applyBulkStatus(target)
+}
+
+const cancelBulkStatusChange = () => {
+  bulkStatusConfirmOpen.value = false
+  bulkStatusTarget.value = null
 }
 
 const loadRows = async (page = currentPage.value) => {
@@ -444,17 +492,32 @@ const goToPage = (page: number) => {
         <span class="text-sm font-medium text-red-700">
           {{ t('common.bulk_delete_only_notice', { count: selectedCount }) }}
         </span>
-        <div class="flex items-center gap-2 ms-auto">
+        <div class="flex items-center gap-2 ms-auto flex-wrap">
+          <Select :model-value="null" :disabled="bulkStatusLoading || bulkDeleteLoading" @update:model-value="value => onBulkStatusSelect(String(value))">
+            <SelectTrigger class="h-8 w-full sm:w-44">
+              <SelectValue :placeholder="t('transport_invoices_page.bulk_status_placeholder')" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="option in INVOICE_STATUS_OPTIONS"
+                :key="option"
+                :value="option"
+                :disabled="isBulkStatusOptionDisabled(option)"
+              >
+                {{ statusOptionLabel(option) }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             size="sm"
             class="h-8 gap-1.5 text-red-600 border-red-300 hover:bg-red-100"
-            :disabled="bulkDeleteLoading"
+            :disabled="bulkDeleteLoading || bulkStatusLoading"
             @click="bulkDeleteConfirmOpen = true"
           >
             {{ t('common.delete') }}
           </Button>
-          <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" @click="selectedIds = new Set()">
+          <Button variant="ghost" size="sm" class="h-8 text-muted-foreground" :disabled="bulkStatusLoading" @click="selectedIds = new Set()">
             {{ t('common.deselect') }}
           </Button>
         </div>
@@ -487,7 +550,7 @@ const goToPage = (page: number) => {
           <TableBody>
             <TableRow v-if="loading" class="md:table-row"><TableCell :colspan="12" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
             <TableRow v-else-if="!sortedList.length" class="md:table-row"><TableCell :colspan="12" class="py-14 text-center text-sm text-muted-foreground">{{ t('transport_invoices_page.empty') }}</TableCell></TableRow>
-            <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default" :class="{ 'bg-muted/20': selectedIds.has(row.id) }" @click="navigateRow(`/transport-invoices/show/${row.id}`)">
+            <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default" :class="{ 'bg-muted/20': selectedIds.has(row.id) }" v-bind="bindRow({ onLongPress: () => toggleSelect(row.id), onTap: () => (selectedCount > 0 ? toggleSelect(row.id) : navigateRow(`/transport-invoices/show/${row.id}`)) })">
               <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.select') }}</span>
                 <Checkbox :model-value="selectedIds.has(row.id)" class="md:mt-0.5 md:mx-4" @update:model-value="toggleSelect(row.id)" />
@@ -603,6 +666,23 @@ const goToPage = (page: number) => {
         <AlertDialogFooter>
           <AlertDialogCancel @click="cancelStatusChange">{{ t('common.cancel') }}</AlertDialogCancel>
           <Button @click="confirmStatusChange">{{ t('common.confirm') }}</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog :open="bulkStatusConfirmOpen" @update:open="v => { if (!v) cancelBulkStatusChange() }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="rtl:text-start">{{ t('transport_invoices_page.bulk_status_backward_title') }}</AlertDialogTitle>
+          <AlertDialogDescription class="rtl:text-start">
+            {{ t('transport_invoices_page.bulk_status_backward_body', { count: selectedCount, to: bulkStatusTarget ? statusOptionLabel(bulkStatusTarget) : '' }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="bulkStatusLoading" @click="cancelBulkStatusChange">{{ t('common.cancel') }}</AlertDialogCancel>
+          <Button :disabled="bulkStatusLoading" @click="applyBulkStatus(bulkStatusTarget!)">
+            <Loader2 v-if="bulkStatusLoading" class="me-2 size-4 animate-spin" />
+            {{ t('common.confirm') }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

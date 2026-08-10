@@ -156,6 +156,8 @@ const toggleSelect = (id: number) => {
   selectedIds.value = s
 }
 
+const { bindRow } = useLongPressSelect()
+
 // ── Load parent list for filter dropdown ───────────────────────────────────────
 
 /** Only categories that are parents (at least one child references them as parent_id). */
@@ -802,7 +804,7 @@ onMounted(() => {
                    md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none
                    hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
             :class="{ 'bg-muted/20': selectedIds.has(cat.id) }"
-            @click="navigateRow(`/categories/show/${cat.id}`)"
+            v-bind="bindRow({ onLongPress: () => toggleSelect(cat.id), onTap: () => (selectedCount > 0 ? toggleSelect(cat.id) : navigateRow(`/categories/show/${cat.id}`)) })"
           >
             <!-- Checkbox -->
             <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:border-0 md:py-4" @click.stop>

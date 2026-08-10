@@ -344,6 +344,8 @@ const toggleSelect = (id: number) => {
   selectedIds.value = next
 }
 
+const { bindRow } = useLongPressSelect()
+
 const categoryLabel = (c: CategoryFilterItem) =>
   locale.value === 'ar' ? c.name_ar || c.name_en : c.name_en || c.name_ar
 
@@ -729,7 +731,10 @@ onMounted(async () => {
               :key="row.id"
               class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default"
               :class="{ 'bg-muted/20': selectedIds.has(row.id) }"
-              @click="navigateRow(row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`)"
+              v-bind="canSelectProductsForDelete ? bindRow({
+                onLongPress: () => toggleSelect(row.id),
+                onTap: () => (selectedCount > 0 ? toggleSelect(row.id) : navigateRow(row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`)),
+              }) : { onClick: () => navigateRow(row.productType === 'combo' ? `/products/show-combo/${row.id}` : `/products/show/${row.id}`) }"
             >
             <TableCell v-if="canSelectProductsForDelete" class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('common.select') }}</span>
