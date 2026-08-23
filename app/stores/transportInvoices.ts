@@ -27,6 +27,9 @@ export interface TransportInvoiceListItem {
   warehouse_name_en: string
   customer_name: string
   district_name: string
+  distributor_id: number | null
+  distributor_name_ar: string
+  distributor_name_en: string
   invoice_date: string
   supply_date: string
   status: TransportInvoiceStatus
@@ -266,6 +269,7 @@ export const useTransportInvoicesStore = defineStore('transport-invoices', () =>
   const normalizeListItem = (payload: Record<string, unknown>): TransportInvoiceListItem => {
     const warehouse = (payload.warehouse && typeof payload.warehouse === 'object' ? payload.warehouse : null) as Record<string, unknown> | null
     const district = (payload.district && typeof payload.district === 'object' ? payload.district : null) as Record<string, unknown> | null
+    const distributor = (payload.distributor && typeof payload.distributor === 'object' ? payload.distributor : null) as Record<string, unknown> | null
     const returnEntity = (
       payload.return && typeof payload.return === 'object' ? payload.return : null
     ) as Record<string, unknown> | null
@@ -286,6 +290,9 @@ export const useTransportInvoicesStore = defineStore('transport-invoices', () =>
       warehouse_name_en: String(warehouse?.name_en ?? ''),
       customer_name: String(payload.customer_name ?? ''),
       district_name: String(district?.district ?? payload.district_name ?? ''),
+      distributor_id: toNumber(payload.distributor_id ?? distributor?.id, 0) || null,
+      distributor_name_ar: String(distributor?.name_ar ?? payload.distributor_name_ar ?? ''),
+      distributor_name_en: String(distributor?.name_en ?? payload.distributor_name_en ?? ''),
       invoice_date: String(payload.invoice_date ?? ''),
       supply_date: String(payload.supply_date ?? ''),
       status: normalizeStatus(payload.status),

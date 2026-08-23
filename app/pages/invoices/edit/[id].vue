@@ -70,6 +70,11 @@ const warehouseDisplayName = (warehouse: InvoiceWarehouseOption): string => {
 }
 const districtLabel = (district: { district: string }): string => district.district || '—'
 const selectedRowsCount = computed(() => draft.value.items.filter(item => item.product_id).length)
+
+const productSearchOptions = computed(() => ({
+  warehouseId: draft.value.warehouse_id ?? undefined,
+}))
+
 const firstEmptyRowIndex = computed(() => {
   const found = draft.value.items.findIndex(item => !item.product_id)
   return found >= 0 ? found : draft.value.items.length
@@ -82,8 +87,8 @@ const addProductToRows = (product: QuotationProductOption, variationId: number |
 }
 const handleBarcodeSubmit = async () => {
   const code = barcodeInput.value.trim()
-  if (!code) return
-  const matched = await lookupBarcode(code)
+  if (!code || !draft.value.warehouse_id) return
+  const matched = await lookupBarcode(code, productSearchOptions.value)
   if (!matched) {
     toast.error(t('invoices_page.system_error_title'), { description: t('invoices_page.barcode_not_found') })
     return
@@ -99,8 +104,21 @@ const selectProductResult = async (productId: number) => {
   productSearch.value = ''
 }
 const showAllProducts = async () => {
-  searchResults.value = await searchProducts('')
+  if (!draft.value.warehouse_id) return
+  searchResults.value = await searchProducts('', productSearchOptions.value)
 }
+
+const clearProductSearch = () => {
+  productSearch.value = ''
+  barcodeInput.value = ''
+  searchResults.value = []
+}
+
+const onWarehouseChange = (value: unknown) => {
+  draft.value.warehouse_id = Number(value) || null
+  clearProductSearch()
+}
+
 watch(productSearch, (value) => {
   if (searchTimer) clearTimeout(searchTimer)
   const text = value.trim()
@@ -108,8 +126,9 @@ watch(productSearch, (value) => {
     searchResults.value = []
     return
   }
+  if (!draft.value.warehouse_id) return
   searchTimer = setTimeout(async () => {
-    searchResults.value = await searchProducts(text)
+    searchResults.value = await searchProducts(text, productSearchOptions.value)
   }, 300)
 })
 
@@ -249,7 +268,7 @@ onMounted(async () => {
             <div class="space-y-2"><label class="text-sm font-medium">{{ t('invoices_page.reference_number') }}</label><Input :model-value="draft.reference_number || `#${id}`" disabled /></div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.warehouse') }}</label>
-              <Select :model-value="draft.warehouse_id ? String(draft.warehouse_id) : ''" @update:model-value="value => draft.warehouse_id = Number(value) || null">
+              <Select :model-value="draft.warehouse_id ? String(draft.warehouse_id) : ''" @update:model-value="onWarehouseChange">
                 <SelectTrigger
                   class="w-full"
                   :aria-invalid="Boolean(formErrors.warehouse_id)"
@@ -325,15 +344,15 @@ onMounted(async () => {
           <div class="grid gap-3 md:grid-cols-2">
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('invoices_page.products') }}</label>
-              <div class="relative"><Search class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input v-model="productSearch" class="ps-9" :placeholder="t('invoices_page.product_search_placeholder')" /></div>
+              <div class="relative"><Search class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input v-model="productSearch" class="ps-9" :placeholder="t('invoices_page.product_search_placeholder')" :disabled="!draft.warehouse_id" /></div>
               <div v-if="searchResults.length" class="max-h-48 overflow-y-auto rounded-md border bg-background">
                 <button v-for="product in searchResults" :key="product.id" type="button" class="flex w-full items-center justify-between px-3 py-2 text-start text-sm hover:bg-muted/40" @click="selectProductResult(product.id)"><span>{{ productDisplayName(product) }}</span><span class="text-xs text-muted-foreground">#{{ product.id }}</span></button>
               </div>
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium">{{ t('products_variations.variation_barcode') }}</label>
-              <div class="relative"><Barcode class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input v-model="barcodeInput" class="ps-9" :placeholder="t('invoices_page.barcode_placeholder')" @keydown.enter.prevent="handleBarcodeSubmit" /></div>
-              <Button type="button" variant="outline" class="w-full gap-2 md:w-auto" :disabled="loadingProducts" @click="showAllProducts"><Loader2 v-if="loadingProducts" class="size-4 animate-spin" /><span>{{ t('invoices_page.products') }}</span></Button>
+              <div class="relative"><Barcode class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input v-model="barcodeInput" class="ps-9" :placeholder="t('invoices_page.barcode_placeholder')" :disabled="!draft.warehouse_id" @keydown.enter.prevent="handleBarcodeSubmit" /></div>
+              <Button type="button" variant="outline" class="w-full gap-2 md:w-auto" :disabled="loadingProducts || !draft.warehouse_id" @click="showAllProducts"><Loader2 v-if="loadingProducts" class="size-4 animate-spin" /><span>{{ t('invoices_page.products') }}</span></Button>
             </div>
           </div>
 

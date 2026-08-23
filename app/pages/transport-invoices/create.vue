@@ -106,6 +106,10 @@ const districtLabel = (item: { district: string }) => item.district || '—'
 
 const selectedRowsCount = computed(() => draft.value.items.filter(item => item.product_id).length)
 
+const productSearchOptions = computed(() => ({
+  warehouseId: draft.value.warehouse_id ?? undefined,
+}))
+
 const firstEmptyRowIndex = computed(() => {
   const found = draft.value.items.findIndex(item => !item.product_id)
   return found >= 0 ? found : draft.value.items.length
@@ -119,8 +123,8 @@ const addProductToRows = (product: QuotationProductOption, variationId: number |
 
 const handleBarcodeSubmit = async () => {
   const code = barcodeInput.value.trim()
-  if (!code) return
-  const matched = await lookupBarcode(code)
+  if (!code || !draft.value.warehouse_id) return
+  const matched = await lookupBarcode(code, productSearchOptions.value)
   if (!matched) {
     toast.error(t('transport_invoices_page.system_error_title'), {
       description: t('transport_invoices_page.barcode_not_found'),
@@ -140,7 +144,19 @@ const selectProductResult = async (productId: number) => {
 }
 
 const showAllProducts = async () => {
-  searchResults.value = await searchProducts('')
+  if (!draft.value.warehouse_id) return
+  searchResults.value = await searchProducts('', productSearchOptions.value)
+}
+
+const clearProductSearch = () => {
+  productSearch.value = ''
+  barcodeInput.value = ''
+  searchResults.value = []
+}
+
+const onWarehouseChange = (value: unknown) => {
+  draft.value.warehouse_id = Number(value) || null
+  clearProductSearch()
 }
 
 watch(productSearch, (value) => {
@@ -150,8 +166,9 @@ watch(productSearch, (value) => {
     searchResults.value = []
     return
   }
+  if (!draft.value.warehouse_id) return
   searchTimer = setTimeout(async () => {
-    searchResults.value = await searchProducts(text)
+    searchResults.value = await searchProducts(text, productSearchOptions.value)
   }, 350)
 })
 
@@ -306,7 +323,7 @@ onMounted(() => {
               <label class="text-sm font-medium">{{ t('transport_invoices_page.warehouse') }}</label>
               <Select
                 :model-value="draft.warehouse_id ? String(draft.warehouse_id) : ''"
-                @update:model-value="value => draft.warehouse_id = Number(value) || null"
+                @update:model-value="onWarehouseChange"
               >
                 <SelectTrigger
                   class="w-full"
@@ -409,7 +426,7 @@ onMounted(() => {
               <label class="text-sm font-medium">{{ t('transport_invoices_page.products') }}</label>
               <div class="relative">
                 <Search class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input v-model="productSearch" class="ps-9" :placeholder="t('transport_invoices_page.product_search_placeholder')" />
+                <Input v-model="productSearch" class="ps-9" :placeholder="t('transport_invoices_page.product_search_placeholder')" :disabled="!draft.warehouse_id" />
               </div>
               <div v-if="loadingProducts" class="text-xs text-muted-foreground">{{ t('common.loading') }}</div>
               <div v-if="searchResults.length" class="max-h-48 overflow-y-auto rounded-md border bg-background">
@@ -433,10 +450,11 @@ onMounted(() => {
                   v-model="barcodeInput"
                   class="ps-9"
                   :placeholder="t('transport_invoices_page.barcode_placeholder')"
+                  :disabled="!draft.warehouse_id"
                   @keydown.enter.prevent="handleBarcodeSubmit"
                 />
               </div>
-              <Button type="button" variant="outline" class="w-full gap-2 md:w-auto" :disabled="loadingProducts" @click="showAllProducts">
+              <Button type="button" variant="outline" class="w-full gap-2 md:w-auto" :disabled="loadingProducts || !draft.warehouse_id" @click="showAllProducts">
                 <Loader2 v-if="loadingProducts" class="size-4 animate-spin" />
                 <span>{{ t('transport_invoices_page.products') }}</span>
               </Button>

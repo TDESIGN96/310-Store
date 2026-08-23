@@ -44,8 +44,15 @@ const canEditInvoice = computed(() => canEdit('invoices'))
 const canDeleteInvoice = computed(() => canDelete('invoices'))
 const canCreateInvoiceReturn = computed(() => can('invoice_returns.store'))
 
+interface DistributorOption {
+  id: number
+  name_ar: string
+  name_en: string
+}
+
 const search = ref('')
 const filterStatus = ref<'all' | InvoiceStatusOption>('all')
+const filterDistributor = ref<'all' | string>('all')
 const invoiceDate = ref('')
 const supplyDate = ref('')
 const currentPage = ref(1)
@@ -57,10 +64,15 @@ const selectedIds = ref<Set<number>>(new Set())
 const bulkDeleteConfirmOpen = ref(false)
 const bulkDeleteLoading = ref(false)
 const shipmentSyncLoading = ref(false)
+const distributorOptions = ref<DistributorOption[]>([])
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasActiveFilters = computed(
-  () => search.value.trim().length > 0 || filterStatus.value !== 'all' || Boolean(invoiceDate.value) || Boolean(supplyDate.value),
+  () => search.value.trim().length > 0
+    || filterStatus.value !== 'all'
+    || filterDistributor.value !== 'all'
+    || Boolean(invoiceDate.value)
+    || Boolean(supplyDate.value),
 )
 const isAllSelected = computed(
   () => sortedList.value.length > 0 && sortedList.value.every(row => selectedIds.value.has(row.id)),
@@ -138,6 +150,24 @@ const warehouseLabel = (row: TransportInvoiceListItem) => {
   const nameAr = row.warehouse_name_ar || ''
   const nameEn = row.warehouse_name_en || ''
   return locale.value === 'ar' ? (nameAr || nameEn || '—') : (nameEn || nameAr || '—')
+}
+
+const distributorOptionLabel = (option: DistributorOption) => {
+  return locale.value === 'ar'
+    ? (option.name_ar || option.name_en || `#${option.id}`)
+    : (option.name_en || option.name_ar || `#${option.id}`)
+}
+
+const distributorLabel = (row: TransportInvoiceListItem) => {
+  const nameAr = row.distributor_name_ar || ''
+  const nameEn = row.distributor_name_en || ''
+  const fromRow = locale.value === 'ar' ? (nameAr || nameEn) : (nameEn || nameAr)
+  if (fromRow) return fromRow
+  if (row.distributor_id) {
+    const option = distributorOptions.value.find(d => d.id === row.distributor_id)
+    if (option) return distributorOptionLabel(option)
+  }
+  return '-'
 }
 
 const statusOptionLabel = (option: InvoiceStatusOption) => {
@@ -282,8 +312,10 @@ const loadRows = async (page = currentPage.value) => {
   if (!canViewInvoices.value) return
   currentPage.value = page
   const query = search.value.trim()
+  const distributorId = filterDistributor.value !== 'all' ? Number(filterDistributor.value) : undefined
   const params: Record<string, string | number | undefined> = {
     page,
+    per_page: 50,
     sort: '-created_at',
     search: query || undefined,
     reference_number: query || undefined,
@@ -291,14 +323,48 @@ const loadRows = async (page = currentPage.value) => {
     invoice_date: toIsoDateTimeStart(invoiceDate.value),
     supply_date: toIsoDateTimeStart(supplyDate.value),
     status: filterStatus.value === 'all' ? undefined : filterStatus.value,
+    distributor_id: Number.isFinite(distributorId) && distributorId! > 0 ? distributorId : undefined,
   }
   await transportInvoicesStore.loadList(params)
   selectedIds.value = new Set()
 }
 
+const loadDistributorOptions = async () => {
+  const aggregated: DistributorOption[] = []
+  let page = 1
+  let lastPage = 1
+  const maxPages = 50
+
+  do {
+    const res = await $api<{
+      data?: { distributors?: unknown[], pagination?: { last_page?: number } }
+      distributors?: unknown[]
+      pagination?: { last_page?: number }
+    }>('/distributors', { params: { page, per_page: 100 } })
+
+    const listRaw = res.data?.distributors ?? res.distributors ?? []
+    for (const item of listRaw) {
+      if (!item || typeof item !== 'object') continue
+      const row = item as Record<string, unknown>
+      if (!row.id) continue
+      aggregated.push({
+        id: Number(row.id),
+        name_ar: String(row.name_ar ?? ''),
+        name_en: String(row.name_en ?? ''),
+      })
+    }
+
+    lastPage = res.data?.pagination?.last_page ?? res.pagination?.last_page ?? 1
+    page++
+  } while (page <= lastPage && page <= maxPages)
+
+  distributorOptions.value = aggregated
+}
+
 const resetFilters = async () => {
   search.value = ''
   filterStatus.value = 'all'
+  filterDistributor.value = 'all'
   invoiceDate.value = ''
   supplyDate.value = ''
   await loadRows(1)
@@ -405,7 +471,7 @@ const cloneInvoice = async (row: TransportInvoiceListItem) => {
 }
 
 watch(
-  [search, filterStatus, invoiceDate, supplyDate],
+  [search, filterStatus, filterDistributor, invoiceDate, supplyDate],
   () => {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => loadRows(1), 300)
@@ -414,7 +480,7 @@ watch(
 )
 
 onMounted(async () => {
-  await loadRows(1)
+  await Promise.all([loadDistributorOptions(), loadRows(1)])
 })
 
 const goToPage = (page: number) => {
@@ -447,6 +513,13 @@ const goToPage = (page: number) => {
             <SelectContent>
               <SelectItem value="all">{{ t('transport_invoices_page.filter_status_all') }}</SelectItem>
               <SelectItem v-for="option in INVOICE_STATUS_OPTIONS" :key="option" :value="option">{{ statusOptionLabel(option) }}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select v-model="filterDistributor">
+            <SelectTrigger class="h-9 w-full sm:w-[220px] gap-2"><Filter class="size-3.5 shrink-0 text-muted-foreground" /><SelectValue :placeholder="t('transport_invoices_page.filter_distributor')" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{{ t('transport_invoices_page.filter_distributor_all') }}</SelectItem>
+              <SelectItem v-for="option in distributorOptions" :key="option.id" :value="String(option.id)">{{ distributorOptionLabel(option) }}</SelectItem>
             </SelectContent>
           </Select>
           <Button v-if="hasActiveFilters" variant="ghost" size="sm" class="h-9 gap-1.5 text-muted-foreground w-full sm:w-auto" :disabled="loading" @click="resetFilters"><X class="size-3.5" />{{ t('transport_invoices_page.reset_filters') }}</Button>
@@ -536,6 +609,7 @@ const goToPage = (page: number) => {
               </TableHead>
               <TableHead class="text-start font-medium min-w-[120px]">{{ t('transport_invoices_page.col_ref_id') }}</TableHead>
               <TableHead class="text-start font-medium min-w-[140px]">{{ t('transport_invoices_page.col_customer') }}</TableHead>
+              <TableHead class="text-start font-medium min-w-[140px]">{{ t('transport_invoices_page.col_distributor') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('transport_invoices_page.col_invoice_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('transport_invoices_page.col_supply_date') }}</TableHead>
               <TableHead class="text-start font-medium whitespace-nowrap">{{ t('transport_invoices_page.warehouse') }}</TableHead>
@@ -548,8 +622,8 @@ const goToPage = (page: number) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-if="loading" class="md:table-row"><TableCell :colspan="12" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
-            <TableRow v-else-if="!sortedList.length" class="md:table-row"><TableCell :colspan="12" class="py-14 text-center text-sm text-muted-foreground">{{ t('transport_invoices_page.empty') }}</TableCell></TableRow>
+            <TableRow v-if="loading" class="md:table-row"><TableCell :colspan="13" class="py-14 text-center"><div class="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="size-4 animate-spin" />{{ t('common.loading') }}…</div></TableCell></TableRow>
+            <TableRow v-else-if="!sortedList.length" class="md:table-row"><TableCell :colspan="13" class="py-14 text-center text-sm text-muted-foreground">{{ t('transport_invoices_page.empty') }}</TableCell></TableRow>
             <TableRow v-for="row in sortedList" :key="row.id" class="flex flex-col gap-1 border-2 rounded-lg p-4 mb-4 shadow-sm md:table-row md:border md:border-b md:rounded-none md:p-0 md:mb-0 md:shadow-none hover:bg-muted/30 transition-colors align-middle cursor-pointer md:cursor-default" :class="{ 'bg-muted/20': selectedIds.has(row.id) }" v-bind="bindRow({ onLongPress: () => toggleSelect(row.id), onTap: () => (selectedCount > 0 ? toggleSelect(row.id) : navigateRow(`/transport-invoices/show/${row.id}`)) })">
               <TableCell class="flex items-center justify-between gap-2 py-1.5 border-b md:w-10 md:table-cell md:py-4 md:border-0" @click.stop>
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.select') }}</span>
@@ -557,12 +631,21 @@ const goToPage = (page: number) => {
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_ref_id') }}</span>
-                <NuxtLink
-                  :to="`/transport-invoices/show/${row.id}`"
-                  class="text-sm font-medium text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
-                >
-                  {{ row.reference_number || `#${row.id}` }}
-                </NuxtLink>
+                <div class="flex flex-wrap items-center gap-2 justify-end md:justify-start">
+                  <NuxtLink
+                    :to="`/transport-invoices/show/${row.id}`"
+                    class="text-sm font-medium text-[#2563eb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                  >
+                    {{ row.reference_number || `#${row.id}` }}
+                  </NuxtLink>
+                  <Badge
+                    v-if="row.status === 'settled'"
+                    variant="destructive"
+                    class="text-[10px] tracking-wide"
+                  >
+                    {{ t('transport_invoices_page.settled_attention_label') }}
+                  </Badge>
+                </div>
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_customer') }}</span>
@@ -572,6 +655,10 @@ const goToPage = (page: number) => {
                     {{ t('transport_invoices_page.district') }}: {{ row.district_name || t('transport_invoices_page.district_unassigned') }}
                   </span>
                 </div>
+              </TableCell>
+              <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
+                <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_distributor') }}</span>
+                <span class="text-sm text-muted-foreground rtl:text-start">{{ distributorLabel(row) }}</span>
               </TableCell>
               <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4">
                 <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('transport_invoices_page.col_invoice_date') }}</span>
