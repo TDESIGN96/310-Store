@@ -3,14 +3,14 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiBase: 'https://301-commerce-backend.test/api',
+      apiBase: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud/api',
       echo: {
         key: 'dA6V4f6Gn3QYA7NDgd6t',
         wsHost: 'ws-a14d3d63-48f2-43f1-a933-d3e4cfde010c-reverb.laravel.cloud',
         wsPort: 443,
         wssPort: 443,
         forceTLS: true,
-        authBaseUrl: 'https://301-commerce-backend.test/',
+        authBaseUrl: 'https://310-commerce-backend-main-ocxb8j.laravel.cloud',
         authEndpoint: '/api/broadcasting/auth',
       },
     },
