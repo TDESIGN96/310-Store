@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   BarChart3,
   Archive,
+  Wallet,
 } from 'lucide-vue-next'
 import type { PermissionModule } from '@/config/permissions'
 
@@ -209,6 +210,28 @@ export const navItems: NavGroup[] = [
         icon: History,
         path: '/activities',
         module: 'activities',
+      },
+    ],
+  },
+  {
+    groupKey: 'nav.groups.accounts',
+    items: [
+      {
+        labelKey: 'nav.items.my_account',
+        icon: Wallet,
+        path: '/my-account',
+      },
+      {
+        labelKey: 'nav.items.user_ledgers',
+        icon: Wallet,
+        path: '/user-ledgers',
+        module: 'user_ledgers',
+      },
+      {
+        labelKey: 'nav.items.distributor_ledgers',
+        icon: Wallet,
+        path: '/distributor-ledgers',
+        module: 'distributor_ledgers',
       },
     ],
   },

@@ -18,6 +18,8 @@ export type PermissionModule =
   | 'activities'
   | 'stocktaking'
   | 'damage'
+  | 'user_ledgers'
+  | 'distributor_ledgers'
 export type PermissionKey = `${PermissionModule}.${PermissionAction}`
 export type StocktakingPermissionKey =
   | 'stocktaking.view'
@@ -219,6 +221,26 @@ export const permissionGroups: PermissionGroup[] = [
       { id: 'damage.approve' },
       { id: 'damage.cancel' },
       { id: 'damage.disposition' },
+    ],
+  },
+  {
+    id: 'user_ledgers',
+    permissions: [
+      { id: 'user_ledgers.index' },
+      { id: 'user_ledgers.show' },
+      { id: 'user_ledgers.store' },
+      { id: 'user_ledgers.update' },
+      { id: 'user_ledgers.destroy' },
+    ],
+  },
+  {
+    id: 'distributor_ledgers',
+    permissions: [
+      { id: 'distributor_ledgers.index' },
+      { id: 'distributor_ledgers.show' },
+      { id: 'distributor_ledgers.store' },
+      { id: 'distributor_ledgers.update' },
+      { id: 'distributor_ledgers.destroy' },
     ],
   },
 ]

@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, UserX, UserCheck, Eye, Boxes } from 'lucide-vue-next'
+import { Search, Plus, Pencil, Trash2, Loader2, ShieldAlert, UserX, UserCheck, Eye, Boxes, Wallet } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
+import { formatLedgerAmount, ledgerAmountClass } from '@/utils/formatLedgerAmount'
 
 definePageMeta({ layout: 'default' })
 
@@ -46,6 +47,7 @@ interface DistributorItem {
   description: string
   status: string
   created_at?: string | null
+  financial_balance?: string
 }
 
 interface ListPagination {
@@ -74,6 +76,8 @@ const canCreateDistributor = computed(() => canCreate('distributors'))
 const canEditDistributor = computed(() => canEdit('distributors'))
 const canDeleteDistributor = computed(() => canDelete('distributors'))
 const canShowDistributor = computed(() => can('distributors.show') || canAccess('distributors'))
+const canViewDistributorLedger = computed(() => can('distributor_ledgers.show') || can('distributor_ledgers.index'))
+const tableColspan = computed(() => 5 + (canViewDistributorLedger.value ? 1 : 0))
 
 const rows = ref<DistributorItem[]>([])
 const loading = ref(false)
@@ -126,6 +130,7 @@ const normalizeDistributor = (raw: unknown): DistributorItem | null => {
     description: getString(raw.description),
     status: statusText(raw.status ?? raw.is_active),
     created_at: getString(raw.created_at || raw.createdAt) || null,
+    financial_balance: getString(raw.financial_balance) || undefined,
   }
 }
 
@@ -379,12 +384,13 @@ onMounted(() => {
             <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_admin_name') }}</TableHead>
             <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_location') }}</TableHead>
             <TableHead class="font-medium rtl:text-right">{{ t('distributors_page.col_status') }}</TableHead>
+            <TableHead v-if="canViewDistributorLedger" class="text-end font-medium">{{ t('distributors_page.col_balance') }}</TableHead>
             <TableHead class="text-end font-medium">{{ t('distributors_page.col_actions') }}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow v-if="loading" class="md:table-row">
-            <TableCell :colspan="5" class="py-14 text-center">
+            <TableCell :colspan="tableColspan" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('distributors_page.loading') }}
@@ -393,7 +399,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="listLoadError" class="md:table-row">
-            <TableCell :colspan="5" class="py-14 text-center">
+            <TableCell :colspan="tableColspan" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -408,7 +414,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="rows.length === 0" class="md:table-row">
-            <TableCell :colspan="5" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="tableColspan" class="py-14 text-center text-sm text-muted-foreground">
               {{ emptyListMessage }}
             </TableCell>
           </TableRow>
@@ -445,9 +451,14 @@ onMounted(() => {
                 {{ statusConfig(row.status).label }}
               </span>
             </TableCell>
+            <TableCell v-if="canViewDistributorLedger" class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('distributors_page.col_balance') }}</span>
+              <span class="text-sm font-medium" :class="ledgerAmountClass(row.financial_balance)">{{ formatLedgerAmount(row.financial_balance) }}</span>
+            </TableCell>
             <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
               <TableRowActions
                 :actions="[
+                  { key: `account-${row.id}`, label: t('distributors_page.action_account'), type: 'button', icon: Wallet, tone: 'muted', visible: canViewDistributorLedger, onClick: () => navigateTo(`/distributor-ledgers/${row.id}`) },
                   { key: `edit-${row.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditDistributor, onClick: () => navigateTo(`/distributors/edit/${row.id}`) },
                   { key: `stock-allocation-${row.id}`, label: t('distributors_page.stock_allocation'), type: 'button', icon: Boxes, tone: 'muted', visible: canShowDistributor, onClick: () => navigateTo({ path: `/distributors/show/${row.id}`, query: { tab: 'stock-allocation' } }) },
                   { key: `deactivate-${row.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditDistributor && row.status === 'active', disabled: togglingId === row.id || deletingId === row.id, loading: togglingId === row.id, onClick: () => { distributorToDeactivate = row } },

@@ -100,6 +100,13 @@ const RULES: { pattern: RegExp; permission: string | string[] | null }[] = [
 
   // Reports Center
   { pattern: /^\/reports-center\/?$/, permission: ['reports.index', 'reports.show', ...REPORT_VIEW_PERMISSIONS] },
+
+  // Financial ledgers — My account is ungated for any signed-in user
+  { pattern: /^\/my-account\/?$/, permission: null },
+  { pattern: /^\/user-ledgers\/[^/]+\/?$/, permission: 'user_ledgers.show' },
+  { pattern: /^\/user-ledgers\/?$/, permission: ['user_ledgers.index', 'user_ledgers.show'] },
+  { pattern: /^\/distributor-ledgers\/[^/]+\/?$/, permission: 'distributor_ledgers.show' },
+  { pattern: /^\/distributor-ledgers\/?$/, permission: ['distributor_ledgers.index', 'distributor_ledgers.show'] },
 ]
 
 /**

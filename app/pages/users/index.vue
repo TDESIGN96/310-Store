@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search, Plus, Pencil, Trash2, Copy, Loader2, ShieldAlert, LoaderCircle, Filter, UserX, UserCheck } from 'lucide-vue-next'
+import { Search, Plus, Pencil, Trash2, Copy, Loader2, ShieldAlert, LoaderCircle, Filter, UserX, UserCheck, Wallet } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import TableRowActions from '@/components/app/table/TableRowActions.vue'
 import PaginationArrowButtons from '@/components/app/table/PaginationArrowButtons.vue'
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'vue-sonner'
 import { formatDisplayDate } from '@/utils/formatDisplayDate'
+import { formatLedgerAmount, ledgerAmountClass } from '@/utils/formatLedgerAmount'
 
 definePageMeta({ layout: 'default' })
 
@@ -64,6 +65,7 @@ interface UserItem {
   phone: string
   created_by?: UserSummary | number | null
   permissions: string[]
+  financial_balance?: string
 }
 
 interface UsersPagination {
@@ -100,6 +102,8 @@ const canCreateUser = computed(() => uCreate('users'))
 const canEditUser = computed(() => uEdit('users'))
 const canDestroyUserPerm = computed(() => uDestroy('users'))
 const canShowUser = computed(() => can('users.show'))
+const canViewUserLedger = computed(() => can('user_ledgers.show') || can('user_ledgers.index'))
+const tableColspan = computed(() => 9 + (canViewUserLedger.value ? 1 : 0))
 
 const users = ref<UserItem[]>([])
 const search = ref('')
@@ -576,6 +580,7 @@ onMounted(() => {
             <TableHead class="text-start font-medium">{{ t('users_page.col_roles') }}</TableHead>
             <TableHead class="text-start font-medium">{{ t('users_page.col_active') }}</TableHead>
             <TableHead class="text-start font-medium">{{ t('users_page.col_added_by') }}</TableHead>
+            <TableHead v-if="canViewUserLedger" class="text-end font-medium">{{ t('users_page.col_balance') }}</TableHead>
             <TableHead class="text-end font-medium tabular-nums">{{ t('users_page.col_created') }}</TableHead>
             <TableHead class="text-end font-medium">{{ t('common.actions') }}</TableHead>
           </TableRow>
@@ -583,7 +588,7 @@ onMounted(() => {
 
         <TableBody>
           <TableRow v-if="loading" class="md:table-row">
-            <TableCell :colspan="9" class="py-14 text-center">
+            <TableCell :colspan="tableColspan" class="py-14 text-center">
               <div class="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 class="size-4 animate-spin" />
                 {{ t('users_page.loading') }}
@@ -592,7 +597,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="listLoadError" class="md:table-row">
-            <TableCell :colspan="9" class="py-14 text-center">
+            <TableCell :colspan="tableColspan" class="py-14 text-center">
               <div class="flex flex-col items-center gap-2 text-sm text-red-500">
                 <ShieldAlert class="size-6" />
                 <p class="font-medium text-center">{{ listLoadError.title }}</p>
@@ -605,7 +610,7 @@ onMounted(() => {
           </TableRow>
 
           <TableRow v-else-if="users.length === 0" class="md:table-row">
-            <TableCell :colspan="9" class="py-14 text-center text-sm text-muted-foreground">
+            <TableCell :colspan="tableColspan" class="py-14 text-center text-sm text-muted-foreground">
               {{
                 search || hasActiveFilters
                   ? t('users_page.no_results')
@@ -668,6 +673,10 @@ onMounted(() => {
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_added_by') }}</span>
               <span class="text-sm text-muted-foreground">{{ createdByDisplay(user.created_by) }}</span>
             </TableCell>
+            <TableCell v-if="canViewUserLedger" class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
+              <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_balance') }}</span>
+              <span class="text-sm font-medium" :class="ledgerAmountClass(user.financial_balance)">{{ formatLedgerAmount(user.financial_balance) }}</span>
+            </TableCell>
             <TableCell class="flex justify-between items-start gap-2 py-1.5 md:table-cell md:py-4 md:text-end">
               <span class="text-xs font-medium text-muted-foreground md:hidden">{{ t('users_page.col_created') }}</span>
               <span class="text-sm text-muted-foreground tabular-nums">{{ formatDate(user.created_at) }}</span>
@@ -675,6 +684,7 @@ onMounted(() => {
             <TableCell class="flex justify-end gap-2 pt-3 border-t mt-2 md:table-cell md:border-0 md:pt-4 md:mt-0 md:text-end" @click.stop>
               <TableRowActions
                 :actions="[
+                  { key: `account-${user.id}`, label: t('users_page.action_account'), type: 'button', icon: Wallet, tone: 'muted', visible: canViewUserLedger, onClick: () => navigateTo(`/user-ledgers/${user.id}`) },
                   { key: `deactivate-${user.id}`, label: t('common.deactivate'), type: 'button', icon: UserX, tone: 'warning', visible: canEditUser && user.is_active && !cannotToggleUserActivation(user), disabled: togglingActiveId === user.id || deletingId === user.id, loading: togglingActiveId === user.id, onClick: () => openDeactivateConfirm(user) },
                   { key: `activate-${user.id}`, label: t('common.activate'), type: 'button', icon: UserCheck, tone: 'success', visible: canEditUser && !user.is_active && !cannotToggleUserActivation(user), disabled: togglingActiveId === user.id || deletingId === user.id, loading: togglingActiveId === user.id, onClick: () => reactivateUser(user) },
                   { key: `edit-${user.id}`, label: t('common.edit'), type: 'button', icon: Pencil, tone: 'default', visible: canEditUser, onClick: () => handleEdit(user) },
